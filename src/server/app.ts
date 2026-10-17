@@ -5,6 +5,8 @@ import { getMcpClient, resetMcpClient } from './mcp/client.js';
 import { McpToolError } from './mcp/errors.js';
 import { ALLOWED_TOOLS, listAddresses, searchOffers } from './mcp/tools.js';
 import type { Address } from './mcp/types.js';
+import { registerEvaluate } from './routes/evaluate.js';
+import type { EvaluateDeps } from './services/evaluate.js';
 
 export function errorBody(err: unknown): { status: 401 | 400 | 502 | 500; body: Record<string, unknown> } {
   if (err instanceof McpToolError) {
@@ -29,7 +31,12 @@ export function pickAddress(addresses: Address[], addressId?: string): Address |
   return { error: 'Múltiplos endereços: informe addressId' };
 }
 
-export function createApp(auth: IfoodAuth = defaultAuth) {
+export interface AppOptions {
+  /** Dependências MCP do /api/evaluate (testes injetam fixtures). */
+  evaluateDeps?: EvaluateDeps;
+}
+
+export function createApp(auth: IfoodAuth = defaultAuth, opts: AppOptions = {}) {
   const app = new Hono();
 
   // Log mínimo: método, caminho (sem query — o callback OAuth carrega `code`), status, duração.
@@ -140,6 +147,9 @@ export function createApp(auth: IfoodAuth = defaultAuth) {
       note: 'Preços de listagem não são definitivos — usar getItem antes de recomendar.',
     });
   });
+
+  // ---------- Avaliação read-only (F2/F3) ----------
+  registerEvaluate(app, opts.evaluateDeps);
 
   // ---------- Endereços (FR-2) ----------
   app.get('/api/addresses', async (c) => {

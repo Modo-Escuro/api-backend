@@ -47,26 +47,34 @@ export function parseToolResult(tool: string, r: RawToolResult): unknown {
   return payload;
 }
 
+export interface CallOptions {
+  /** Limite desta chamada (ms); nunca acima de MCP_TIMEOUT_MS. */
+  timeoutMs?: number;
+  signal?: AbortSignal;
+}
+
 export async function callReadTool<T>(
   name: string,
   args: Record<string, unknown>,
   client?: Client,
+  opts: CallOptions = {},
 ): Promise<T> {
   if (!ALLOWED_TOOLS.has(name)) throw new Error(`Tool não permitida no MVP: ${name}`);
   const c = client ?? (await getMcpClient());
-  const r = (await c.callTool({ name, arguments: args }, undefined, { timeout: MCP_TIMEOUT_MS })) as RawToolResult;
+  const timeout = Math.max(1, Math.min(opts.timeoutMs ?? MCP_TIMEOUT_MS, MCP_TIMEOUT_MS));
+  const r = (await c.callTool({ name, arguments: args }, undefined, { timeout, signal: opts.signal })) as RawToolResult;
   return parseToolResult(name, r) as T;
 }
 
 export const listAddresses = (client?: Client) => callReadTool<ListAddressesResult>('listAddresses', {}, client);
 
-export function searchOffers(args: SearchOffersArgs, client?: Client) {
+export function searchOffers(args: SearchOffersArgs, client?: Client, opts?: CallOptions) {
   if (!args.query.trim()) throw new Error('searchOffers exige `query` descritivo (qualificadores vão em refinements)');
-  return callReadTool<SearchOffersResult>('searchOffers', { ...args }, client);
+  return callReadTool<SearchOffersResult>('searchOffers', { ...args }, client, opts);
 }
 
-export const getItem = (a: { itemId: string; merchantId: string; userLocation: LatLng }, client?: Client) =>
-  callReadTool<GetItemResult>('getItem', { ...a }, client);
+export const getItem = (a: { itemId: string; merchantId: string; userLocation: LatLng }, client?: Client, opts?: CallOptions) =>
+  callReadTool<GetItemResult>('getItem', { ...a }, client, opts);
 
 export const getMerchant = (a: { merchantId: string; userLocation: LatLng }, client?: Client) =>
   callReadTool<Record<string, unknown>>('getMerchant', { ...a }, client);

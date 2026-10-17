@@ -1,0 +1,487 @@
+{
+  "agentHints": {
+    "nextStepWhenUserPicksItem": "Retrieve full item details — option groups and applicable promotions — before presenting it to the user."
+  },
+  "hasMore": false,
+  "interpretedQuery": "hamburguer",
+  "nextPageToken": null,
+  "resultKind": "ITEM",
+  "results": [
+    {
+      "itemEan": "",
+      "itemId": "c29bfc17-0c56-4925-9298-93c946c39075",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/82fb5c42-5f0f-41c0-8bf7-1832cd171d53/202101101710_W0yu_.jpeg",
+      "itemName": "Maria salada Veg",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 40,
+            "min": 30
+          },
+          "fee": 6.99,
+          "promotionalFee": 6.99
+        },
+        "isOpen": true,
+        "merchantId": "82fb5c42-5f0f-41c0-8bf7-1832cd171d53",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/82fb5c42-5f0f-41c0-8bf7-1832cd171d53/202007032012_iOia_i.png",
+        "merchantName": "Três Marias Burger & Beer",
+        "minimumOrderAmount": 15.9,
+        "ratingCount": 258,
+        "reviewRating": 4.900000095367432,
+        "straightLineDistanceKm": 0.82
+      },
+      "promotionalUnitPrice": 29.9,
+      "unitPrice": 29.9
+    },
+    {
+      "itemEan": "",
+      "itemId": "6c3194f8-e4f5-4d64-9211-7636758e62ec",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/14b56719-889c-4541-9153-01296c67a4b5/202011221755_FubG_.jpeg",
+      "itemName": "Vegano Brooks",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 65,
+            "min": 55
+          },
+          "fee": 0,
+          "promotionalFee": 0
+        },
+        "isOpen": true,
+        "merchantId": "14b56719-889c-4541-9153-01296c67a4b5",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/14b56719-889c-4541-9153-01296c67a4b5/202505132330_Dwbb_.jpeg",
+        "merchantName": "HAMBURGUERIA BROOKS ",
+        "minimumOrderAmount": 20,
+        "ratingCount": 118,
+        "reviewRating": 4.699999809265137,
+        "straightLineDistanceKm": 0.86
+      },
+      "promotionalUnitPrice": 42.9,
+      "unitPrice": 42.9
+    },
+    {
+      "itemEan": "",
+      "itemId": "7722b351-85e0-4563-b0dd-ec77c1bcb801",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/52205842-867c-495b-9b83-877e4aede6cd/202511071912_65M0_i.jpg",
+      "itemName": "Veggie Burger",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 50,
+            "min": 40
+          },
+          "fee": 5.99,
+          "promotionalFee": 5.99
+        },
+        "isOpen": true,
+        "merchantId": "52205842-867c-495b-9b83-877e4aede6cd",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/52205842-867c-495b-9b83-877e4aede6cd/202003231602_wiH1_i.jpg",
+        "merchantName": "Jolly Gastro Lab",
+        "minimumOrderAmount": 20,
+        "ratingCount": 7,
+        "reviewRating": 5,
+        "straightLineDistanceKm": 0.71
+      },
+      "promotionalUnitPrice": 59.8,
+      "unitPrice": 59.8
+    },
+    {
+      "itemEan": "",
+      "itemId": "ef0005f1-c42e-4268-9b85-80de449cac75",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/82fb5c42-5f0f-41c0-8bf7-1832cd171d53/202103121854_06rk_.jpeg",
+      "itemName": "Veggie Três Marias Fest burguer",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 40,
+            "min": 30
+          },
+          "fee": 6.99,
+          "promotionalFee": 6.99
+        },
+        "isOpen": true,
+        "merchantId": "82fb5c42-5f0f-41c0-8bf7-1832cd171d53",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/82fb5c42-5f0f-41c0-8bf7-1832cd171d53/202007032012_iOia_i.png",
+        "merchantName": "Três Marias Burger & Beer",
+        "minimumOrderAmount": 15.9,
+        "ratingCount": 258,
+        "reviewRating": 4.900000095367432,
+        "straightLineDistanceKm": 0.82
+      },
+      "promotionalUnitPrice": 30.9,
+      "unitPrice": 30.9
+    },
+    {
+      "itemEan": "",
+      "itemId": "cb12e702-6cc9-4028-a45b-f0506513ef2e",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/87d7e3fc-8467-44d0-9fde-5aea373153a6/202601231552_5848_i.jpg",
+      "itemName": "Santo Duplo Crispy",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 55,
+            "min": 45
+          },
+          "fee": 5.5,
+          "promotionalFee": 5.5
+        },
+        "isOpen": true,
+        "merchantId": "87d7e3fc-8467-44d0-9fde-5aea373153a6",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/87d7e3fc-8467-44d0-9fde-5aea373153a6/202601221543_HPKm_3.png",
+        "merchantName": "Santo de Casa Veg",
+        "minimumOrderAmount": 0,
+        "ratingCount": 7,
+        "reviewRating": 5,
+        "straightLineDistanceKm": 1.34
+      },
+      "promotionalUnitPrice": 30.9,
+      "unitPrice": 30.9
+    },
+    {
+      "itemEan": "",
+      "itemId": "cb8034a5-3064-436f-b7e7-ee633551fa87",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/87d7e3fc-8467-44d0-9fde-5aea373153a6/202601231551_8T75_i.jpg",
+      "itemName": "Big Santo",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 55,
+            "min": 45
+          },
+          "fee": 5.5,
+          "promotionalFee": 5.5
+        },
+        "isOpen": true,
+        "merchantId": "87d7e3fc-8467-44d0-9fde-5aea373153a6",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/87d7e3fc-8467-44d0-9fde-5aea373153a6/202601221543_HPKm_3.png",
+        "merchantName": "Santo de Casa Veg",
+        "minimumOrderAmount": 0,
+        "ratingCount": 7,
+        "reviewRating": 5,
+        "straightLineDistanceKm": 1.34
+      },
+      "promotionalUnitPrice": 30.9,
+      "unitPrice": 30.9
+    },
+    {
+      "itemEan": "",
+      "itemId": "c51ae254-a6db-4db8-9e72-ed28ea2192fd",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/87d7e3fc-8467-44d0-9fde-5aea373153a6/202601231558_SP18_i.jpg",
+      "itemName": "Santo Cheddar",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 55,
+            "min": 45
+          },
+          "fee": 5.5,
+          "promotionalFee": 5.5
+        },
+        "isOpen": true,
+        "merchantId": "87d7e3fc-8467-44d0-9fde-5aea373153a6",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/87d7e3fc-8467-44d0-9fde-5aea373153a6/202601221543_HPKm_3.png",
+        "merchantName": "Santo de Casa Veg",
+        "minimumOrderAmount": 0,
+        "ratingCount": 7,
+        "reviewRating": 5,
+        "straightLineDistanceKm": 1.34
+      },
+      "promotionalUnitPrice": 26.9,
+      "unitPrice": 26.9
+    },
+    {
+      "itemEan": "",
+      "itemId": "4e11877c-9542-45d5-ade5-67fe85eddcb9",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/87d7e3fc-8467-44d0-9fde-5aea373153a6/202601231556_X348_i.jpg",
+      "itemName": "Santo Bacon Bbq",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 55,
+            "min": 45
+          },
+          "fee": 5.5,
+          "promotionalFee": 5.5
+        },
+        "isOpen": true,
+        "merchantId": "87d7e3fc-8467-44d0-9fde-5aea373153a6",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/87d7e3fc-8467-44d0-9fde-5aea373153a6/202601221543_HPKm_3.png",
+        "merchantName": "Santo de Casa Veg",
+        "minimumOrderAmount": 0,
+        "ratingCount": 7,
+        "reviewRating": 5,
+        "straightLineDistanceKm": 1.34
+      },
+      "promotionalUnitPrice": 26.9,
+      "unitPrice": 26.9
+    },
+    {
+      "itemEan": "",
+      "itemId": "a63fcc0a-c970-4b5a-9e82-72e309f8729e",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/87d7e3fc-8467-44d0-9fde-5aea373153a6/202601231555_6O14_i.jpg",
+      "itemName": "Santíssimo",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 55,
+            "min": 45
+          },
+          "fee": 5.5,
+          "promotionalFee": 5.5
+        },
+        "isOpen": true,
+        "merchantId": "87d7e3fc-8467-44d0-9fde-5aea373153a6",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/87d7e3fc-8467-44d0-9fde-5aea373153a6/202601221543_HPKm_3.png",
+        "merchantName": "Santo de Casa Veg",
+        "minimumOrderAmount": 0,
+        "ratingCount": 7,
+        "reviewRating": 5,
+        "straightLineDistanceKm": 1.34
+      },
+      "promotionalUnitPrice": 29.9,
+      "unitPrice": 29.9
+    },
+    {
+      "itemEan": "",
+      "itemId": "e347d76f-64ea-4aa3-a725-9f7c536a4dec",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/87d7e3fc-8467-44d0-9fde-5aea373153a6/202601231555_DU3B_i.jpg",
+      "itemName": "Black Santo",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 55,
+            "min": 45
+          },
+          "fee": 5.5,
+          "promotionalFee": 5.5
+        },
+        "isOpen": true,
+        "merchantId": "87d7e3fc-8467-44d0-9fde-5aea373153a6",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/87d7e3fc-8467-44d0-9fde-5aea373153a6/202601221543_HPKm_3.png",
+        "merchantName": "Santo de Casa Veg",
+        "minimumOrderAmount": 0,
+        "ratingCount": 7,
+        "reviewRating": 5,
+        "straightLineDistanceKm": 1.34
+      },
+      "promotionalUnitPrice": 30.9,
+      "unitPrice": 30.9
+    },
+    {
+      "itemEan": "",
+      "itemId": "b994aaf4-aaea-457e-b129-d9ca2173b4ce",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/87d7e3fc-8467-44d0-9fde-5aea373153a6/202601231557_A8BE_i.jpg",
+      "itemName": "São Duba",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 55,
+            "min": 45
+          },
+          "fee": 5.5,
+          "promotionalFee": 5.5
+        },
+        "isOpen": true,
+        "merchantId": "87d7e3fc-8467-44d0-9fde-5aea373153a6",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/87d7e3fc-8467-44d0-9fde-5aea373153a6/202601221543_HPKm_3.png",
+        "merchantName": "Santo de Casa Veg",
+        "minimumOrderAmount": 0,
+        "ratingCount": 7,
+        "reviewRating": 5,
+        "straightLineDistanceKm": 1.34
+      },
+      "promotionalUnitPrice": 37.9,
+      "unitPrice": 37.9
+    },
+    {
+      "itemEan": "",
+      "itemId": "d8468457-cb87-4d38-a65b-6f9baf07dbfb",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/87d7e3fc-8467-44d0-9fde-5aea373153a6/202601231551_H26K_i.jpg",
+      "itemName": "Australianjo",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 55,
+            "min": 45
+          },
+          "fee": 5.5,
+          "promotionalFee": 5.5
+        },
+        "isOpen": true,
+        "merchantId": "87d7e3fc-8467-44d0-9fde-5aea373153a6",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/87d7e3fc-8467-44d0-9fde-5aea373153a6/202601221543_HPKm_3.png",
+        "merchantName": "Santo de Casa Veg",
+        "minimumOrderAmount": 0,
+        "ratingCount": 7,
+        "reviewRating": 5,
+        "straightLineDistanceKm": 1.34
+      },
+      "promotionalUnitPrice": 29.9,
+      "unitPrice": 29.9
+    },
+    {
+      "itemEan": "",
+      "itemId": "90a2371a-e38d-4288-a97f-b8a2d935f767",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/87d7e3fc-8467-44d0-9fde-5aea373153a6/202601231551_8167_i.jpg",
+      "itemName": "Santo Fish",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 55,
+            "min": 45
+          },
+          "fee": 5.5,
+          "promotionalFee": 5.5
+        },
+        "isOpen": true,
+        "merchantId": "87d7e3fc-8467-44d0-9fde-5aea373153a6",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/87d7e3fc-8467-44d0-9fde-5aea373153a6/202601221543_HPKm_3.png",
+        "merchantName": "Santo de Casa Veg",
+        "minimumOrderAmount": 0,
+        "ratingCount": 7,
+        "reviewRating": 5,
+        "straightLineDistanceKm": 1.34
+      },
+      "promotionalUnitPrice": 29.9,
+      "unitPrice": 29.9
+    },
+    {
+      "itemEan": "",
+      "itemId": "25b97f42-3c90-49c4-ab28-01212a791018",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/87d7e3fc-8467-44d0-9fde-5aea373153a6/202601231552_N3OV_i.jpg",
+      "itemName": "Santão",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 55,
+            "min": 45
+          },
+          "fee": 5.5,
+          "promotionalFee": 5.5
+        },
+        "isOpen": true,
+        "merchantId": "87d7e3fc-8467-44d0-9fde-5aea373153a6",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/87d7e3fc-8467-44d0-9fde-5aea373153a6/202601221543_HPKm_3.png",
+        "merchantName": "Santo de Casa Veg",
+        "minimumOrderAmount": 0,
+        "ratingCount": 7,
+        "reviewRating": 5,
+        "straightLineDistanceKm": 1.34
+      },
+      "promotionalUnitPrice": 38.9,
+      "unitPrice": 38.9
+    },
+    {
+      "itemEan": "",
+      "itemId": "767ccbf0-ffc7-4364-a9f1-85cb7767afcb",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/87d7e3fc-8467-44d0-9fde-5aea373153a6/202601231557_3SLM_i.jpg",
+      "itemName": "Santinho",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 55,
+            "min": 45
+          },
+          "fee": 5.5,
+          "promotionalFee": 5.5
+        },
+        "isOpen": true,
+        "merchantId": "87d7e3fc-8467-44d0-9fde-5aea373153a6",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/87d7e3fc-8467-44d0-9fde-5aea373153a6/202601221543_HPKm_3.png",
+        "merchantName": "Santo de Casa Veg",
+        "minimumOrderAmount": 0,
+        "ratingCount": 7,
+        "reviewRating": 5,
+        "straightLineDistanceKm": 1.34
+      },
+      "promotionalUnitPrice": 23.9,
+      "unitPrice": 23.9
+    },
+    {
+      "itemEan": "",
+      "itemId": "549c4893-d155-4ec9-8a15-e6fb380b6d3c",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f39c7c91-4ef9-4e4d-9085-23c7acfff8d7/202412311022_C8S7_i.jpg",
+      "itemName": "Falafel Vegano",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 34,
+            "min": 19
+          },
+          "fee": 8.99,
+          "promotionalFee": 8.99
+        },
+        "isOpen": true,
+        "merchantId": "c4438085-a517-4f4a-9c91-24c245005025",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/2aa0754c-0360-47fa-9a4f-34ef19bd1314/202606091454_2Q53.jpeg",
+        "merchantName": "Madero - São Carlos",
+        "minimumOrderAmount": 30,
+        "ratingCount": 56,
+        "reviewRating": 4.800000190734863,
+        "straightLineDistanceKm": 4.45
+      },
+      "promotionalUnitPrice": 56,
+      "unitPrice": 56
+    },
+    {
+      "itemEan": "",
+      "itemId": "7d7c7a7a-ee41-42ed-b379-1245b3a70b57",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f39c7c91-4ef9-4e4d-9085-23c7acfff8d7/202412311022_C8S7_i.jpg",
+      "itemName": "Falafel Vegano",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 49,
+            "min": 34
+          },
+          "fee": 8.99,
+          "promotionalFee": 8.99
+        },
+        "isOpen": true,
+        "merchantId": "0c0eb98c-024f-48d5-86b0-d2b18ca4e863",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/0c0eb98c-024f-48d5-86b0-d2b18ca4e863/202606091452_ZURR.jpeg",
+        "merchantName": "Madero & Jeronimo - São Carlos",
+        "minimumOrderAmount": 20,
+        "ratingCount": 176,
+        "reviewRating": 4.800000190734863,
+        "straightLineDistanceKm": 4.45
+      },
+      "promotionalUnitPrice": 56,
+      "unitPrice": 56
+    }
+  ]
+}

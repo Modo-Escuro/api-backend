@@ -29,7 +29,10 @@ npm test
 
 ## Credenciais (nunca commitar, nunca logar)
 - Config existente do OpenCode: `~/.config/opencode/opencode.jsonc` (fonte única atual; há 2 clients — usar 1 só)
-- O app lê por env: `IFOOD_MCP_URL`, `IFOOD_CLIENT_ID`, `IFOOD_CLIENT_SECRET`, `IFOOD_REDIRECT_URI` (default `http://localhost:8000/callback`)
+- O app lê por env: `IFOOD_MCP_URL`, `IFOOD_CLIENT_ID`, `IFOOD_CLIENT_SECRET`, `IFOOD_REDIRECT_URI` (default `http://localhost:8000`)
+- Redirect OAuth registrado no client: **`http://localhost:8000`** — exatamente, sem barra final e sem `/callback`
+  (o AS compara `redirect_uri` literalmente). O backend trata o callback em `GET /` (e também aceita `GET /callback`)
+  e depois redireciona o navegador para `WEB_ORIGIN` (default `http://localhost:5173`).
 - Tokens OAuth: memória + arquivo `.tokens.json` em `.gitignore`. Nunca em resposta HTTP/UI.
 - O `userId` é injetado pelo gateway via token — o app nunca manipula `userId`.
 
@@ -40,6 +43,8 @@ npm test
 4. **Restrição com dados insuficientes ⇒ marcar como "não verificado"**, não concluir.
 5. **Sem checkout**: proibido `createCart` / `addItemToCart` / `submitOrder` no MVP.
 6. **Preço exibido = composição**: base (`promotionalUnitPrice` ?? `unitPrice`) + Σ `additionalPrice` das opções escolhidas; avisar se < `merchantMinimumOrderAmount`.
+   Exceção observada: quando Σ das opções obrigatórias mais baratas = `unitPrice`, a semântica é ambígua (preço "a partir de")
+   ⇒ mostrar faixa, nunca um valor único. Ver `docs/pricing-audit.md`. Todo preço é estimativa; total confirmado só no carrinho.
 7. Erros do MCP vêm inline (`errors[]` em discovery; `error` singular em cart) — mapear `code`/`retryable`, não genérico "deu erro".
 
 ## Estrutura alvo

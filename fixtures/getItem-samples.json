@@ -1,0 +1,2866 @@
+[
+  {
+    "agentHints": {
+      "nextStep": "Add this item to the active cart with the chosen quantity and any selected options."
+    },
+    "appDeeplink": "ifood://dish-details/780e72eb-fc47-4420-9416-59989207ea07/45a7249f-52b5-4d83-ab89-0424f13f88de",
+    "itemDescription": "Escolha sua pizza com mais de 20% de desconto: Presunto, Calabria, Marguerita, Indivia alla moda, Gigione e Porthoguesa, Pollastra, Al Catupiry, Presunto . Pizza grande de 8 pedaços.",
+    "itemId": "45a7249f-52b5-4d83-ab89-0424f13f88de",
+    "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/780e72eb-fc47-4420-9416-59989207ea07/201803221857_35886094.jpg",
+    "itemName": "Promoção pizza grande",
+    "merchantId": "780e72eb-fc47-4420-9416-59989207ea07",
+    "merchantMinimumOrderAmount": 30,
+    "merchantName": "Don Raffaele Pizze e Ristorante",
+    "optionGroups": [
+      {
+        "maxSelections": 2,
+        "minSelections": 2,
+        "name": "Escolha até 2 Sabores.",
+        "optionGroupId": "bdb10f6c-a571-4e87-b2bd-8ca526bd8088",
+        "options": [
+          {
+            "additionalPrice": 39,
+            "description": "Muçarela e presunto",
+            "name": "Presunto",
+            "optionId": "b9fdc6be-dd75-4d81-bf75-3dd38a204a4e"
+          },
+          {
+            "additionalPrice": 39,
+            "description": "Lombo canadense, Catupiry e muçarela",
+            "name": "Filetto canadense al Catupiry",
+            "optionId": "ff934acb-e563-446f-aadb-71060ddd9692"
+          },
+          {
+            "additionalPrice": 39,
+            "description": "Catupiry e muçarela",
+            "name": "Al Catupiry",
+            "optionId": "07e25612-4e36-4f69-b4c9-992abf97e04f"
+          },
+          {
+            "additionalPrice": 39,
+            "description": "Frango desfiado, milho, Catupiry e muçarela",
+            "name": "Pollastra",
+            "optionId": "82f6d258-31e3-4f31-9815-9d387bc6a716"
+          },
+          {
+            "additionalPrice": 39,
+            "description": "Linguiça de pernil, muçarela, tomate, manjericão e azeitonas",
+            "name": "Gigione",
+            "optionId": "6b0b877f-fc2c-402c-844d-d9f1fd40b78c"
+          },
+          {
+            "additionalPrice": 39,
+            "description": "Presunto, muçarela, palmito, ovos, ervilha, cebola e azeitona",
+            "name": "Porthoghesa",
+            "optionId": "12934fad-5f22-46fb-b9fc-04b2ec0df4f8"
+          },
+          {
+            "additionalPrice": 39,
+            "description": "Escarola, muçarela e bacon",
+            "name": "Indivia alla moda",
+            "optionId": "c28e1938-0a06-482f-9f21-068756e9ea4a"
+          },
+          {
+            "additionalPrice": 39,
+            "description": "Calabresa, muçarela, cebola, azeitona e fatias de bacon",
+            "name": "Calabria",
+            "optionId": "de32e566-53cb-4055-8b40-2e72c0e2cb3e"
+          },
+          {
+            "additionalPrice": 39,
+            "description": "Muçarela, tomate, alface temperada, maionese e bacon",
+            "name": "Insalata verde",
+            "optionId": "87f4f85a-0225-4542-ad0b-adf855d9e6d5"
+          },
+          {
+            "additionalPrice": 39,
+            "description": "Muçarela, tomate, manjericão e parmesão",
+            "name": "Margherita",
+            "optionId": "2dc4bc55-57bb-4d68-9e85-0f03e845cf4e"
+          }
+        ]
+      }
+    ],
+    "promotionalUnitPrice": 65,
+    "unitPrice": 78
+  },
+  {
+    "agentHints": {
+      "nextStep": "Add this item to the active cart with the chosen quantity and any selected options."
+    },
+    "appDeeplink": "ifood://dish-details/f0671abe-24e0-4d85-b419-caf20570a32b/7f5481e2-718c-437c-800f-455144d64000",
+    "itemDescription": "Uma pizza 4 pedaços salgada + 1 pizza 4 pedaços doce. \nBora de experiência completa? \nCombo individual! Serve 1 pessoa.",
+    "itemId": "7f5481e2-718c-437c-800f-455144d64000",
+    "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202610091929_7680_i.jpg",
+    "itemName": "Combo Individual - 1 Pizza 22cm + 1 Pizza Doce 22cm.",
+    "merchantId": "f0671abe-24e0-4d85-b419-caf20570a32b",
+    "merchantMinimumOrderAmount": 29.9,
+    "merchantName": "Tomate Cru Pizzaria",
+    "optionGroups": [
+      {
+        "maxSelections": 1,
+        "minSelections": 1,
+        "name": "Escolha sua Pizza",
+        "optionGroupId": "882e88cd-b391-4c52-9988-aa62d6bced3c",
+        "options": [
+          {
+            "additionalPrice": 3,
+            "description": "Massa tradicional ou integral com um magnífico molho artesanal a sua escolha, queijo mussarela, tomate e manjericão fresco.",
+            "name": "Marguerita",
+            "optionId": "777dd800-4549-4069-8aea-51bb1b88fb78",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202610091833_O558_i.jpg"
+          },
+          {
+            "additionalPrice": 6,
+            "description": "Massa tradicional ou integral com um magnífico molho artesanal a sua escolha, queijo mussarela, calabresa e rodelas de cebola.",
+            "name": "Calabresa",
+            "optionId": "fad65987-eda9-4c5e-ac48-00dd7ff94dc8",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202610091833_6EE7_i.jpg"
+          },
+          {
+            "additionalPrice": 10,
+            "description": "Massa tradicional ou integral com um magnífico molho artesanal a sua escolha, queijo mussarela, frango desfiado e Catupiry.",
+            "name": "Frango com Catupiry",
+            "optionId": "274ae460-6fc4-4ea2-9e70-c4e630087f76",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202610091834_Y662_i.jpg"
+          },
+          {
+            "additionalPrice": 13,
+            "description": "Massa tradicional ou integral com um magnífico molho artesanal a sua escolha, queijo mussarela, presunto, ovos de codorna, ervilha e rodelas de cebola.",
+            "name": "Portuguesa",
+            "optionId": "7cbb9e45-2215-42ee-9f25-fe69a7b4d7a2",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202610091834_1PF8_i.jpg"
+          },
+          {
+            "additionalPrice": 15,
+            "description": "Massa tradicional ou integral com um magnífico molho artesanal a sua escolha, queijo mussarela, provolone, gorgonzola e Catupiry.",
+            "name": "4 Queijos",
+            "optionId": "d814a0aa-eab0-4a4e-9702-ccefdfe957a4",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202610091835_N32T_i.jpg"
+          },
+          {
+            "additionalPrice": 20,
+            "description": "Massa tradicional ou integral com um magnífico molho artesanal a sua escolha, queijo mussarela, rodelas de pepperoni e cream cheese.",
+            "name": "Pepperoni com Cream Cheese",
+            "optionId": "f845e966-3bca-4bc9-a3e1-e0375ea2c2de",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202610091835_IDI2_i.jpg"
+          },
+          {
+            "additionalPrice": 0,
+            "description": "Massa tradicional ou integral com um magnífico molho artesanal a sua escolha e queijo mussarela.",
+            "name": "Mussarela",
+            "optionId": "cef5b711-5d95-48f4-a8d9-6b12c493962f",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202610091836_5XD4_i.jpg"
+          },
+          {
+            "additionalPrice": 10,
+            "description": "Massa tradicional ou integral com um magnífico molho artesanal a sua escolha, queijo mussarela, lombo canadense e Catupiry.",
+            "name": "Lombo com Catupiry",
+            "optionId": "73f143b8-4c7a-4093-95c2-11798b3633c5",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202610091836_R857_i.jpg"
+          },
+          {
+            "additionalPrice": 8,
+            "description": "Massa tradicional ou integral com um magnífico molho artesanal a sua escolha, queijo mussarela, rúcula fresca e tomate seco.",
+            "name": "Rúcula e Tomate Seco",
+            "optionId": "e9235471-1329-4286-a853-fa57187c7a9b",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202610091837_VR4Q_i.jpg"
+          },
+          {
+            "additionalPrice": 3,
+            "description": "Massa tradicional ou integral com um magnífico molho artesanal a sua escolha, queijo mussarela e presunto.",
+            "name": "Presunto e Mussarela",
+            "optionId": "70ab33cd-ae4b-4957-b5a0-9a6a5812966c",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202610091838_M8T8_i.jpg"
+          },
+          {
+            "additionalPrice": 10,
+            "description": "Massa tradicional ou integral com um magnífico molho artesanal a sua escolha, queijo mussarela, milho e bacon.",
+            "name": "Milho e Bacon",
+            "optionId": "c65fcc0d-c655-4336-9e9a-40efdfb49424",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202610091839_7RKQ_i.jpg"
+          },
+          {
+            "additionalPrice": 8,
+            "description": "Generosa camada de mussarela, fatias de abobrinha com azeite, finalizada com cream cheese e alho frito.",
+            "name": "Abobrinha com Alho",
+            "optionId": "e5c65c05-eafe-4e62-8f1c-4ec5b0455dcc",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202610091840_2VJY_i.jpg"
+          },
+          {
+            "additionalPrice": 15,
+            "description": "Costelinha suína com um maravilhoso molho de Barbecue, finalizada com cream cheese Olha quem está de volta!! Para delírio de todos!! Não precisa resistir... Só pede uma e você vai ver que será a melhor pizza que você irá comer na sua vida!",
+            "name": "Costelinha com Barbecue",
+            "optionId": "11dc9167-e121-45c6-8551-426e9b375552",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202610091841_4H1J_i.jpg"
+          },
+          {
+            "additionalPrice": 15,
+            "description": "Nosso espetacular molho Pesto artesanal com generosa camada de Mussarela de Búfala e rodelas de tomate. A queridinha de vocês! Combinação de uma extrema leveza e explosão de sabor!",
+            "name": "Búfala com Pesto",
+            "optionId": "42f20227-19f0-49d8-99b9-fe37479ea8c9",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202610091841_ON6I_i.jpg"
+          },
+          {
+            "additionalPrice": 15,
+            "description": "Massa tradicional ou integral com um magnífico molho artesanal a sua escolha, queijo mussarela, linguiça toscana, tomate, cebola e cream cheese.",
+            "name": "Toscana",
+            "optionId": "fbfc04c2-54b1-4819-a3fc-5e8182d79724",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202610091844_562Q_i.jpg"
+          },
+          {
+            "additionalPrice": 15,
+            "description": "Generosa camada de mussarela e deliciosos camarões marinados com receita especial da casa e finalizado com Cream Cheese e alho frito. Essa pizza chegou para invadir o seu coração e não sair mais!",
+            "name": "Camarão Com Cream Cheese",
+            "optionId": "6e2ab982-43d8-4005-b06b-b8efc7fb9360",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202610091844_P06K_i.jpg"
+          },
+          {
+            "additionalPrice": 25,
+            "description": "Massa tradicional ou integral com um magnífico molho artesanal a sua escolha, queijo mussarela, atum e Catupiry.",
+            "name": "Atum",
+            "optionId": "875e65cc-4f16-4b0f-94d1-6756d779ee90",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202610091844_QIKA_i.jpg"
+          },
+          {
+            "additionalPrice": 28,
+            "description": "Massa tradicional ou integral com um magnífico molho artesanal a sua escolha, queijo mussarela, provolone e costelinha suína finalizada com geleia de pimenta.",
+            "name": "Costela com Geleia",
+            "optionId": "fa85164a-7e2a-4bf9-a7fb-d16baa09fee2",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202610091846_1056_i.jpg"
+          }
+        ]
+      },
+      {
+        "maxSelections": 1,
+        "minSelections": 1,
+        "name": "Escolha Sua Pizza Doce",
+        "optionGroupId": "f995bc7e-32d6-4311-a751-3c7a4b2bd136",
+        "options": [
+          {
+            "additionalPrice": 0,
+            "description": "Massa fresca artesanal e muuuita Nutella!",
+            "name": "Pizza de Nutella (Campeã de Vendas)",
+            "optionId": "7eb02419-d7fe-4094-80c1-c25f90ad628c",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202609290040_W5PC_i.jpg"
+          },
+          {
+            "additionalPrice": 0,
+            "description": "Massa fresca artesanal, chocolate branco na base, muitooo farelo de Óreo e mais uma camada de chocolate branco.",
+            "name": "Pizza de Cookies & Cream (Novidade)",
+            "optionId": "aec1e06e-9cd1-4e2d-9f93-6d75dcd5aa2a",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202610091145_2KH7_i.jpg"
+          },
+          {
+            "additionalPrice": 0,
+            "description": "Massa fresca artesanal com uma camada generosa de avelã, finalizada com muuuito marshmallows fini.",
+            "name": "Pizza de Avelã com Marshmallows (Novidade)",
+            "optionId": "e34a3b1e-f795-495a-ad23-725b05288980",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202609290059_S280_i.jpg"
+          },
+          {
+            "additionalPrice": 0,
+            "description": "Massa fresca artesanal com uma base de doce de leite e banana caramelizada finalizada com amendoim.",
+            "name": "Pizza de Banoffe",
+            "optionId": "4d98ee76-9340-4b7c-9c43-f60f699323a3",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202609290055_2OKO_i.jpg"
+          },
+          {
+            "additionalPrice": 0,
+            "description": "Massa fresca artesanal, base com muito chocolate ao leite, pedaços de uva verde thompson, finalizada com tiras de chocolate branco.",
+            "name": "Pizza de Uva com Chocolate",
+            "optionId": "ee2a0362-561c-432e-9228-211f8c8b31de",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202610091148_YE4P_i.jpg"
+          },
+          {
+            "additionalPrice": 0,
+            "description": "Massa fresca artesanal, compota de morango da casa finalizada com queijo mussarela.",
+            "name": "Pizza de Compota de Morango",
+            "optionId": "d909aab5-b881-4e67-a4f6-825d548963fc",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202610091151_OB3T_i.jpg"
+          }
+        ]
+      },
+      {
+        "maxSelections": 1,
+        "minSelections": 0,
+        "name": "Que tal uma bebida?",
+        "optionGroupId": "c85df26e-5f8c-4705-9f21-33d8e85465c7",
+        "options": [
+          {
+            "additionalPrice": 4.9,
+            "name": "Água com Gas 500ml",
+            "optionId": "e913cace-15c9-47f5-8f61-6046bea257dd",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202507110007_ido8xph0jos.jpeg"
+          },
+          {
+            "additionalPrice": 4,
+            "name": "Água sem Gas 500ml",
+            "optionId": "4aa47e94-6375-4f13-ab27-b1003dcae0b5",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202507110007_wx3l1trjy2j.jpeg"
+          },
+          {
+            "additionalPrice": 17.9,
+            "name": "Coca Cola 2 litros",
+            "optionId": "a7dc99f6-3a3d-48b7-9ecf-c18b24a7a846",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202507110007_mhie2x4k9jl.jpeg"
+          },
+          {
+            "additionalPrice": 17.9,
+            "name": "Coca Cola Zero 2 litros",
+            "optionId": "427bd96e-9827-417b-b7b2-e8cd600c5803",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202507110007_k5vez9rgbcl.jpeg"
+          },
+          {
+            "additionalPrice": 11.9,
+            "name": "Coca Cola 600ml",
+            "optionId": "3cb34569-7c0e-49dc-9869-9cc246404abc",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202507110007_x4sfmmtr2l.jpeg"
+          },
+          {
+            "additionalPrice": 8.9,
+            "name": "Coca Cola Lata",
+            "optionId": "00730cb9-b2f9-425a-b075-f19fa3d8a339",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202507110007_mbhv9t2bij.jpeg"
+          },
+          {
+            "additionalPrice": 8.9,
+            "name": "Coca Cola Zero Lata",
+            "optionId": "505258ac-25d2-4165-9829-5f0017f1d2c5",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202507110007_9yvz2hws06.jpeg"
+          },
+          {
+            "additionalPrice": 8.9,
+            "name": "Fanta Guaraná Lata",
+            "optionId": "b9b409ae-6a53-49f0-809d-657f6d07e614",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202507110007_ccexyze58pv.jpeg"
+          },
+          {
+            "additionalPrice": 8.9,
+            "name": "Fanta Laranja Lata",
+            "optionId": "9c21fc30-9f60-45a1-a96c-5682eb49b3d4",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202507110007_xhvldpfc9fr.jpeg"
+          },
+          {
+            "additionalPrice": 8.9,
+            "name": "Fanta Uva Lata",
+            "optionId": "0bc72ed4-d96e-4fc2-96f8-a1f682d242fd",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202507110007_yla76fe0u2.jpeg"
+          },
+          {
+            "additionalPrice": 8.9,
+            "name": "Sprite Lata",
+            "optionId": "9eca0886-3fe5-4b3c-aadc-d8acec3b8cce",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202507110007_0m54rqtgekef.jpeg"
+          },
+          {
+            "additionalPrice": 9.9,
+            "name": "H2O - Limão 500ml",
+            "optionId": "a11d9741-39f6-4269-a461-9daa91db7f6e",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202507110007_1y51a8ezcjx.jpeg"
+          }
+        ]
+      }
+    ],
+    "promotionalUnitPrice": 59.9,
+    "unitPrice": 59.9
+  },
+  {
+    "agentHints": {
+      "nextStep": "Add this item to the active cart with the chosen quantity and any selected options."
+    },
+    "appDeeplink": "ifood://dish-details/6cd03779-c865-462d-8e42-c51bfba0dffc/ac05adb6-4091-34bd-b70d-f9ab44b9e504",
+    "itemId": "ac05adb6-4091-34bd-b70d-f9ab44b9e504",
+    "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202605161149_04R0_i.jpg",
+    "itemName": "GRANDE 2 SABORES (8 PEDAÇOS)",
+    "merchantId": "6cd03779-c865-462d-8e42-c51bfba0dffc",
+    "merchantMinimumOrderAmount": 20,
+    "merchantName": "São Carlos - Pizzaria",
+    "optionGroups": [
+      {
+        "maxSelections": 1,
+        "minSelections": 1,
+        "name": "Escolha a sua Preferência",
+        "optionGroupId": "619ae009-ce15-3f80-8397-5598bf0819c6",
+        "options": [
+          {
+            "additionalPrice": 0,
+            "name": "Massa tradicional",
+            "optionId": "aff474ba-c7d7-353f-9c2c-87a7d35b9724"
+          }
+        ]
+      },
+      {
+        "maxSelections": 1,
+        "minSelections": 1,
+        "name": "Escolha um sabor",
+        "optionGroupId": "235556b4-33fd-3bf5-99b0-a2673e4c4933",
+        "options": [
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate cm frango mussarela e mostarda",
+            "name": "1/2 Frango com  Mostarda",
+            "optionId": "462ee616-3e57-306f-9da2-7bbce68335b0",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132210_58E1_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Mussarela, provolone e mel",
+            "name": "1/2 Provolone com Mel",
+            "optionId": "9327f366-d629-3c5f-849f-ffeb7d9e75e6",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132249_51E6_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Mussarela e seleta de legumes",
+            "name": "1/2 Vegetariana",
+            "optionId": "9544fd12-6816-3565-b52a-e8a1b16dc4b1",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202311142029_14ET_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Mussarela,lombo fatiado e milho",
+            "name": "1/2 Veneza",
+            "optionId": "1ae2a6b6-e50a-35b2-a086-e9d55d9fecf2",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132223_8A44_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate,mussarela,Catupiry e provolone",
+            "name": "1/2 3 queijos",
+            "optionId": "7e8a5562-b90b-3e3f-958d-59c08520e267",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202101121438_nq4l_.jpeg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, Catupiry, provolone, gorgonzola,",
+            "name": "1/2 4 queijos",
+            "optionId": "eeace7ac-05f8-3e2d-be2d-71a77716058c",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202101121401_3TSD_.jpeg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, alho,",
+            "name": "1/2 Alho e óleo",
+            "optionId": "def78c40-9841-34cd-b4d8-b66efc3c3ba7",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202311142038_FK54_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, presunto, bacon, tomate e",
+            "name": "1/2 Americana",
+            "optionId": "c8b30e0b-88ad-3f37-9b16-1c65741509df",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132208_07M8_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, bacon",
+            "name": "1/2 Bacon",
+            "optionId": "6733a913-94e5-3ccf-a622-7804fa5d1316",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202101121405_sc1O_.jpeg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate , mussarela bacon e molho barbecue",
+            "name": "1/2 Bacon Barbecue",
+            "optionId": "ed7ed20e-d497-3a64-97a8-80702afc8a2f",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202311142055_F2Y7_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate ,mussarela, bacon e cheddar",
+            "name": "1/2 Bacon Catupiry",
+            "optionId": "7e2989d7-0ac3-382c-be48-460b681801f5",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202311142044_K4HS_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho tomate , mussarela bacon e cheddar",
+            "name": "1/2 Bacon Cheddar",
+            "optionId": "baf00638-0c73-34a8-9a5c-acdd3bd90b15",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202311142056_51FN_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate , mussarela e bacon e batata palha",
+            "name": "1/2 Bacon Crocante",
+            "optionId": "35ad3893-680e-32dd-aede-6f413ff3c9c8",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202311142057_S2PF_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate , mussarela bacon e milho",
+            "name": "1/2 Bacon Milho",
+            "optionId": "58fc84f5-0b71-3395-b219-e020cf46884d",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202311142046_P1LE_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, calabresa, pimenta, ovo, cebola",
+            "name": "1/2 Baiana",
+            "optionId": "529cfd7f-497a-335b-9d06-70034a910eb4",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132226_WWQ7_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, calabresa, milho, molho barbecue",
+            "name": "1/2 Barbecue",
+            "optionId": "38cbfd1c-f88e-3d65-9fbc-f721a4655092"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, brócolis, azeitonas, (alho frito)",
+            "name": "1/2 Brócolis",
+            "optionId": "043f780e-b8c6-3ab7-b70b-15b3a5ff1405",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202101121400_PFoC_.jpeg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate,mussarela, brócolis e Catupiry",
+            "name": "1/2 Brócolis Catupiry",
+            "optionId": "371bb527-cda9-3766-b975-bec5d0e6fb12",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202311142101_6SJ7_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, calabresa, cebola",
+            "name": "1/2 Calabresa",
+            "optionId": "74e96a00-bda2-3c1b-a58c-5ea4079e0198",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202101121350_bLkd_.jpeg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate , mussarela,calabresa e cheddar",
+            "name": "1/2 Calabresa  Cheddar",
+            "optionId": "85066200-19df-3ff8-9155-ec7da212f987",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132235_N0N2_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho tomate,Mussarela,Calabresa e alho",
+            "name": "1/2 Calabresa ao Alho",
+            "optionId": "ca127241-af6e-3718-a277-d2621ede4995",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132214_752X_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, calabresa, Catupiry",
+            "name": "1/2 Calabresa Catupiry",
+            "optionId": "ee0fa6e4-fc48-3592-a8c9-5339f70871af",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132234_1W13_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, Catupiry, tomate",
+            "name": "1/2 Catupiry",
+            "optionId": "4ccfe705-5c42-3ddf-98c7-5f3ce7800013",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132222_48HY_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, cheddar",
+            "name": "1/2 Cheddar",
+            "optionId": "82ae9cb7-0fc9-36eb-8265-9ff4ffa5f762",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132225_M80J_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate , mussarela,frango e molho barbecue",
+            "name": "1/2 Frango Barbecue",
+            "optionId": "b31f4e3b-2a8f-389c-8f64-ce85d829cfbd",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132248_3YE2_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, frango desfiado, Catupiry.",
+            "name": "1/2 Frango Catupiry",
+            "optionId": "bfaeb76b-0e20-326e-a107-7fd85c62c898",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202101121359_IJN9_.jpeg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, frango, cheddar",
+            "name": "1/2 Frango cheddar",
+            "optionId": "2c1f4eaf-5ed8-3448-8959-a3a1f9112ce8",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132248_047N_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate , mussarela, frango e batata palha",
+            "name": "1/2 Frango Crocante",
+            "optionId": "0578bd5b-8287-32f4-a949-6d8d8300af6b",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132248_3TU8_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate , mussarela,frango e milho",
+            "name": "1/2 Frango Milho",
+            "optionId": "9ae45125-fed8-3ec8-ad3e-e6f164a5e60f",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132216_A8ES_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate , mussarela,lombo e cebola",
+            "name": "1/2 Lombo Acebolado",
+            "optionId": "07936837-6fcf-3e9a-8fcb-ce831deca1ca",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132235_3W33_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, lombo canadense, molho barbecue",
+            "name": "1/2 Lombo ao barbecue",
+            "optionId": "6bedc222-931b-3801-b26c-7aaa70d48610",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132247_836A_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, lombo canadense, Catupiry e",
+            "name": "1/2 Lombo Catupiry",
+            "optionId": "ed59a7dc-47e8-3ae5-b40f-907e7ab9cd7e",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202101121359_bMBk_.jpeg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate , mussarela, lombo e batata palha",
+            "name": "1/2 Lombo Crocante",
+            "optionId": "22c98c4b-757e-3cd1-8a79-5b558c063fb0",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132247_RV6L_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, lombo canadense, manjericão",
+            "name": "1/2 Lombo manjericão",
+            "optionId": "d104b588-e920-3b85-a461-49a772e85584",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132237_N7OA_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, manjericão, tomate, parmesão",
+            "name": "1/2 Marguerita",
+            "optionId": "81cb3849-8942-324e-9214-3e0e0ee248f2",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202101121358_RrYV_.jpeg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, milho, bacon",
+            "name": "1/2 Milho bacon",
+            "optionId": "5d0180c1-bcd3-3034-b11c-3935256732bd",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202102121148_Csdd_f.png"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, tomate",
+            "name": "1/2 Mussarela",
+            "optionId": "b346451d-d1fa-3a5f-b5f1-921a7e3aa2f6",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202101121404_kJLF_.jpeg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, palmito e Catupiry",
+            "name": "1/2 Palmito Catupiry",
+            "optionId": "c2fcda52-d156-3ae4-9640-d2c3556d5e20",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132229_C57V_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, presunto,  ervilha, cebola",
+            "name": "1/2 Portuguesa",
+            "optionId": "9c68d69e-040e-34da-b2b0-acebda23cb53",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132215_LL3P_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, presunto, tomate e azeitonas",
+            "name": "1/2 Presunto",
+            "optionId": "27a5beb6-a70e-36e8-8bde-598dd324b1c0",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132212_BPNI_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate , mussarela, presunto e Catupiry",
+            "name": "1/2 Presunto Catupiry",
+            "optionId": "e7416b41-db60-3fe5-a764-d5b6bb935643",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132230_B822_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate , mussarela, presunto e batata palha",
+            "name": "1/2 Presunto Crocante",
+            "optionId": "e014e2ca-deed-379b-965c-e7a33f7514c1",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132238_88EP_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, calabresa, Catupiry, bacon e azeitonas",
+            "name": "1/2 Toscana",
+            "optionId": "bd6a2bbd-23e2-34c4-b83f-86f1f8bb3ea8",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132217_815F_i.jpg"
+          }
+        ]
+      },
+      {
+        "maxSelections": 1,
+        "minSelections": 1,
+        "name": "Escolha o segundo sabor",
+        "optionGroupId": "333f704e-bdc7-3a54-a658-43dcc34c79c2",
+        "options": [
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate cm frango mussarela e mostarda",
+            "name": "1/2 Frango com  Mostarda",
+            "optionId": "6526038d-bba0-30c9-98ac-041ee22801ef",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132210_58E1_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Mussarela, provolone e mel",
+            "name": "1/2 Provolone com Mel",
+            "optionId": "d3061468-569f-3f9e-8fb1-d2ee3e695219",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132249_51E6_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Mussarela e seleta de legumes",
+            "name": "1/2 Vegetariana",
+            "optionId": "acc2a1ed-2d85-3f69-bf4c-6d160755a3a3",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202311142029_14ET_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Mussarela,lombo fatiado e milho",
+            "name": "1/2 Veneza",
+            "optionId": "36ea0ae6-9e5b-3793-8d39-a88269d1d434",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132223_8A44_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate,mussarela,Catupiry e provolone",
+            "name": "1/2 3 queijos",
+            "optionId": "980c1d13-f1df-31d6-a33c-f9af1df0be39",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202101121438_nq4l_.jpeg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, Catupiry, provolone, gorgonzola,",
+            "name": "1/2 4 queijos",
+            "optionId": "dda0fe21-e70f-3e83-bd3b-024ba78c7edd",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202101121401_3TSD_.jpeg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, alho,",
+            "name": "1/2 Alho e óleo",
+            "optionId": "4e02db60-1a15-336a-8fde-7966e4bc77f7",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202311142038_FK54_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, presunto, bacon, tomate e",
+            "name": "1/2 Americana",
+            "optionId": "86942743-a585-341b-b8d9-dab767ad60f6",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132208_07M8_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, bacon",
+            "name": "1/2 Bacon",
+            "optionId": "67fb0110-1408-3350-8f60-c38daca24b76",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202101121405_sc1O_.jpeg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate , mussarela bacon e molho barbecue",
+            "name": "1/2 Bacon Barbecue",
+            "optionId": "b35672ec-8319-38ca-99bb-c1a900dfff22",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202311142055_F2Y7_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate ,mussarela, bacon e cheddar",
+            "name": "1/2 Bacon Catupiry",
+            "optionId": "59796d85-3007-3ecf-8605-a5d2fcae9720",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202311142044_K4HS_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho tomate , mussarela bacon e cheddar",
+            "name": "1/2 Bacon Cheddar",
+            "optionId": "8fd66447-53cd-33ab-a7ee-df5e9feb2570",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202311142056_51FN_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate , mussarela e bacon e batata palha",
+            "name": "1/2 Bacon Crocante",
+            "optionId": "0e409a9d-ec8e-3e62-a16f-6e86a5ec42dc",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202311142057_S2PF_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate , mussarela bacon e milho",
+            "name": "1/2 Bacon Milho",
+            "optionId": "b86d3893-2eee-38ed-99ad-dc98ad1fb688",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202311142046_P1LE_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, calabresa, pimenta, ovo, cebola",
+            "name": "1/2 Baiana",
+            "optionId": "a8cbfafb-ec12-3673-8e61-0951e001a214",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132226_WWQ7_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, calabresa, milho, molho barbecue",
+            "name": "1/2 Barbecue",
+            "optionId": "115c17ae-eb20-3018-b579-6b1656c948ed"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, brócolis, azeitonas, (alho frito)",
+            "name": "1/2 Brócolis",
+            "optionId": "27271766-cc08-330d-b49b-59a3a20daf46",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202101121400_PFoC_.jpeg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate,mussarela, brócolis e Catupiry",
+            "name": "1/2 Brócolis Catupiry",
+            "optionId": "2001b4f7-f5ad-3df0-9cbe-b0cc48b5a35a",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202311142101_6SJ7_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, calabresa, cebola",
+            "name": "1/2 Calabresa",
+            "optionId": "1c1a3d0d-9f2b-3b99-9455-4a108e5a633a",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202101121350_bLkd_.jpeg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate , mussarela,calabresa e cheddar",
+            "name": "1/2 Calabresa  Cheddar",
+            "optionId": "ec347e24-35e9-3e04-ac6e-bb97f793f9e1",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132235_N0N2_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho tomate,Mussarela,Calabresa e alho",
+            "name": "1/2 Calabresa ao Alho",
+            "optionId": "4cdaa57d-a9f5-37fa-b45f-ccc0ffa7554d",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132214_752X_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, calabresa, Catupiry",
+            "name": "1/2 Calabresa Catupiry",
+            "optionId": "f33b997e-5801-3632-9560-4f5fb7b17c5b",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132234_1W13_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, Catupiry, tomate",
+            "name": "1/2 Catupiry",
+            "optionId": "da1d6da3-0c94-3095-8851-f214229c3cf5",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132222_48HY_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, cheddar",
+            "name": "1/2 Cheddar",
+            "optionId": "3e49e9db-839d-30f0-bf01-eea1fbc4b84d",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132225_M80J_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate , mussarela,frango e molho barbecue",
+            "name": "1/2 Frango Barbecue",
+            "optionId": "9dc87c88-c2d0-3267-a438-673c55d7aef4",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132248_3YE2_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, frango desfiado, Catupiry.",
+            "name": "1/2 Frango Catupiry",
+            "optionId": "822b8dfc-b71c-3f2f-858a-fbb237abb421",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202101121359_IJN9_.jpeg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, frango, cheddar",
+            "name": "1/2 Frango cheddar",
+            "optionId": "a6f37f38-05bb-3c46-ba3d-2fa4592f37a2",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132248_047N_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate , mussarela, frango e batata palha",
+            "name": "1/2 Frango Crocante",
+            "optionId": "c2b70225-eadc-3fc4-a1ed-7dc6a09175cc",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132248_3TU8_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate , mussarela,frango e milho",
+            "name": "1/2 Frango Milho",
+            "optionId": "f01586bb-467b-3547-995c-96e61965d024",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132216_A8ES_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate , mussarela,lombo e cebola",
+            "name": "1/2 Lombo Acebolado",
+            "optionId": "bb88f583-127e-354c-9cb3-c859fdaf5134",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132235_3W33_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, lombo canadense, molho barbecue",
+            "name": "1/2 Lombo ao barbecue",
+            "optionId": "84780339-4110-33e0-9733-1b1ef729d4a7",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132247_836A_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, lombo canadense, Catupiry e",
+            "name": "1/2 Lombo Catupiry",
+            "optionId": "ad56c731-3ce6-3dfb-b4d4-2853279f5923",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202101121359_bMBk_.jpeg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate , mussarela, lombo e batata palha",
+            "name": "1/2 Lombo Crocante",
+            "optionId": "08034049-7872-33e2-a72f-3ab0e54363c4",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132247_RV6L_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, lombo canadense, manjericão",
+            "name": "1/2 Lombo manjericão",
+            "optionId": "d5ea29f8-c3e8-3d6e-a603-6fd7c98a45c8",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132237_N7OA_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, manjericão, tomate, parmesão",
+            "name": "1/2 Marguerita",
+            "optionId": "23853fab-cdaf-3a1a-ab65-110983ba41bf",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202101121358_RrYV_.jpeg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, milho, bacon",
+            "name": "1/2 Milho bacon",
+            "optionId": "17f5c013-ccbe-3947-b219-2bddec2d0e58",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202102121148_Csdd_f.png"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, tomate",
+            "name": "1/2 Mussarela",
+            "optionId": "68136e56-2704-3c56-aee7-acd23bb4c9e1",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/42f27c3b-7ad9-4139-8866-cc580dfb60e0/202101121404_kJLF_.jpeg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, palmito e Catupiry",
+            "name": "1/2 Palmito Catupiry",
+            "optionId": "f5b0200d-67b3-3d4a-9de8-113c92e11721",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132229_C57V_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, presunto,  ervilha, cebola",
+            "name": "1/2 Portuguesa",
+            "optionId": "e24721d1-875f-3bcf-8da5-866fa8838f06",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132215_LL3P_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, mussarela, presunto, tomate e azeitonas",
+            "name": "1/2 Presunto",
+            "optionId": "583ec478-1f1e-37b2-a7ed-f66bbd2fac50",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132212_BPNI_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate , mussarela, presunto e Catupiry",
+            "name": "1/2 Presunto Catupiry",
+            "optionId": "415493f8-e2a1-33ab-892b-71adf4def6de",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132230_B822_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate , mussarela, presunto e batata palha",
+            "name": "1/2 Presunto Crocante",
+            "optionId": "a5e68482-53e1-3d73-a3fa-f9752b3adf20",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132238_88EP_i.jpg"
+          },
+          {
+            "additionalPrice": 22.49,
+            "description": "Molho de tomate, calabresa, Catupiry, bacon e azeitonas",
+            "name": "1/2 Toscana",
+            "optionId": "8544d447-8a7a-3e47-91cc-9ff327096b10",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202410132217_815F_i.jpg"
+          }
+        ]
+      }
+    ],
+    "promotionalUnitPrice": 44.98,
+    "unitPrice": 44.98
+  },
+  {
+    "agentHints": {
+      "nextStep": "Add this item to the active cart with the chosen quantity and any selected options."
+    },
+    "appDeeplink": "ifood://dish-details/780e72eb-fc47-4420-9416-59989207ea07/8fabb93b-6ce8-3a05-9180-588665c9cce8",
+    "itemId": "8fabb93b-6ce8-3a05-9180-588665c9cce8",
+    "itemName": "GRANDE 2 SABORES",
+    "merchantId": "780e72eb-fc47-4420-9416-59989207ea07",
+    "merchantMinimumOrderAmount": 30,
+    "merchantName": "Don Raffaele Pizze e Ristorante",
+    "optionGroups": [
+      {
+        "maxSelections": 1,
+        "minSelections": 1,
+        "name": "Escolha a sua Preferência",
+        "optionGroupId": "a8e8932f-a232-3dcc-b4fe-3daa0d68ac7c",
+        "options": [
+          {
+            "additionalPrice": 0,
+            "name": "MASSA TRADICIONAL",
+            "optionId": "08fcfb55-0ebc-36c8-80b5-3753c463e5c1"
+          }
+        ]
+      },
+      {
+        "maxSelections": 1,
+        "minSelections": 1,
+        "name": "Escolha um sabor",
+        "optionGroupId": "a8e01c89-963a-3217-af57-0a39b43462f3",
+        "options": [
+          {
+            "additionalPrice": 40.5,
+            "description": "Banana fatiada, açucar, canela e mussarela",
+            "name": "1/2 Tropicale",
+            "optionId": "feed0ea0-6f03-31e7-a48e-a944f9000d1d",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/780e72eb-fc47-4420-9416-59989207ea07/202205190915_5227_i.jpg"
+          },
+          {
+            "additionalPrice": 39,
+            "description": "Muçarela e geleia de goiaba",
+            "name": "1/2 ROMEU E GIULIETTA",
+            "optionId": "d43e73fa-223a-325f-acb9-df482b94fe71"
+          },
+          {
+            "additionalPrice": 39,
+            "description": "Chocolate e coco ralado",
+            "name": "1/2 PRESTIGIO",
+            "optionId": "d55da71e-36ae-3b0f-9f21-e5a193935870"
+          },
+          {
+            "additionalPrice": 39,
+            "description": "Chocolate, cereja e coberta com granulado",
+            "name": "1/2 CIOCCOLATA",
+            "optionId": "6a06240c-e0e5-3594-bf17-bf19861b2e76"
+          },
+          {
+            "additionalPrice": 42,
+            "description": "Lombo canadense, figo, pêssego e geleia de goiaba",
+            "name": "1/2 CALIFORNIA",
+            "optionId": "61abfc5e-3b73-3367-a6a7-8ca2a8988228",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/780e72eb-fc47-4420-9416-59989207ea07/202205190916_U4TU_i.jpg"
+          }
+        ]
+      },
+      {
+        "maxSelections": 1,
+        "minSelections": 1,
+        "name": "Escolha o segundo sabor",
+        "optionGroupId": "af4f5e44-4d71-3953-81aa-9dbd809e2bc4",
+        "options": [
+          {
+            "additionalPrice": 40.5,
+            "description": "Banana fatiada, açucar, canela e mussarela",
+            "name": "1/2 Tropicale",
+            "optionId": "85a32fe4-4ff1-3b7e-a295-8fed8858dbb0",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/780e72eb-fc47-4420-9416-59989207ea07/202205190915_5227_i.jpg"
+          },
+          {
+            "additionalPrice": 39,
+            "description": "Muçarela e geleia de goiaba",
+            "name": "1/2 ROMEU E GIULIETTA",
+            "optionId": "5e7c8290-2bc1-3342-b36a-5c840b5e280e"
+          },
+          {
+            "additionalPrice": 39,
+            "description": "Chocolate e coco ralado",
+            "name": "1/2 PRESTIGIO",
+            "optionId": "a05b1557-1fa0-3759-acd1-1a34ffdaa7ae"
+          },
+          {
+            "additionalPrice": 39,
+            "description": "Chocolate, cereja e coberta com granulado",
+            "name": "1/2 CIOCCOLATA",
+            "optionId": "b8e056bf-454b-3184-88d3-86d2723a5c20"
+          },
+          {
+            "additionalPrice": 42,
+            "description": "Lombo canadense, figo, pêssego e geleia de goiaba",
+            "name": "1/2 CALIFORNIA",
+            "optionId": "8feb3e73-0310-3319-9886-79c241bee303",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/780e72eb-fc47-4420-9416-59989207ea07/202205190916_U4TU_i.jpg"
+          }
+        ]
+      }
+    ],
+    "promotionalUnitPrice": 78,
+    "unitPrice": 78
+  },
+  {
+    "agentHints": {
+      "nextStep": "Add this item to the active cart with the chosen quantity and any selected options."
+    },
+    "appDeeplink": "ifood://dish-details/82fb5c42-5f0f-41c0-8bf7-1832cd171d53/c29bfc17-0c56-4925-9298-93c946c39075",
+    "itemDescription": "Vegano - Hambúrguer de sua escolha, muçarela, tomate, alface americana, rúcula, cebola roxa e maionese.",
+    "itemId": "c29bfc17-0c56-4925-9298-93c946c39075",
+    "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/82fb5c42-5f0f-41c0-8bf7-1832cd171d53/202101101710_W0yu_.jpeg",
+    "itemName": "Maria salada Veg",
+    "merchantId": "82fb5c42-5f0f-41c0-8bf7-1832cd171d53",
+    "merchantMinimumOrderAmount": 15.9,
+    "merchantName": "Três Marias Burger & Beer",
+    "optionGroups": [
+      {
+        "maxSelections": 1,
+        "minSelections": 1,
+        "name": "Confirme sua opção:",
+        "optionGroupId": "565fb500-7179-459b-99f1-8dba34e4b39f",
+        "options": [
+          {
+            "additionalPrice": 0,
+            "name": "Lanche Totalmente Vegano",
+            "optionId": "569aeacf-4d17-4983-b6ae-4b3b2595685f"
+          }
+        ]
+      },
+      {
+        "maxSelections": 1,
+        "minSelections": 1,
+        "name": "Escolha seu hamburguer",
+        "optionGroupId": "0a53166b-1fbc-4cdf-b998-fc95e9012507",
+        "options": [
+          {
+            "additionalPrice": 0,
+            "name": "Feijão Roxo",
+            "optionId": "51d9d0c5-3f3a-4f01-8769-d6c4ed73a9fa"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Grão de bico c/ castanha do pará",
+            "optionId": "076ad435-eb09-49e1-8a04-62d1550b3762"
+          },
+          {
+            "additionalPrice": 3,
+            "name": "Hambúrguer do futuro",
+            "optionId": "994f774a-b030-4788-bd06-4ff6eba891a6"
+          }
+        ]
+      },
+      {
+        "maxSelections": 1,
+        "minSelections": 1,
+        "name": "Combo Batata P",
+        "optionGroupId": "0805401e-d02e-4fc0-9f98-39904d791885",
+        "options": [
+          {
+            "additionalPrice": 8.9,
+            "description": "Atenção, fritas pode chegar não crocante devido ao vapor que fica na embalagem e bag do entregador.",
+            "name": "Batata Frita P",
+            "optionId": "d8a26d0c-fbaf-40b9-b6fb-1351712331a1",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/82fb5c42-5f0f-41c0-8bf7-1832cd171d53/202303311545_52NM_i.jpg"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Nenhum combo",
+            "optionId": "0db7c489-e5cf-4132-a59c-7e1b1b941dd5"
+          }
+        ]
+      },
+      {
+        "maxSelections": 5,
+        "minSelections": 0,
+        "name": "Adicionais",
+        "optionGroupId": "6d6c2448-d79d-4e44-9bb9-14937f239f64",
+        "options": [
+          {
+            "additionalPrice": 3,
+            "name": "Cebola Crispy",
+            "optionId": "d6f9b039-5c3c-4049-8261-f0ced1385cfd"
+          },
+          {
+            "additionalPrice": 4,
+            "name": "Bacon crocante vegano",
+            "optionId": "494d9caf-3508-4fc0-9e56-b21d1421376d"
+          },
+          {
+            "additionalPrice": 4,
+            "name": "Muçarela vegana",
+            "optionId": "7ab07fbb-0490-4499-ba47-34bb6e0d78b8"
+          },
+          {
+            "additionalPrice": 2.5,
+            "name": "Molho barbecue vegano",
+            "optionId": "9f8fd4a3-248a-448e-a054-02c8567164de"
+          },
+          {
+            "additionalPrice": 3,
+            "name": "Picles",
+            "optionId": "413c569d-72e8-4c32-ae7b-2b8922ec4ce0"
+          },
+          {
+            "additionalPrice": 2.5,
+            "name": "Alface Americana",
+            "optionId": "e40f24c2-e60f-4f57-9983-10673ad48890"
+          },
+          {
+            "additionalPrice": 2.5,
+            "name": "Rúcula",
+            "optionId": "6258a5e7-12dd-4f6d-94e3-7022d4eb460a"
+          },
+          {
+            "additionalPrice": 2,
+            "name": "Tomate",
+            "optionId": "6db021b0-5a3e-4383-9147-543c1f7408da"
+          },
+          {
+            "additionalPrice": 2.5,
+            "name": "Cebola Roxa",
+            "optionId": "f41f857b-91a9-490f-bd84-3466638c7927"
+          }
+        ]
+      },
+      {
+        "maxSelections": 1,
+        "minSelections": 1,
+        "name": "Gostaria de molhos?",
+        "optionGroupId": "bbe39262-df4c-4902-8c77-797cf673c232",
+        "options": [
+          {
+            "additionalPrice": 0,
+            "name": "Ketchup",
+            "optionId": "07611e56-92d4-4213-b275-ad55be1975bb"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Nenhum molho",
+            "optionId": "fe098664-510c-4ec1-ab78-00bf7de1c86b"
+          }
+        ]
+      },
+      {
+        "maxSelections": 5,
+        "minSelections": 0,
+        "name": "Molhos adicionais",
+        "optionGroupId": "403f1a39-cd25-4d6a-b74a-439ef85bdba8",
+        "options": [
+          {
+            "additionalPrice": 2.5,
+            "name": "+Molho barbecue vegano*",
+            "optionId": "b9250b18-ce1b-4d1a-a02e-9d79ca59a3e9"
+          },
+          {
+            "additionalPrice": 2.5,
+            "name": "+Molho de pimenta*",
+            "optionId": "f9b52a45-6744-4827-85a6-805e27b36ab6"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Não",
+            "optionId": "9c48950f-4d22-4ebe-850b-489789b98504"
+          }
+        ]
+      }
+    ],
+    "promotionalUnitPrice": 29.9,
+    "unitPrice": 29.9
+  },
+  {
+    "agentHints": {
+      "nextStep": "Add this item to the active cart with the chosen quantity and any selected options."
+    },
+    "appDeeplink": "ifood://dish-details/14b56719-889c-4541-9153-01296c67a4b5/6c3194f8-e4f5-4d64-9211-7636758e62ec",
+    "itemDescription": "Burger de kibe (base de soja), rúcula, tomate cereja, sour cream vegano e cebola crispy. No pão francês redondo.",
+    "itemId": "6c3194f8-e4f5-4d64-9211-7636758e62ec",
+    "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/14b56719-889c-4541-9153-01296c67a4b5/202011221755_FubG_.jpeg",
+    "itemName": "Vegano Brooks",
+    "merchantId": "14b56719-889c-4541-9153-01296c67a4b5",
+    "merchantMinimumOrderAmount": 20,
+    "merchantName": "HAMBURGUERIA BROOKS ",
+    "optionGroups": [
+      {
+        "maxSelections": 1,
+        "minSelections": 0,
+        "name": "Escolha o acompanhamento",
+        "optionGroupId": "7acd2679-5f34-4013-89df-379627b6e137",
+        "options": [
+          {
+            "additionalPrice": 6.9,
+            "name": "Batata Croc Croc (chips)",
+            "optionId": "51bc13fb-b7f0-44dc-86d2-f7d3f5d261d4"
+          },
+          {
+            "additionalPrice": 7.9,
+            "name": "Batata Crinkle",
+            "optionId": "54fca5b4-915c-449b-a1cc-dbe354324132"
+          },
+          {
+            "additionalPrice": 8.9,
+            "name": "Anéis de cebola (acompanhamento)",
+            "optionId": "6a1acf4c-b827-468e-b2b8-680effa75f74"
+          },
+          {
+            "additionalPrice": 10.9,
+            "name": "Nuggets de frango",
+            "optionId": "99ac5cef-203b-4ab9-a44f-a07516fa376b"
+          }
+        ]
+      },
+      {
+        "maxSelections": 1,
+        "minSelections": 1,
+        "name": "Descartáveis",
+        "optionGroupId": "c3d63a59-201a-44d2-822c-37282d4740e6",
+        "options": [
+          {
+            "additionalPrice": 0,
+            "description": "Guardanapo / sal / pazinha",
+            "name": "Desejo descartáveis",
+            "optionId": "f1375d3d-362e-4066-ad5d-0c3c5d607691"
+          },
+          {
+            "additionalPrice": 0,
+            "description": "Guardanapo / sal / pazinha",
+            "name": "Não desejo descartáveis",
+            "optionId": "168983a0-973f-4493-ab00-cf6bd36c5874"
+          }
+        ]
+      }
+    ],
+    "promotionalUnitPrice": 42.9,
+    "unitPrice": 42.9
+  },
+  {
+    "agentHints": {
+      "nextStep": "Add this item to the active cart with the chosen quantity and any selected options."
+    },
+    "appDeeplink": "ifood://dish-details/52205842-867c-495b-9b83-877e4aede6cd/7722b351-85e0-4563-b0dd-ec77c1bcb801",
+    "itemDescription": "Pão sem glúten e sem lactose, hambúrguer de grão de bico, queijo artesanal de mandioca, rúcula, alface e tomate",
+    "itemId": "7722b351-85e0-4563-b0dd-ec77c1bcb801",
+    "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/52205842-867c-495b-9b83-877e4aede6cd/202511071912_65M0_i.jpg",
+    "itemName": "Veggie Burger",
+    "merchantId": "52205842-867c-495b-9b83-877e4aede6cd",
+    "merchantMinimumOrderAmount": 20,
+    "merchantName": "Jolly Gastro Lab",
+    "optionGroups": [],
+    "promotionalUnitPrice": 59.8,
+    "unitPrice": 59.8
+  },
+  {
+    "agentHints": {
+      "nextStep": "Add this item to the active cart with the chosen quantity and any selected options."
+    },
+    "appDeeplink": "ifood://dish-details/82fb5c42-5f0f-41c0-8bf7-1832cd171d53/ef0005f1-c42e-4268-9b85-80de449cac75",
+    "itemDescription": "Vegano - Lanche participante e finalista do Evento Fest Burger! - Hambúrguer da sua escolha, muçarela vegana, molho barbecue, bacon crocante veg, cebola crispy, tomate e maionese.",
+    "itemId": "ef0005f1-c42e-4268-9b85-80de449cac75",
+    "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/82fb5c42-5f0f-41c0-8bf7-1832cd171d53/202103121854_06rk_.jpeg",
+    "itemName": "Veggie Três Marias Fest burguer",
+    "merchantId": "82fb5c42-5f0f-41c0-8bf7-1832cd171d53",
+    "merchantMinimumOrderAmount": 15.9,
+    "merchantName": "Três Marias Burger & Beer",
+    "optionGroups": [
+      {
+        "maxSelections": 1,
+        "minSelections": 1,
+        "name": "Confirme sua opção:",
+        "optionGroupId": "565fb500-7179-459b-99f1-8dba34e4b39f",
+        "options": [
+          {
+            "additionalPrice": 0,
+            "name": "Lanche Totalmente Vegano",
+            "optionId": "569aeacf-4d17-4983-b6ae-4b3b2595685f"
+          }
+        ]
+      },
+      {
+        "maxSelections": 1,
+        "minSelections": 1,
+        "name": "Escolha seu hamburguer",
+        "optionGroupId": "0a53166b-1fbc-4cdf-b998-fc95e9012507",
+        "options": [
+          {
+            "additionalPrice": 0,
+            "name": "Feijão Roxo",
+            "optionId": "51d9d0c5-3f3a-4f01-8769-d6c4ed73a9fa"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Grão de bico c/ castanha do pará",
+            "optionId": "076ad435-eb09-49e1-8a04-62d1550b3762"
+          },
+          {
+            "additionalPrice": 3,
+            "name": "Hambúrguer do futuro",
+            "optionId": "994f774a-b030-4788-bd06-4ff6eba891a6"
+          }
+        ]
+      },
+      {
+        "maxSelections": 1,
+        "minSelections": 1,
+        "name": "Combo Batata P",
+        "optionGroupId": "0805401e-d02e-4fc0-9f98-39904d791885",
+        "options": [
+          {
+            "additionalPrice": 8.9,
+            "description": "Atenção, fritas pode chegar não crocante devido ao vapor que fica na embalagem e bag do entregador.",
+            "name": "Batata Frita P",
+            "optionId": "d8a26d0c-fbaf-40b9-b6fb-1351712331a1",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/82fb5c42-5f0f-41c0-8bf7-1832cd171d53/202303311545_52NM_i.jpg"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Nenhum combo",
+            "optionId": "0db7c489-e5cf-4132-a59c-7e1b1b941dd5"
+          }
+        ]
+      },
+      {
+        "maxSelections": 5,
+        "minSelections": 0,
+        "name": "Adicionais",
+        "optionGroupId": "6d6c2448-d79d-4e44-9bb9-14937f239f64",
+        "options": [
+          {
+            "additionalPrice": 3,
+            "name": "Cebola Crispy",
+            "optionId": "d6f9b039-5c3c-4049-8261-f0ced1385cfd"
+          },
+          {
+            "additionalPrice": 4,
+            "name": "Bacon crocante vegano",
+            "optionId": "494d9caf-3508-4fc0-9e56-b21d1421376d"
+          },
+          {
+            "additionalPrice": 4,
+            "name": "Muçarela vegana",
+            "optionId": "7ab07fbb-0490-4499-ba47-34bb6e0d78b8"
+          },
+          {
+            "additionalPrice": 2.5,
+            "name": "Molho barbecue vegano",
+            "optionId": "9f8fd4a3-248a-448e-a054-02c8567164de"
+          },
+          {
+            "additionalPrice": 3,
+            "name": "Picles",
+            "optionId": "413c569d-72e8-4c32-ae7b-2b8922ec4ce0"
+          },
+          {
+            "additionalPrice": 2.5,
+            "name": "Alface Americana",
+            "optionId": "e40f24c2-e60f-4f57-9983-10673ad48890"
+          },
+          {
+            "additionalPrice": 2.5,
+            "name": "Rúcula",
+            "optionId": "6258a5e7-12dd-4f6d-94e3-7022d4eb460a"
+          },
+          {
+            "additionalPrice": 2,
+            "name": "Tomate",
+            "optionId": "6db021b0-5a3e-4383-9147-543c1f7408da"
+          },
+          {
+            "additionalPrice": 2.5,
+            "name": "Cebola Roxa",
+            "optionId": "f41f857b-91a9-490f-bd84-3466638c7927"
+          }
+        ]
+      },
+      {
+        "maxSelections": 1,
+        "minSelections": 1,
+        "name": "Gostaria de molhos?",
+        "optionGroupId": "bbe39262-df4c-4902-8c77-797cf673c232",
+        "options": [
+          {
+            "additionalPrice": 0,
+            "name": "Ketchup",
+            "optionId": "07611e56-92d4-4213-b275-ad55be1975bb"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Nenhum molho",
+            "optionId": "fe098664-510c-4ec1-ab78-00bf7de1c86b"
+          }
+        ]
+      },
+      {
+        "maxSelections": 5,
+        "minSelections": 0,
+        "name": "Molhos adicionais",
+        "optionGroupId": "403f1a39-cd25-4d6a-b74a-439ef85bdba8",
+        "options": [
+          {
+            "additionalPrice": 2.5,
+            "name": "+Molho barbecue vegano*",
+            "optionId": "b9250b18-ce1b-4d1a-a02e-9d79ca59a3e9"
+          },
+          {
+            "additionalPrice": 2.5,
+            "name": "+Molho de pimenta*",
+            "optionId": "f9b52a45-6744-4827-85a6-805e27b36ab6"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Não",
+            "optionId": "9c48950f-4d22-4ebe-850b-489789b98504"
+          }
+        ]
+      }
+    ],
+    "promotionalUnitPrice": 30.9,
+    "unitPrice": 30.9
+  },
+  {
+    "agentHints": {
+      "nextStep": "Add this item to the active cart with the chosen quantity and any selected options."
+    },
+    "appDeeplink": "ifood://dish-details/cb916f48-d654-4651-857e-1dda3d91a741/6f34fe9d-d7a1-406f-a9f3-1f7b02da56d7",
+    "itemDescription": "Copo de açaí 500 ml: sugerimos a escolha de até 5 toppings. Nossos oaks são enviados montados - toppings não poderão ser enviados à parte. – foto ilustrativa",
+    "itemId": "6f34fe9d-d7a1-406f-a9f3-1f7b02da56d7",
+    "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202307101353_2K0U_i.jpg",
+    "itemName": "Açaí Bowl Works (500ml)",
+    "merchantId": "cb916f48-d654-4651-857e-1dda3d91a741",
+    "merchantMinimumOrderAmount": 15,
+    "merchantName": "Oakberry Açaí - São Carlos",
+    "optionGroups": [
+      {
+        "maxSelections": 5,
+        "minSelections": 1,
+        "name": "Escolha até 5 toppings:",
+        "optionGroupId": "eb3e5c67-47e2-4f97-9478-5f75b6eeb99b",
+        "options": [
+          {
+            "additionalPrice": 0,
+            "description": "Quero apenas o açaí, sem complementos.",
+            "name": "Não desejo toppings",
+            "optionId": "cb2d3cb0-6781-4284-865f-243352883880",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/a7d7f819-ec20-4d67-9e45-0ec393137ba3/202508261809_2M74_i.jpg"
+          },
+          {
+            "additionalPrice": 0,
+            "description": "Produto vegano. Contém glúten.",
+            "name": "Amendoim (16g)",
+            "optionId": "0738e48c-0c57-4cb6-9651-4808ce441f93",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202408301034_5G20_i.jpg"
+          },
+          {
+            "additionalPrice": 0,
+            "description": "Produto vegano. Contém glúten.",
+            "name": "Aveia (21g)",
+            "optionId": "6ea21fcc-fdbb-41ff-a475-7303524aca75",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202408301035_6AA0_i.jpg"
+          },
+          {
+            "additionalPrice": 0,
+            "description": "Produto natural e sem açúcar.",
+            "name": "Banana (40g)",
+            "optionId": "266585c1-b0c6-45cb-99bc-a4692abb0725",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202408301036_6I21_i.jpg"
+          },
+          {
+            "additionalPrice": 0,
+            "description": "Produto vegano. Contém glúten.",
+            "name": "Castanha de caju (16g)",
+            "optionId": "2e6e62c9-96d1-4188-af90-3b032b7eebbe",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202408301036_37EB_i.jpg"
+          },
+          {
+            "additionalPrice": 0,
+            "description": "Produto vegano. Pode conter coco, amendoim e castanha de caju.",
+            "name": "Chia (10g)",
+            "optionId": "06c9c703-7a43-4a18-9073-0fa3d05dd4b7",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202408051525_2B16_i.jpg"
+          },
+          {
+            "additionalPrice": 0,
+            "description": "Pode conter leite, soja e ovo.",
+            "name": "Chia pudding (20g)",
+            "optionId": "4f24a7b1-9d6f-4a4d-be78-3deb908869fe",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202408301039_8C00_i.jpg"
+          },
+          {
+            "additionalPrice": 0,
+            "description": "Produto natural e sem açúcar. Pode conter amendoim e castanha de caju.",
+            "name": "Coco em lascas (20g)",
+            "optionId": "07928bf3-090d-481a-8de3-35ecfcafbd6e",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202408301036_CVY6_i.jpg"
+          },
+          {
+            "additionalPrice": 5,
+            "description": "Lascas de coco com açúcar mascavo. Produto vegano.",
+            "name": "Coco Rock (25g)",
+            "optionId": "ca7d0e5d-8052-4772-b034-502435bb6e9a",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202408301037_XLTT_i.jpg"
+          },
+          {
+            "additionalPrice": 0,
+            "description": "Combinação fortificada de cereal com leite. Contém glúten e lactose.",
+            "name": "Farinha Láctea (16g)",
+            "optionId": "5d909ccf-d1ea-4023-9f72-3b409119be14",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/a7d7f819-ec20-4d67-9e45-0ec393137ba3/202508270908_233R_i.jpg"
+          },
+          {
+            "additionalPrice": 0,
+            "description": "Produto vegano. Contém glúten.",
+            "name": "Granola com castanhas (40g)",
+            "optionId": "9eabdef2-048e-4ea4-b0ab-fe223d33d0ea",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202408301040_AS05_i.jpg"
+          },
+          {
+            "additionalPrice": 0,
+            "description": "Produto vegano. Contém glúten. Pode conter derivados de leite.",
+            "name": "Granola de banana e cacau (40g)",
+            "optionId": "7d28df9a-416e-4629-93c1-fabcb0948e66",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202408301041_BJ12_i.jpg"
+          },
+          {
+            "additionalPrice": 0,
+            "description": "Contém lactose.",
+            "name": "Leite Condensado (15g)",
+            "optionId": "cb0f1c24-d9a2-4e87-99a6-d3950b8f6147",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202408301041_5KF7_i.jpg"
+          },
+          {
+            "additionalPrice": 0,
+            "description": "Contém lactose.",
+            "name": "Leite Ninho (10g)",
+            "optionId": "1eb4f65b-5a59-4667-9c90-3f3f16290b95",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202408301041_PE25_i.jpg"
+          },
+          {
+            "additionalPrice": 6,
+            "description": "Produto natural e sem açúcar.",
+            "name": "Maracujá (25g)",
+            "optionId": "1454d712-84eb-4bbc-a9c3-26c6a680a998",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202408051551_087H_i.jpg"
+          },
+          {
+            "additionalPrice": 5,
+            "description": "Produto sem glúten e sem lactose.",
+            "name": "Mel (15g)",
+            "optionId": "f98bc73a-9bef-4a36-8aee-db9d81332adb",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202408051551_0W25_i.jpg"
+          },
+          {
+            "additionalPrice": 6,
+            "description": "Produto natural e sem açúcar.",
+            "name": "Morango (40g)",
+            "optionId": "f8092cff-46fe-4fd9-899d-267b2346b471",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202408301042_47AL_i.jpg"
+          },
+          {
+            "additionalPrice": 0,
+            "description": "Neston Nestlé 3 cereais, trigo, cevada e aveia. Contém glúten. Pode conter leite.",
+            "name": "Neston (6g)",
+            "optionId": "c479dbae-b670-4d89-a69b-d1113579856b",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202408301042_1BDR_i.jpg"
+          },
+          {
+            "additionalPrice": 5,
+            "description": "Paçoca zero açúcar com açaí Oakberry. Contém glúten. Pode conter leite.",
+            "name": "Paç.oak (20g)",
+            "optionId": "8d7397ce-a4f1-46e2-a347-68c88a6ff19a",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202408301042_M547_i.jpg"
+          },
+          {
+            "additionalPrice": 5,
+            "description": "Produto sem açúcar. Pode conter leite.",
+            "name": "Paçoca zero açúcar (25g)",
+            "optionId": "9f6b2c87-e02b-44a5-b252-949898c684a9",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202408301043_4182_i.jpg"
+          },
+          {
+            "additionalPrice": 5,
+            "description": "Produto sem glúten, sem lactose e sem açúcar",
+            "name": "Pb: pasta de amendoim com mel (20g)",
+            "optionId": "1524b9a4-0f49-4765-b567-1e98c22b0866",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202408051553_E2L0_i.jpg"
+          },
+          {
+            "additionalPrice": 5,
+            "description": "Zero lactose, zero glúten, zero adição de açúcares",
+            "name": "Pasta de Pistache (20g)",
+            "optionId": "b7a2dcf2-fe12-4b9f-99cc-f14c4dfe70c0",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/a7d7f819-ec20-4d67-9e45-0ec393137ba3/202511121222_IH4W_i.jpg"
+          },
+          {
+            "additionalPrice": 12,
+            "description": "Whey Protein sabor Coco. Contém glúten e lactose.",
+            "name": "Whey protein Coco (14g)",
+            "optionId": "387e7d06-f7a9-4889-819f-281d39e3ec81",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202408301043_N54N_i.jpg"
+          },
+          {
+            "additionalPrice": 14,
+            "description": "Whey Protein sabor Coco. Contém glúten e lactose.",
+            "name": "Whey protein Coco (28g)",
+            "optionId": "f32bec29-3bba-466a-a692-e3e39a14cb2f",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202408301043_N54N_i.jpg"
+          }
+        ]
+      },
+      {
+        "maxSelections": 1,
+        "minSelections": 1,
+        "name": "Precisa de descartáveis para o pedido?",
+        "optionGroupId": "35ede4d9-c657-497d-99ec-0c0ccd4cc8b9",
+        "options": [
+          {
+            "additionalPrice": 0,
+            "name": "Sim, preciso de colher e guardanapo.",
+            "optionId": "3de354a2-7352-4566-a202-419394114228"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Não, quero ajudar a reduzir o consumo de plásticos.",
+            "optionId": "c378c90a-0d12-4f2f-9a3c-42d7d3343ee5"
+          }
+        ]
+      },
+      {
+        "maxSelections": 3,
+        "minSelections": 0,
+        "name": "Deseja adicionar algo?",
+        "optionGroupId": "edb37fae-e1b7-44de-8cb0-712ac6b6e2f4",
+        "options": [
+          {
+            "additionalPrice": 10.99,
+            "description": "Imagem ilustrativa",
+            "name": "Água com gás (500ml)",
+            "optionId": "ca7e44b8-6848-44f8-880b-01b55d814879",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202408301725_0X1K_i.jpg"
+          },
+          {
+            "additionalPrice": 5,
+            "description": "Paçoca zero açúcar com açaí oakberry. Opção saudável, nutritiva e proteica para apoiar refeições intermediárias ou pra substituir doces calóricos. Peso: 20g und. Alérgicos: Contém amendoim. Pode conter traços castanha de cajú e leite.",
+            "name": "Paç.oak (20g)",
+            "optionId": "20eecbcc-43b4-4c5b-8e7e-56344b208757",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202410071044_TUK6_i.jpg"
+          }
+        ]
+      }
+    ],
+    "promotionalUnitPrice": 41.99,
+    "unitPrice": 41.99
+  },
+  {
+    "agentHints": {
+      "nextStep": "Add this item to the active cart with the chosen quantity and any selected options."
+    },
+    "appDeeplink": "ifood://dish-details/653509b6-ab6a-48b8-bd83-31d77665aa27/1c0ac96f-5342-48b8-a59e-2900b8a2c8d4",
+    "itemDescription": "Entregamos Tudo nesse kit incrível, o Melhor monte do seu jeito, já incluso sem valores extras dentro das limitações (limitado a 3 sabores + 3 acompanhamentos + 1 creme ou calda), total de 500gr (somado os sorvetes, açaís e acompanhamentos).\nTemos a opção de enviar os acompanhamentos em embalagens separadas, (exceto coberturas e caldas eskimo)\nAcompanhamentos sendo grãos e pó, possui o peso médio de 20gr, \nAcompanhamento sendo fruta, peso médio de 50gr,\nAcompanhamento sendo creme, peso médio de 65gr.\n\n(portanto quanto mais itens são escolhidos, mais será reduzida a quantidade de sorvete e açaí a ser enviado)",
+    "itemId": "1c0ac96f-5342-48b8-a59e-2900b8a2c8d4",
+    "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/653509b6-ab6a-48b8-bd83-31d77665aa27/202408091520_4JF3_i.jpg",
+    "itemName": "Açaí e sorvete 500gr - o Melhor monte do seu jeito!",
+    "merchantId": "653509b6-ab6a-48b8-bd83-31d77665aa27",
+    "merchantMinimumOrderAmount": 22,
+    "merchantName": "La Suqueria",
+    "optionGroups": [
+      {
+        "maxSelections": 1,
+        "minSelections": 1,
+        "name": "Acompanhamentos Juntos ou Separados?",
+        "optionGroupId": "9c18c426-b275-47e6-8ddf-be3fe44e7920",
+        "options": [
+          {
+            "additionalPrice": 0,
+            "description": "Os acompanhamentos são enviados juntos com o Açaí / Sorvete",
+            "name": "Juntos",
+            "optionId": "1166f37a-3dfe-4c93-858a-294eeabcf3f7"
+          },
+          {
+            "additionalPrice": 2,
+            "description": "Os acompanhamentos são enviados em embalagens Separadas do Açaí / Sorvete",
+            "name": "Embalagens Separadas",
+            "optionId": "410b9d81-5463-49f5-a453-43eb9b5e7bca",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/653509b6-ab6a-48b8-bd83-31d77665aa27/202108112326_0EC6_i.jpg"
+          }
+        ]
+      },
+      {
+        "maxSelections": 3,
+        "minSelections": 1,
+        "name": "Escolha seus sabores entre açaís e sorvetes",
+        "optionGroupId": "46f217dc-aedf-4ae6-905a-afbd760fa1bb",
+        "options": [
+          {
+            "additionalPrice": 0,
+            "name": "Açaí avelã",
+            "optionId": "554057b2-5ff1-4fde-b369-71c12557b88c"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Açaí banana",
+            "optionId": "a33ce58c-fe8e-48c6-bb4c-0cb83122318e"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Açaí iogurte",
+            "optionId": "59e5cbe2-784a-43f4-a5b7-fdb428ae8a94"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Açaí leite Ninho",
+            "optionId": "d1e59794-fce0-4545-a429-bb3761cdd1ce"
+          },
+          {
+            "additionalPrice": 0,
+            "description": "Açaí  da casa, sem corantes, natural.",
+            "name": "Açaí Premium",
+            "optionId": "89f0e66c-eca2-4b09-b6e8-c4eb7f8477da"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Açaí paçoca",
+            "optionId": "59b0028f-29c8-4952-9c72-f462a064dc94"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Açaí natural",
+            "optionId": "8aee86bd-fc7e-45f7-9f9f-77ad4b9c1117"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Açaí trufado",
+            "optionId": "eee471de-97be-4ee0-9501-6c5e375cedf2"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Açaí trufado branco",
+            "optionId": "cdd32125-a161-4871-8d87-cfc492e08d3b"
+          },
+          {
+            "additionalPrice": 4,
+            "name": "Açaí zero",
+            "optionId": "c54d8409-9bc5-44d4-8aa2-66b6732aef41"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Creme cupuaçu",
+            "optionId": "17a71f32-1c0d-42a4-ad30-a4c975658cc6"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Creme pitaya",
+            "optionId": "263ddf23-e6c2-40eb-bfe5-d74aef162ff9"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete abacaxi",
+            "optionId": "d960d318-5360-4253-97a7-2ba2b877ff4e"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete café trufado",
+            "optionId": "96fa7385-cb74-471c-9e63-9aa031e642db"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete cereja",
+            "optionId": "ebcc1fce-1337-43be-b4ad-9e5c6651802b"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete Chocomenta",
+            "optionId": "cd5fac72-b1b9-464a-b142-0966eec10799"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete Creme",
+            "optionId": "d6fa8f2c-4bd4-4f0e-a3f7-b7c8d06ebbb3"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete chocolate",
+            "optionId": "746bdf8e-47dc-493f-ada7-8e0014e8a2b8"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete doce de leite",
+            "optionId": "a27791fd-8862-4c3d-8920-1b8f7c1cd311"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete ferreiro rocher",
+            "optionId": "7a720e8f-82c6-4af2-8a9c-556ff15dd46f"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete flocos",
+            "optionId": "6426151d-44f3-46f9-a74f-4c74b7798eaa"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete floresta negra",
+            "optionId": "c4f8798f-be1b-498e-84e7-f24371c49197"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete Graviola com Damasco",
+            "optionId": "092ce1d5-14dc-45ee-8836-3eff52e9cfab"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete iogurte amarena",
+            "optionId": "dc61cfeb-61c3-400c-9feb-75f2eae7821b"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete Kinder",
+            "optionId": "5879393b-c32f-48f9-8c38-416baef93848"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete Laka",
+            "optionId": "22224ca2-8906-4c61-b057-255050572241"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete limão",
+            "optionId": "f55169ba-2a21-49ac-aa91-9488cc450a0a"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete maracujá trufado",
+            "optionId": "dd3aa7fa-8f7b-491c-b897-5e07f938bc39"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete de milho verde",
+            "optionId": "0b40796b-3e67-41c3-9531-583b90d7ace2"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete de morango",
+            "optionId": "0cdbc023-8a72-48a6-8986-7548e9798e0f"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete Ninho Trufado",
+            "optionId": "5009d00d-9148-4d1b-a005-dd053dbdd269"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete Nozes",
+            "optionId": "9234149d-d648-4a91-b91c-46d20e28a694"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete Oreo",
+            "optionId": "3337291d-d4ec-4b99-91e6-b245dca17ac1"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete Pistache",
+            "optionId": "6552ca01-8cb0-46a7-9dff-a99b840200f4"
+          },
+          {
+            "additionalPrice": 0,
+            "description": "Sorvete a base de creme de leite",
+            "name": "Sorvete fior di late",
+            "optionId": "00fcd2e1-2dde-45c6-a30d-816d6c874344"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete rafaello",
+            "optionId": "a9a8dc5e-ce79-4fea-ae24-ec8674a6df7c"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete de Romeu e Julieta",
+            "optionId": "1f1f55aa-0244-4e92-88f8-09cdfd189fa6"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete sensação",
+            "optionId": "fd5776ad-dfab-45cf-9e43-bed4a9df3999"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete Snickers",
+            "optionId": "5f2aaff8-4a2a-4bc7-9e1a-57afdf1bc0fc"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete de torta paulista",
+            "optionId": "4bec6e01-c9cf-4900-8fe9-b84a5e2cf55a"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sorvete Unicórnio",
+            "optionId": "4a2c8794-edd1-4ca1-9d2d-3e48ad470dfe"
+          }
+        ]
+      },
+      {
+        "maxSelections": 1,
+        "minSelections": 1,
+        "name": "Escolha 1 creme ou 1 Calda",
+        "optionGroupId": "574b6c6b-fa4d-49ef-9c0d-7143c557aade",
+        "options": [
+          {
+            "additionalPrice": 5,
+            "name": "Creme Ovomaltine Original",
+            "optionId": "afe090f0-24a8-4d59-a46f-d2010648ee86"
+          },
+          {
+            "additionalPrice": 5,
+            "name": "Nutella Original",
+            "optionId": "3702b030-47c3-4627-8c28-23a22509bf09"
+          },
+          {
+            "additionalPrice": 5,
+            "name": "Creme Leite Ninho Nestlé",
+            "optionId": "cb784680-4a10-4f76-9a55-cbbf7bf7226c"
+          },
+          {
+            "additionalPrice": 5,
+            "name": "Creme de pistache",
+            "optionId": "d7bb771b-d04b-43f4-b2ce-53e8595ddeb1"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Cobertura de blue-ice",
+            "optionId": "b68b1c33-c3b9-4185-a050-49d7c708fd2b"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Cobertura de chocolate",
+            "optionId": "ae55c733-2b61-4638-9540-f782ba9399d2"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Cobertura Fini Dentadura",
+            "optionId": "e73314e5-1cf3-445c-aa2f-32f2977ab836"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Cobertura fini Beijos",
+            "optionId": "c4820ad8-205a-4291-9153-1d4317248527"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Cobertura Fini Banana",
+            "optionId": "a02f1866-5c36-4c86-adde-c017c567a284"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Cobertura de menta",
+            "optionId": "d7a36350-93dc-466f-b8c5-caaeca07abd6"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Cobertura de morango",
+            "optionId": "79e9b7f4-976c-4592-8fb5-241c5ddc2276"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Cobertura de uva",
+            "optionId": "400fb982-f1e9-46e3-89b0-dedacfde7edd"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Leite Condensado",
+            "optionId": "c7efd536-dc94-46f9-a749-5d1edf6a8170"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Mel",
+            "optionId": "833fa7e0-4f97-4cd2-8e4a-78c6c89d13e6"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Calda skimo Chocolate",
+            "optionId": "ef15f223-965b-42cf-90a5-a819f9ff49ee"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Calda skimo Chocolate Branco",
+            "optionId": "cdaaa538-960a-46cd-b6f3-2887f83243ce"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Chanti- Ninho",
+            "optionId": "817d3ef7-9dd5-4c87-8081-de11a21914bf"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Creme Kinder",
+            "optionId": "7e305e6d-90cb-4e8b-8796-00a61fc17c1c"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Creme de Avelã",
+            "optionId": "ae52cb4d-6302-474c-8026-716890a34eb0"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Creme Chocowafer ao Leite",
+            "optionId": "d5965d4f-2f58-4db0-9553-1345a9db734b"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Creme Chocowaffer branco",
+            "optionId": "d849fd4c-9511-4a85-9c67-35e2c5fe4b74"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Creme Cookies",
+            "optionId": "bf0f1668-8478-44bb-b69c-95539cad0b3e"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Creme Leitinho",
+            "optionId": "b77252ff-f48c-435a-8c84-1e5d40f2396b"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Creme paçoca",
+            "optionId": "726dcea9-dd7f-4692-ad49-c702428730c7"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Creme Trufa - meio amargo",
+            "optionId": "f8f3bc12-8a32-46fa-a713-7d4e9c0b42cb"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Geléia frutas vermelhas",
+            "optionId": "30811b5d-29ca-4574-965f-5a08118a7081"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Geléia de morango",
+            "optionId": "e5806606-6803-4314-81ff-8ee74d05612e"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Geléia de amarena",
+            "optionId": "58ada8ef-01a2-4d96-8a7f-e0ef20fc1b0a"
+          }
+        ]
+      },
+      {
+        "maxSelections": 3,
+        "minSelections": 0,
+        "name": "Escolha 3 itens",
+        "optionGroupId": "8444e5a7-2afe-4db0-b0de-28662ebdd39b",
+        "options": [
+          {
+            "additionalPrice": 0,
+            "name": "Abacaxi",
+            "optionId": "da57acdb-8b9b-4ebe-b479-52c9b46e439f"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Amendoim Triturado",
+            "optionId": "22c25566-3d15-41d1-bb03-8e117ec702b5"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Aveia",
+            "optionId": "fce348b9-70c1-4dff-a153-be25eb93f3b6"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Bombom",
+            "optionId": "fce870b4-d6ee-4811-8e50-918902557211"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Canudo biju",
+            "optionId": "cf8d08c9-5f8f-4a17-bd68-638f550bfbe6"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Cereja",
+            "optionId": "44ae7adc-1d1e-4baa-b2e0-614fea4e3e34"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Chocoball",
+            "optionId": "a1b8bd2f-4b4e-4875-92e9-1308b5100082"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Chocoball mini branco/preto",
+            "optionId": "cf64c129-08cc-4135-a7b1-d85231dc409d"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Confete",
+            "optionId": "f2615eb2-d477-4e6d-91a7-94ca9a74bb36"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Farinha Láctea",
+            "optionId": "8651c13d-53f6-45a5-b43c-8993e50efee6"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Gominha cítrica",
+            "optionId": "35cd811f-2f26-40fe-a876-1fba37321d67"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Granola",
+            "optionId": "fe79f2b9-e30b-4ef9-9f88-71fcfd1fbaaa"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Granulado",
+            "optionId": "146449ed-4c52-4d77-812f-6f2d5bc39c39"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Kiwi",
+            "optionId": "454c583f-1327-4664-9309-b4ac5802d191"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Leite em pó",
+            "optionId": "4daf0233-1134-4308-a6d5-736be3995447"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Manga",
+            "optionId": "788542f7-887d-4a01-9f26-ed0c45d5cb82"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Marshmallow",
+            "optionId": "8002004f-6c33-4aad-a67e-8b6f5588c716"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Melão",
+            "optionId": "f2a1cfe2-cf0a-4ff4-bba2-004f56702cb2"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Morango picado",
+            "optionId": "f3f5c505-a13a-427e-96da-a91156b11a87"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Neston",
+            "optionId": "d729f4ab-f5b5-41c8-8280-c2640f568cc4"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Ovomaltine",
+            "optionId": "aad04d32-c338-4738-af11-d9826056b847"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Paçoca",
+            "optionId": "f3a2be02-5a70-4f20-b902-929aa935448c"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Paçoca em pó",
+            "optionId": "a795c1b3-c4c0-4744-998c-249dff5662f5"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Pingo chocolate",
+            "optionId": "f77c8d29-cc43-46cf-a396-c8fe27dac315"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Sucrilhos Colorido",
+            "optionId": "754f1297-a4f2-4a20-90f4-7f9ce0375854"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Uva",
+            "optionId": "fb110d78-b29c-4efa-ab28-1c3a0f88a16f"
+          },
+          {
+            "additionalPrice": 7,
+            "description": "Sabor Baunilha 30g",
+            "name": "Whey Protein",
+            "optionId": "cc5b408a-ae6b-4876-bd1d-d167e68f0356"
+          }
+        ]
+      },
+      {
+        "maxSelections": 3,
+        "minSelections": 0,
+        "name": "Adicionais cremes e caldas",
+        "optionGroupId": "62ab8e02-997f-412e-9b80-c290cfa8822d",
+        "options": [
+          {
+            "additionalPrice": 8,
+            "name": "Creme Ovomaltine Original",
+            "optionId": "89f7d247-4d4f-4e54-b4d8-e0c9a22387be"
+          },
+          {
+            "additionalPrice": 8,
+            "name": "Creme leite Ninho Nestlé",
+            "optionId": "b29850bc-e0b5-4e06-ba05-8aa08ee7ced1"
+          },
+          {
+            "additionalPrice": 8,
+            "name": "Nutella Original",
+            "optionId": "4022c0e2-f745-483a-be97-9ebfd6ca240d"
+          },
+          {
+            "additionalPrice": 5,
+            "name": "Creme de pistache",
+            "optionId": "8d3dca4e-d7b1-4d5e-9b63-b03dba814976"
+          },
+          {
+            "additionalPrice": 3,
+            "name": "Chantilly",
+            "optionId": "4dc31c10-13eb-42d1-8e15-58a5e19cb13d"
+          },
+          {
+            "additionalPrice": 3,
+            "name": "Leite condensado",
+            "optionId": "4f198dbf-9365-4ba1-a75e-b73d1558061e"
+          },
+          {
+            "additionalPrice": 3,
+            "name": "Calda skimo branca",
+            "optionId": "f320e3f3-3d02-4483-8915-184297c1071c"
+          },
+          {
+            "additionalPrice": 3,
+            "name": "Calda skimo chocolate",
+            "optionId": "f137759f-903c-4288-b625-1a5b831cca95"
+          },
+          {
+            "additionalPrice": 3,
+            "name": "Creme de Avelã",
+            "optionId": "967cf281-35b1-40c8-aa55-7a756b6365e5"
+          },
+          {
+            "additionalPrice": 3,
+            "name": "Creme Chocowaffer ao leite",
+            "optionId": "aa1d1758-88a6-4a9a-bc50-049ab5aa98a4"
+          },
+          {
+            "additionalPrice": 3,
+            "name": "Creme Chocowaffer branco",
+            "optionId": "93303ca0-6ace-4793-b5ff-9c7b5b318ce8"
+          },
+          {
+            "additionalPrice": 3,
+            "name": "Cookies Ao Leite",
+            "optionId": "fc64a978-f35c-4c52-9c96-989e1da52227"
+          },
+          {
+            "additionalPrice": 3,
+            "name": "Cookies Branco",
+            "optionId": "f1e9c5ee-1e63-42d2-b263-ff6b2d0e8f7d"
+          },
+          {
+            "additionalPrice": 3,
+            "name": "Creme de leitinho",
+            "optionId": "66ae86d7-6556-4e74-90cc-27a655cffbc9"
+          },
+          {
+            "additionalPrice": 3,
+            "name": "Geléia de amarena",
+            "optionId": "c537f484-0a98-444a-8981-cdbbd3f2c6c5"
+          },
+          {
+            "additionalPrice": 3,
+            "name": "Geleia de frutas vermelhas",
+            "optionId": "e72f251b-1317-4e9a-9e03-06fb8a62f1cd"
+          },
+          {
+            "additionalPrice": 3,
+            "name": "Geléia de morango",
+            "optionId": "c133b093-f94e-41ff-bdf6-8b2c01393d1f"
+          },
+          {
+            "additionalPrice": 3,
+            "name": "Chanti - Ninho",
+            "optionId": "e7be4f89-11db-4b3e-8d33-d606413b5b15"
+          },
+          {
+            "additionalPrice": 3,
+            "name": "Creme de paçoca",
+            "optionId": "e32be0f4-55ad-4d6d-903a-042fa81002ee"
+          },
+          {
+            "additionalPrice": 3,
+            "name": "Creme trufa - meio amargo",
+            "optionId": "c635cdc2-e858-4730-8a78-debb37a8e7ef"
+          },
+          {
+            "additionalPrice": 3,
+            "name": "Creme trufa - meio amargo",
+            "optionId": "f134c0eb-71a0-408d-8a5b-cf3d399c6c64"
+          },
+          {
+            "additionalPrice": 2,
+            "name": "Cobertura chocolate",
+            "optionId": "be8a339f-4132-42d2-82bb-78a023af395e"
+          },
+          {
+            "additionalPrice": 2,
+            "name": "Cobertura de caramelo",
+            "optionId": "f26c92b3-4468-4ed3-b474-41059cb8aca0"
+          },
+          {
+            "additionalPrice": 2,
+            "name": "Cobertura de morango",
+            "optionId": "91170f2d-87cf-487e-ba6c-3d545408009c"
+          },
+          {
+            "additionalPrice": 2,
+            "name": "Cobertura de blue ice",
+            "optionId": "803adc97-932a-4eee-ad71-1a27298f0374"
+          },
+          {
+            "additionalPrice": 2,
+            "name": "Cobertura fini banana",
+            "optionId": "d81f7a65-4c1c-46b4-9274-cfa5447cb75a"
+          },
+          {
+            "additionalPrice": 2,
+            "name": "Cobertura fini beijos",
+            "optionId": "45668bb0-dbc3-43cb-9c6d-6500124ef1fa"
+          },
+          {
+            "additionalPrice": 2,
+            "name": "Cobertura fini dentadura",
+            "optionId": "996e17f6-640f-49d4-b87a-c8ad7846366c"
+          },
+          {
+            "additionalPrice": 2,
+            "name": "Cobertura de menta",
+            "optionId": "b657e88d-938d-404f-8285-099aa653b3c7"
+          },
+          {
+            "additionalPrice": 2,
+            "name": "Cobertura de uva",
+            "optionId": "cc2fe692-1549-4083-89da-ea9da13a01b9"
+          },
+          {
+            "additionalPrice": 2,
+            "name": "Mel",
+            "optionId": "a05a908e-41e6-451a-9a99-5e2a762f12e9"
+          }
+        ]
+      },
+      {
+        "maxSelections": 5,
+        "minSelections": 0,
+        "name": "Cascão",
+        "optionGroupId": "a6c78547-6f79-4b14-b456-4bd61d8f6d26",
+        "options": [
+          {
+            "additionalPrice": 2,
+            "description": "Cestinha Cascão Sabor Baunilha, comporta aproximadamente 300gr de sorvete",
+            "name": "Cestinha Cascão",
+            "optionId": "37bf949c-1ecb-4377-8f31-a3b2cdd21e5f",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/653509b6-ab6a-48b8-bd83-31d77665aa27/202102131610_alZY_.jpeg"
+          },
+          {
+            "additionalPrice": 2,
+            "description": "Barquinha Cascão Sabor Baunilha, comporta aproximadamente 500gr de sorvete",
+            "name": "Barquinha Cascão",
+            "optionId": "85f47bdd-3367-4210-98c5-f16cd3d57bda",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/653509b6-ab6a-48b8-bd83-31d77665aa27/202102131611_7Crt_.jpeg"
+          }
+        ]
+      },
+      {
+        "maxSelections": 4,
+        "minSelections": 1,
+        "name": "Colher",
+        "optionGroupId": "05d07b54-624f-4a8b-b4dc-6453a85931b8",
+        "options": [
+          {
+            "additionalPrice": 0.05,
+            "description": "Adicionamos esta categoria, com valor simbólico, para evitarmos desperdício estimulando o consumo consciente.",
+            "name": "Colher sim",
+            "optionId": "71c4046d-e102-4a08-be41-4e3f0394c2a3"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Colher não",
+            "optionId": "b2321490-565b-472c-a311-2828d7091fd6"
+          }
+        ]
+      },
+      {
+        "maxSelections": 2,
+        "minSelections": 0,
+        "name": "Que tal uma bebida para acompanhar?",
+        "optionGroupId": "3f4ecb32-1f0d-47f1-ba6a-1b4bdbf7c2f9",
+        "options": [
+          {
+            "additionalPrice": 5.5,
+            "name": "Água Mineral Sem Gás- 500ml",
+            "optionId": "daa53b1f-637d-4afb-998e-4b5b9d3985ca",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/653509b6-ab6a-48b8-bd83-31d77665aa27/202410232037_1317_i.jpg"
+          },
+          {
+            "additionalPrice": 6.5,
+            "name": "Água Mineral Com Gás- 500 ml",
+            "optionId": "d2670601-cb77-4ed2-ab38-1e31f2e5be74",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/653509b6-ab6a-48b8-bd83-31d77665aa27/202410232043_1LR4_i.jpg"
+          },
+          {
+            "additionalPrice": 7.5,
+            "description": "Lata 350ml",
+            "name": "Coca-Cola Original 350m",
+            "optionId": "49ec2f35-634e-4680-bc77-0dcf0bead9ca",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/820af392-002c-47b1-bfae-d7ef31743c7f/202210192321_sna79adqiqa.jpg"
+          },
+          {
+            "additionalPrice": 7.5,
+            "description": "Lata 350ml.",
+            "name": "Refrigerante Coca Cola S/Acucar Lt 350ml",
+            "optionId": "bb58090e-28ad-410a-b19b-8c828a892005",
+            "optionImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/820af392-002c-47b1-bfae-d7ef31743c7f/202604091025_mhw6dd4fz4c.png"
+          }
+        ]
+      }
+    ],
+    "promotionalUnitPrice": 32.9,
+    "unitPrice": 32.9
+  },
+  {
+    "agentHints": {
+      "nextStep": "Add this item to the active cart with the chosen quantity and any selected options."
+    },
+    "appDeeplink": "ifood://dish-details/c5c24cea-56bf-467c-9b4c-4d02e653c6a1/e064e21d-8dc1-47e9-a00b-f8b0a932cbfc",
+    "itemDescription": "Nosso Artesanal é o carro-chefe da casa\nPreparamos aqui na nossa loja, com uma receita que valoriza o sabor e a qualidade do açaí.\nNão leva corantes nem conservantes e é adoçado com xarope de Guaraná + 5% de açúcar, resultando em um açaí cremoso, equilibrado e muito saboroso.\nÉ a escolha perfeita para quem busca um açaí mais fresco, autêntico e com sabor de fruta, proporcionando uma experiência diferente",
+    "itemId": "e064e21d-8dc1-47e9-a00b-f8b0a932cbfc",
+    "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/c5c24cea-56bf-467c-9b4c-4d02e653c6a1/202012121823_kPQ0_.jpeg",
+    "itemName": "Açai Artesanal",
+    "merchantId": "c5c24cea-56bf-467c-9b4c-4d02e653c6a1",
+    "merchantMinimumOrderAmount": 15,
+    "merchantName": "Açaí do Pé",
+    "optionGroups": [
+      {
+        "maxSelections": 1,
+        "minSelections": 1,
+        "name": "Escolha",
+        "optionGroupId": "cb430f13-f910-4461-b6e4-09911d940828",
+        "options": [
+          {
+            "additionalPrice": 215,
+            "name": "3,6kg",
+            "optionId": "7d68132d-ac19-42d2-914c-f9810474d56c"
+          },
+          {
+            "additionalPrice": 24,
+            "name": "300g",
+            "optionId": "7d217cf6-6fc2-4458-af45-91a3aa6152ec"
+          },
+          {
+            "additionalPrice": 36,
+            "name": "500g",
+            "optionId": "8e0bb729-843c-4a07-85ec-40a279aeb1b4"
+          },
+          {
+            "additionalPrice": 68,
+            "name": "1kg",
+            "optionId": "49d58ce4-24ef-4bca-9c09-fe886d6cc3c2"
+          }
+        ]
+      },
+      {
+        "maxSelections": 30,
+        "minSelections": 0,
+        "name": "Complementos",
+        "optionGroupId": "ba3f33e8-7484-4a49-9347-180e5c305386",
+        "options": [
+          {
+            "additionalPrice": 5.5,
+            "name": "Leite condensado",
+            "optionId": "815bdbf6-9f2a-4b25-b96c-55a2f09bd9a7"
+          },
+          {
+            "additionalPrice": 4,
+            "name": "Mel",
+            "optionId": "8c948067-61c7-4491-9a50-c4fba92eaa64"
+          },
+          {
+            "additionalPrice": 4,
+            "name": "Farinha Láctea",
+            "optionId": "383866d4-9a39-462a-8a7e-c609e502fa11"
+          },
+          {
+            "additionalPrice": 7,
+            "name": "Leite Ninho",
+            "optionId": "9d083b85-7248-4381-9c4a-10dabecc0e2b"
+          },
+          {
+            "additionalPrice": 5,
+            "name": "Paçoca",
+            "optionId": "5c9e37e3-5a2b-4a07-9b76-2b247d0d2b43"
+          },
+          {
+            "additionalPrice": 4,
+            "name": "Granola",
+            "optionId": "fb47569d-6c37-4220-8ec1-c50b0bcda6ba"
+          },
+          {
+            "additionalPrice": 4,
+            "name": "Banana",
+            "optionId": "83c6c309-e92a-47b1-9f72-d0fbbc255fd3"
+          },
+          {
+            "additionalPrice": 8,
+            "name": "Creme de pistache",
+            "optionId": "8e17387f-e28a-4dab-99bc-c0b4d36a3e99"
+          },
+          {
+            "additionalPrice": 8,
+            "name": "Nutella",
+            "optionId": "892d01d1-b46d-4231-903b-bfb986e76232"
+          },
+          {
+            "additionalPrice": 3,
+            "name": "Ouro Branco",
+            "optionId": "3ca7b556-2af7-4933-856c-da77ce9d7e67"
+          },
+          {
+            "additionalPrice": 3,
+            "name": "Sonho de Valsa",
+            "optionId": "39530e53-980a-47dc-bf55-847fdf8ed85d"
+          },
+          {
+            "additionalPrice": 5,
+            "name": "Ovo maltine",
+            "optionId": "b489f01e-65ef-4682-a5fc-31c81bc6f62f"
+          },
+          {
+            "additionalPrice": 5,
+            "name": "Leite em pó",
+            "optionId": "461bdcd0-d9de-4469-9057-8324130c53ab"
+          },
+          {
+            "additionalPrice": 8,
+            "name": "Chocowaffer  branco",
+            "optionId": "d3524557-7ddb-4afd-97f2-febb804a501e"
+          },
+          {
+            "additionalPrice": 8,
+            "name": "Creme cookie",
+            "optionId": "d325e256-ef99-4222-8304-fe22f01c7f3d"
+          },
+          {
+            "additionalPrice": 5,
+            "name": "Manga",
+            "optionId": "3c5d28e1-de8b-472c-a5b9-7d88b58c9b81"
+          },
+          {
+            "additionalPrice": 7,
+            "name": "Leite Ninho sem lactose",
+            "optionId": "6149a214-3bec-436f-bff1-27eb0e594bb8"
+          },
+          {
+            "additionalPrice": 4,
+            "name": "Confete",
+            "optionId": "27ae9d4c-c28f-4f4a-8dee-a22769c2d0b8"
+          },
+          {
+            "additionalPrice": 5,
+            "name": "Abacaxi",
+            "optionId": "b8438370-9f27-4375-93b8-1c1dca242352"
+          },
+          {
+            "additionalPrice": 8,
+            "name": "Creme de Cupuaçu",
+            "optionId": "e7a47600-cb23-4cf0-8ac6-b220f82a6363"
+          },
+          {
+            "additionalPrice": 3,
+            "name": "Aveia",
+            "optionId": "e01d2301-b13e-40df-a7eb-93e53ebb7a13"
+          },
+          {
+            "additionalPrice": 8,
+            "name": "Creme de Maracujá",
+            "optionId": "bf9a5f07-a511-48a3-b8fb-e5c3c0e0310b"
+          },
+          {
+            "additionalPrice": 8,
+            "name": "Creme de Morango",
+            "optionId": "fb5e10f1-26a4-44f8-9b6b-45b90d49da6f"
+          },
+          {
+            "additionalPrice": 5,
+            "name": "Chantilly",
+            "optionId": "583a1013-5d75-43bb-82b8-74bbb5af6a31"
+          },
+          {
+            "additionalPrice": 7,
+            "name": "Sorvete de Chocolate",
+            "optionId": "c45f15cc-edeb-4b03-8aea-8617e91ebffb"
+          },
+          {
+            "additionalPrice": 7,
+            "name": "Creme de Ninho",
+            "optionId": "b41ef2bf-3d89-4e40-b571-4747a4132c35"
+          },
+          {
+            "additionalPrice": 7,
+            "name": "Sorvete de Morango",
+            "optionId": "e8e1af02-ff3f-4c37-8615-4c52a70ec900"
+          },
+          {
+            "additionalPrice": 7,
+            "name": "Sorvete de Creme",
+            "optionId": "a71e0332-4612-4e71-bfa5-5424359382da"
+          },
+          {
+            "additionalPrice": 8,
+            "name": "Whey",
+            "optionId": "f8d6bbdd-9d25-4ca6-a068-757992386751"
+          }
+        ]
+      },
+      {
+        "maxSelections": 1,
+        "minSelections": 1,
+        "name": "Colher",
+        "optionGroupId": "4f8810a4-860e-4f2d-98c0-787896440bd8",
+        "options": [
+          {
+            "additionalPrice": 0.5,
+            "name": "Sim colher",
+            "optionId": "f69f92a4-9419-458c-88f6-c76e31ab508c"
+          },
+          {
+            "additionalPrice": 0,
+            "name": "Não colher",
+            "optionId": "0225449b-79e4-43ef-b49a-6e672605fe83"
+          }
+        ]
+      }
+    ],
+    "promotionalUnitPrice": 21,
+    "unitPrice": 24
+  },
+  {
+    "agentHints": {
+      "nextStep": "Add this item to the active cart with the chosen quantity and any selected options."
+    },
+    "appDeeplink": "ifood://dish-details/f4f4d3f6-a352-4e34-b17d-0227f3a6ff88/ca81ed8c-fb17-451e-bd37-85c2534aa461",
+    "itemDescription": "Aproveite a nossa promoção do Pote do Dia: um irresistível Açaí, servido em um generoso pote de 360ml. Este deleite tropical vem acompanhado de suculentos morangos e uma dose generosa de leite condensado para adicionar um toque extra de doçura. Todos os complementos são cuidadosamente acomodados dentro do pote para garantir a perfeita harmonização dos sabores. Não perca a oportunidade de experimentar um dos melhores sorvetes e Açaís do Brasil! Uma autêntica explosão de sabor com uma irresistível mistura de texturas. Corra e aproveite enquanto durar a promoção!",
+    "itemId": "ca81ed8c-fb17-451e-bd37-85c2534aa461",
+    "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/270d12cd-fcca-4a0a-b7fb-6f598cb95bd0/202210142240_WF54_i.jpg",
+    "itemName": "Açaí + Morango e Leite Condensado",
+    "merchantId": "f4f4d3f6-a352-4e34-b17d-0227f3a6ff88",
+    "merchantMinimumOrderAmount": 23,
+    "merchantName": "Jah Açaí Express - São Carlos",
+    "optionGroups": [
+      {
+        "maxSelections": 1,
+        "minSelections": 1,
+        "name": "Escolha seu Tamanho",
+        "optionGroupId": "31e8119e-c028-4579-a430-1334d63cd4de",
+        "options": [
+          {
+            "additionalPrice": 0,
+            "name": "Pote 360ml",
+            "optionId": "0e3dd475-f86b-4c63-a292-8b75bdf62245"
+          },
+          {
+            "additionalPrice": 8,
+            "name": "Pote 480ml",
+            "optionId": "5c8ed0cd-adad-4f26-9cb3-203f591a9f57"
+          },
+          {
+            "additionalPrice": 29,
+            "name": "Pote 780ml",
+            "optionId": "89a34e0a-3333-4369-9c43-2cac39b7ba9b"
+          },
+          {
+            "additionalPrice": 45,
+            "name": "Pote 1 Litro",
+            "optionId": "bf79f785-05dc-431a-bdea-e63d76dcab42"
+          }
+        ]
+      },
+      {
+        "maxSelections": 10,
+        "minSelections": 0,
+        "name": "Quer mais Complementos? Vem!",
+        "optionGroupId": "90e59e4e-b00c-4944-b1da-697de562a4e3",
+        "options": [
+          {
+            "additionalPrice": 3.5,
+            "name": "Banana Extra",
+            "optionId": "10ed11e5-ee95-4e56-917e-b83a1ec95537"
+          },
+          {
+            "additionalPrice": 3.5,
+            "name": "Creme de avelã Extra",
+            "optionId": "9589bedc-809b-4f7d-a445-ac40d7bf3ce5"
+          },
+          {
+            "additionalPrice": 3.5,
+            "name": "Creme de leite Ninho Extra",
+            "optionId": "2cceb08d-6465-47fc-89c5-57c3995c2c5f"
+          },
+          {
+            "additionalPrice": 3.5,
+            "name": "Creme de Valsa Extra",
+            "optionId": "914acf89-e80e-4e83-8eea-7cbf1eb32c1a"
+          },
+          {
+            "additionalPrice": 3.5,
+            "name": "Leite em pó Extra",
+            "optionId": "2f718237-dfa9-42d0-8d4e-3f33293ec7c3"
+          }
+        ]
+      },
+      {
+        "maxSelections": 10,
+        "minSelections": 0,
+        "name": "Vai uma Bebida?",
+        "optionGroupId": "6558db1d-1078-4b6e-b19b-72b883572979",
+        "options": [
+          {
+            "additionalPrice": 5.5,
+            "description": "Que tal uma Água com gás?",
+            "name": "Água com gás",
+            "optionId": "73a940e1-6176-456a-b56a-bcdff6ebf62d"
+          },
+          {
+            "additionalPrice": 5,
+            "description": "Que tal uma Água sem gás?",
+            "name": "Água sem gás",
+            "optionId": "c9b6e706-79f2-4c5f-860d-1879a65a39fb"
+          }
+        ]
+      }
+    ],
+    "promotionalUnitPrice": 27.99,
+    "unitPrice": 27.99
+  }
+]

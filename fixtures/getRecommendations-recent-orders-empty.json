@@ -1,0 +1,10 @@
+{
+  "agentHints": {
+    "noResultsGuidance": "No recent orders found to reorder. Try browsing available inventory or search for items the user might want."
+  },
+  "contentMode": "RECENT_ORDERS",
+  "hasMore": false,
+  "nextPageToken": null,
+  "resultKind": "MERCHANT",
+  "results": []
+}

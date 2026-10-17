@@ -39,6 +39,24 @@ describe('parseToolResult (fixtures reais)', () => {
   });
 });
 
+describe('erro upstream real ({code, message, agent_instruction} na raiz)', () => {
+  it('preserva code, mensagem e instrução; não inventa retryable', () => {
+    let caught: unknown;
+    try {
+      parseToolResult('listAddresses', fx('mcp-error-upstream-internal.json'));
+    } catch (e) {
+      caught = e;
+    }
+    const err = caught as McpToolError;
+    expect(err).toBeInstanceOf(McpToolError);
+    expect(err.code).toBe('INTERNAL');
+    expect(err.message).toMatch(/internal failure at an upstream service/);
+    expect(err.errors[0]!.agentInstruction).toMatch(/Do not retry immediately/);
+    expect(err.errors[0]!.retryable).toBeUndefined();
+    expect(err.retryable).toBe(false);
+  });
+});
+
 describe('extractErrors (formatos documentados)', () => {
   it('discovery: errors[] com code/retryable', () => {
     expect(extractErrors({ errors: [{ code: 'X', message: 'm', retryable: true }] })).toEqual([{ code: 'X', message: 'm', retryable: true }]);

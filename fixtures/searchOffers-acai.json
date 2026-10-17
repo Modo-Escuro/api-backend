@@ -1,0 +1,711 @@
+{
+  "agentHints": {
+    "nextStepWhenUserPicksItem": "Retrieve full item details — option groups and applicable promotions — before presenting it to the user."
+  },
+  "hasMore": true,
+  "interpretedQuery": "açaí",
+  "nextPageToken": "MjU7MQ==",
+  "resultKind": "ITEM",
+  "results": [
+    {
+      "itemEan": "",
+      "itemId": "6f34fe9d-d7a1-406f-a9f3-1f7b02da56d7",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202307101353_2K0U_i.jpg",
+      "itemName": "Açaí Bowl Works (500ml)",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 38,
+            "min": 23
+          },
+          "fee": 6.99,
+          "promotionalFee": 6.99
+        },
+        "isOpen": true,
+        "merchantId": "cb916f48-d654-4651-857e-1dda3d91a741",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/cb916f48-d654-4651-857e-1dda3d91a741/202406261851_CZ5I.png",
+        "merchantName": "Oakberry Açaí - São Carlos",
+        "minimumOrderAmount": 15,
+        "ratingCount": 118,
+        "reviewRating": 5,
+        "straightLineDistanceKm": 0.44
+      },
+      "promotionalUnitPrice": 41.99,
+      "unitPrice": 41.99
+    },
+    {
+      "itemEan": "",
+      "itemId": "1c0ac96f-5342-48b8-a59e-2900b8a2c8d4",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/653509b6-ab6a-48b8-bd83-31d77665aa27/202408091520_4JF3_i.jpg",
+      "itemName": "Açaí e sorvete 500gr - o Melhor monte do seu jeito!",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 34,
+            "min": 24
+          },
+          "fee": 5.99,
+          "promotionalFee": 5.99
+        },
+        "isOpen": true,
+        "merchantId": "653509b6-ab6a-48b8-bd83-31d77665aa27",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/653509b6-ab6a-48b8-bd83-31d77665aa27/201905172323_3gIG_i.png",
+        "merchantName": "La Suqueria",
+        "minimumOrderAmount": 22,
+        "ratingCount": 720,
+        "reviewRating": 4.900000095367432,
+        "straightLineDistanceKm": 1.22
+      },
+      "promotionalUnitPrice": 32.9,
+      "unitPrice": 32.9
+    },
+    {
+      "itemEan": "",
+      "itemId": "e064e21d-8dc1-47e9-a00b-f8b0a932cbfc",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/c5c24cea-56bf-467c-9b4c-4d02e653c6a1/202012121823_kPQ0_.jpeg",
+      "itemName": "Açai Artesanal",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 60,
+            "min": 50
+          },
+          "fee": 2.99,
+          "promotionalFee": 2.99
+        },
+        "isOpen": true,
+        "merchantId": "c5c24cea-56bf-467c-9b4c-4d02e653c6a1",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/c5c24cea-56bf-467c-9b4c-4d02e653c6a1/202110192003_kA3y_.jpeg",
+        "merchantName": "Açaí do Pé",
+        "minimumOrderAmount": 15,
+        "ratingCount": 245,
+        "reviewRating": 4.900000095367432,
+        "straightLineDistanceKm": 0.9
+      },
+      "promotionalUnitPrice": 21,
+      "unitPrice": 24
+    },
+    {
+      "itemEan": "",
+      "itemId": "ca81ed8c-fb17-451e-bd37-85c2534aa461",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/270d12cd-fcca-4a0a-b7fb-6f598cb95bd0/202210142240_WF54_i.jpg",
+      "itemName": "Açaí + Morango e Leite Condensado",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "HIGH_DENSITY",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 61,
+            "min": 46
+          },
+          "fee": 3.99,
+          "promotionalFee": 3.99
+        },
+        "isOpen": true,
+        "merchantId": "f4f4d3f6-a352-4e34-b17d-0227f3a6ff88",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/f4f4d3f6-a352-4e34-b17d-0227f3a6ff88/202502051438_s4D8_2.jpg",
+        "merchantName": "Jah Açaí Express - São Carlos",
+        "minimumOrderAmount": 23,
+        "ratingCount": 155,
+        "reviewRating": 4.900000095367432,
+        "straightLineDistanceKm": 0.14
+      },
+      "promotionalUnitPrice": 27.99,
+      "unitPrice": 27.99
+    },
+    {
+      "itemEan": "",
+      "itemId": "f13cfd52-d887-4322-b839-6a839f299ec8",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/653509b6-ab6a-48b8-bd83-31d77665aa27/202405261729_I626_i.jpg",
+      "itemName": "Açaí e sorvete 300gr - O Melhor monte do seu jeito!",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 34,
+            "min": 24
+          },
+          "fee": 5.99,
+          "promotionalFee": 5.99
+        },
+        "isOpen": true,
+        "merchantId": "653509b6-ab6a-48b8-bd83-31d77665aa27",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/653509b6-ab6a-48b8-bd83-31d77665aa27/201905172323_3gIG_i.png",
+        "merchantName": "La Suqueria",
+        "minimumOrderAmount": 22,
+        "ratingCount": 720,
+        "reviewRating": 4.900000095367432,
+        "straightLineDistanceKm": 1.22
+      },
+      "promotionalUnitPrice": 21.9,
+      "unitPrice": 21.9
+    },
+    {
+      "itemEan": "",
+      "itemId": "d8bde7bd-0e2d-41f2-b0f5-b62d30a3784a",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/8ef97d1e-4853-4c74-9c41-dacf4e9ab408/202603100822_I6JD_i.jpg",
+      "itemName": "Açaí 500g | O favorito da casa",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 110,
+            "min": 100
+          },
+          "fee": 3.9,
+          "promotionalFee": 3.9
+        },
+        "isOpen": true,
+        "merchantId": "38c8cf24-9826-44f4-abcc-439a38638145",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/38c8cf24-9826-44f4-abcc-439a38638145/202011151437_wZws_i.jpg",
+        "merchantName": "Açaí da Villa - Santa Felícia",
+        "minimumOrderAmount": 35,
+        "ratingCount": 458,
+        "reviewRating": 4.699999809265137,
+        "straightLineDistanceKm": 2.79
+      },
+      "promotionalUnitPrice": 26.9,
+      "unitPrice": 26.9
+    },
+    {
+      "itemEan": "",
+      "itemId": "493f22ba-8f68-44ec-94a3-a36422239b41",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/270d12cd-fcca-4a0a-b7fb-6f598cb95bd0/202210142240_WF54_i.jpg",
+      "itemName": "Açaí + Morango e Leite Condensado",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "HIGH_DENSITY",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 61,
+            "min": 46
+          },
+          "fee": 3.99,
+          "promotionalFee": 3.99
+        },
+        "isOpen": true,
+        "merchantId": "f4f4d3f6-a352-4e34-b17d-0227f3a6ff88",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/f4f4d3f6-a352-4e34-b17d-0227f3a6ff88/202502051438_s4D8_2.jpg",
+        "merchantName": "Jah Açaí Express - São Carlos",
+        "minimumOrderAmount": 23,
+        "ratingCount": 155,
+        "reviewRating": 4.900000095367432,
+        "straightLineDistanceKm": 0.14
+      },
+      "promotionalUnitPrice": 19.99,
+      "unitPrice": 27.99
+    },
+    {
+      "itemEan": "",
+      "itemId": "4ec7fcad-5a2c-4bae-9e91-7d8a3d9ce3da",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/ec6b5874-8a84-42ce-b918-681808824a8c/202605171510_EHX7_i.jpg",
+      "itemName": "Açaí 800g",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 55,
+            "min": 45
+          },
+          "fee": 3.9,
+          "promotionalFee": 3.9
+        },
+        "isOpen": true,
+        "merchantId": "ec6b5874-8a84-42ce-b918-681808824a8c",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/ec6b5874-8a84-42ce-b918-681808824a8c/202208232007_AaMA_i.jpg",
+        "merchantName": "Santo Açai",
+        "minimumOrderAmount": 35,
+        "ratingCount": 147,
+        "reviewRating": 4.5,
+        "straightLineDistanceKm": 2.78
+      },
+      "promotionalUnitPrice": 31.9,
+      "unitPrice": 37.9
+    },
+    {
+      "itemEan": "",
+      "itemId": "f8ae234b-57c9-427f-b594-cc10dffa1b99",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/98dfd9d5-892b-4de7-a5a0-052799373ba3/202211091146_1B6A_i.jpg",
+      "itemName": "Monte seu açaí 480ml - Grátis 4 Complementos",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "HIGH_DENSITY",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 61,
+            "min": 46
+          },
+          "fee": 3.99,
+          "promotionalFee": 3.99
+        },
+        "isOpen": true,
+        "merchantId": "f4f4d3f6-a352-4e34-b17d-0227f3a6ff88",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/f4f4d3f6-a352-4e34-b17d-0227f3a6ff88/202502051438_s4D8_2.jpg",
+        "merchantName": "Jah Açaí Express - São Carlos",
+        "minimumOrderAmount": 23,
+        "ratingCount": 155,
+        "reviewRating": 4.900000095367432,
+        "straightLineDistanceKm": 0.14
+      },
+      "promotionalUnitPrice": 26.99,
+      "unitPrice": 34.99
+    },
+    {
+      "itemEan": "",
+      "itemId": "867373ec-9cc4-418b-a787-ac17d3eb2ec9",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/270d12cd-fcca-4a0a-b7fb-6f598cb95bd0/202210142240_WF54_i.jpg",
+      "itemName": "Açaí + Granola + Leite em Pó",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "HIGH_DENSITY",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 61,
+            "min": 46
+          },
+          "fee": 3.99,
+          "promotionalFee": 3.99
+        },
+        "isOpen": true,
+        "merchantId": "f4f4d3f6-a352-4e34-b17d-0227f3a6ff88",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/f4f4d3f6-a352-4e34-b17d-0227f3a6ff88/202502051438_s4D8_2.jpg",
+        "merchantName": "Jah Açaí Express - São Carlos",
+        "minimumOrderAmount": 23,
+        "ratingCount": 155,
+        "reviewRating": 4.900000095367432,
+        "straightLineDistanceKm": 0.14
+      },
+      "promotionalUnitPrice": 27.99,
+      "unitPrice": 27.99
+    },
+    {
+      "itemEan": "",
+      "itemId": "e79fb7c9-aa36-4dd0-8fa6-f35ef59ac8c2",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/98dfd9d5-892b-4de7-a5a0-052799373ba3/202211091153_5C18_i.jpg",
+      "itemName": "Monte seu açaí 360ml - Grátis 3 Complementos",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "HIGH_DENSITY",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 61,
+            "min": 46
+          },
+          "fee": 3.99,
+          "promotionalFee": 3.99
+        },
+        "isOpen": true,
+        "merchantId": "f4f4d3f6-a352-4e34-b17d-0227f3a6ff88",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/f4f4d3f6-a352-4e34-b17d-0227f3a6ff88/202502051438_s4D8_2.jpg",
+        "merchantName": "Jah Açaí Express - São Carlos",
+        "minimumOrderAmount": 23,
+        "ratingCount": 155,
+        "reviewRating": 4.900000095367432,
+        "straightLineDistanceKm": 0.14
+      },
+      "promotionalUnitPrice": 21.99,
+      "unitPrice": 29.99
+    },
+    {
+      "itemEan": "",
+      "itemId": "9c479da9-9eeb-402f-a9df-67e91ff6b705",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/51ab90fe-2606-423c-9b86-32520e7fcd86/202508270951_2ltl07wiy1d.png",
+      "itemName": "Açaí Creme de Paçoca",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "HIGH_DENSITY",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 78,
+            "min": 63
+          },
+          "fee": 7,
+          "promotionalFee": 7
+        },
+        "isOpen": true,
+        "merchantId": "51ab90fe-2606-423c-9b86-32520e7fcd86",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/51ab90fe-2606-423c-9b86-32520e7fcd86/202602031818_kemi_i.jpg",
+        "merchantName": "Açaí & Sorvetes Artesanais - Borelli",
+        "minimumOrderAmount": 10,
+        "ratingCount": 323,
+        "reviewRating": 4.900000095367432,
+        "straightLineDistanceKm": 3.05
+      },
+      "promotionalUnitPrice": 21.9,
+      "unitPrice": 33.9
+    },
+    {
+      "itemEan": "",
+      "itemId": "37c52598-308c-43af-8484-38f9d466fef8",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/1751465c-9e9c-425e-8f60-5cfb03a2e680/202311091448_0WEY_i.jpg",
+      "itemName": "Açaí ou Sorvete no Copo 500ml",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 80,
+            "min": 70
+          },
+          "fee": 12,
+          "promotionalFee": 12
+        },
+        "isOpen": true,
+        "merchantId": "1751465c-9e9c-425e-8f60-5cfb03a2e680",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/1751465c-9e9c-425e-8f60-5cfb03a2e680/202003211002_IrfU_.jpeg",
+        "merchantName": "Lual Lanches e Açaí Jardim Botafogo",
+        "minimumOrderAmount": 25,
+        "ratingCount": 547,
+        "reviewRating": 4.900000095367432,
+        "straightLineDistanceKm": 2.5
+      },
+      "promotionalUnitPrice": 29.29,
+      "unitPrice": 29.29
+    },
+    {
+      "itemEan": "",
+      "itemId": "ce613f9d-9e4d-4e05-8750-05e73272c711",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202307101347_C084_i.jpg",
+      "itemName": "Açaí Bowl One (270ml)",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 38,
+            "min": 23
+          },
+          "fee": 6.99,
+          "promotionalFee": 6.99
+        },
+        "isOpen": true,
+        "merchantId": "cb916f48-d654-4651-857e-1dda3d91a741",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/cb916f48-d654-4651-857e-1dda3d91a741/202406261851_CZ5I.png",
+        "merchantName": "Oakberry Açaí - São Carlos",
+        "minimumOrderAmount": 15,
+        "ratingCount": 118,
+        "reviewRating": 5,
+        "straightLineDistanceKm": 0.44
+      },
+      "promotionalUnitPrice": 26.99,
+      "unitPrice": 26.99
+    },
+    {
+      "itemEan": "",
+      "itemId": "60b96b0c-5aa3-42fc-824a-06c8d7189efd",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202307101347_POI0_i.jpg",
+      "itemName": "Açaí Bowl Classic (350ml)",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 38,
+            "min": 23
+          },
+          "fee": 6.99,
+          "promotionalFee": 6.99
+        },
+        "isOpen": true,
+        "merchantId": "cb916f48-d654-4651-857e-1dda3d91a741",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/cb916f48-d654-4651-857e-1dda3d91a741/202406261851_CZ5I.png",
+        "merchantName": "Oakberry Açaí - São Carlos",
+        "minimumOrderAmount": 15,
+        "ratingCount": 118,
+        "reviewRating": 5,
+        "straightLineDistanceKm": 0.44
+      },
+      "promotionalUnitPrice": 32.99,
+      "unitPrice": 32.99
+    },
+    {
+      "itemEan": "",
+      "itemId": "22d7bbde-076c-4e3b-9432-34d43b5e1655",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/3ecdce9d-f7e8-450b-9ca5-0c0f605e3576/202307101354_DF87_i.jpg",
+      "itemName": "Açaí Bowl The Oak (720ml)",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 38,
+            "min": 23
+          },
+          "fee": 6.99,
+          "promotionalFee": 6.99
+        },
+        "isOpen": true,
+        "merchantId": "cb916f48-d654-4651-857e-1dda3d91a741",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/cb916f48-d654-4651-857e-1dda3d91a741/202406261851_CZ5I.png",
+        "merchantName": "Oakberry Açaí - São Carlos",
+        "minimumOrderAmount": 15,
+        "ratingCount": 118,
+        "reviewRating": 5,
+        "straightLineDistanceKm": 0.44
+      },
+      "promotionalUnitPrice": 51.99,
+      "unitPrice": 51.99
+    },
+    {
+      "itemEan": "",
+      "itemId": "8d213529-0001-48d0-a1ec-957d2fc40a65",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/facc668b-3d7c-4f0c-833c-f7f12e496992/202408311450_p6ocijr68dg.png",
+      "itemName": "Açai no copo 500ml",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 28,
+            "min": 13
+          },
+          "fee": 10.99,
+          "promotionalFee": 10.99
+        },
+        "isOpen": true,
+        "merchantId": "facc668b-3d7c-4f0c-833c-f7f12e496992",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/facc668b-3d7c-4f0c-833c-f7f12e496992/202503201641_JUTd_.jpeg",
+        "merchantName": "Açai Sallum",
+        "minimumOrderAmount": 20,
+        "ratingCount": 146,
+        "reviewRating": 5,
+        "straightLineDistanceKm": 2.67
+      },
+      "promotionalUnitPrice": 23.9,
+      "unitPrice": 23.9
+    },
+    {
+      "itemEan": "",
+      "itemId": "815fcf20-f175-4ad7-8504-16643c3f6a45",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/cf809640-5879-4275-871a-416e463e8028/202002140943_2PRh_.jpeg",
+      "itemName": "450gr/açaí",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 25,
+            "min": 10
+          },
+          "fee": 4.99,
+          "promotionalFee": 0
+        },
+        "isOpen": true,
+        "merchantId": "cf809640-5879-4275-871a-416e463e8028",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/cf809640-5879-4275-871a-416e463e8028/202001301501_BBWy_i.jpg",
+        "merchantName": "Paçai",
+        "minimumOrderAmount": 20,
+        "ratingCount": 48,
+        "reviewRating": 4.900000095367432,
+        "straightLineDistanceKm": 0.73
+      },
+      "promotionalUnitPrice": 34.9,
+      "unitPrice": 34.9
+    },
+    {
+      "itemEan": "",
+      "itemId": "6c421250-e40a-4a9f-a99c-f0320d041be3",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/4b078b50-2287-4b87-9b92-721ce47c32d2/202610142114_71K2_i.jpg",
+      "itemName": "Açai Trad - C/ Fruta - Leite em Pó, Leite Condensado + Topo c/ Fruta 300ml",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 29,
+            "min": 19
+          },
+          "fee": 0,
+          "promotionalFee": 0
+        },
+        "isOpen": true,
+        "merchantId": "4b078b50-2287-4b87-9b92-721ce47c32d2",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/4b078b50-2287-4b87-9b92-721ce47c32d2/202607131554_YBBR_5.png",
+        "merchantName": "Açaí no Copo – Açaíteria Casaçaí",
+        "minimumOrderAmount": 13,
+        "ratingCount": 142,
+        "reviewRating": 5,
+        "straightLineDistanceKm": 1.63
+      },
+      "promotionalUnitPrice": 19.99,
+      "unitPrice": 19.99
+    },
+    {
+      "itemEan": "",
+      "itemId": "f1c93c30-7948-442a-bfe8-b953787a4331",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/4b078b50-2287-4b87-9b92-721ce47c32d2/202607062124_3B3R_i.jpg",
+      "itemName": "Açai Copo Tradicional 200 ml - Leve Mais Um Por 15,00 R$",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 29,
+            "min": 19
+          },
+          "fee": 0,
+          "promotionalFee": 0
+        },
+        "isOpen": true,
+        "merchantId": "4b078b50-2287-4b87-9b92-721ce47c32d2",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/4b078b50-2287-4b87-9b92-721ce47c32d2/202607131554_YBBR_5.png",
+        "merchantName": "Açaí no Copo – Açaíteria Casaçaí",
+        "minimumOrderAmount": 13,
+        "ratingCount": 142,
+        "reviewRating": 5,
+        "straightLineDistanceKm": 1.63
+      },
+      "promotionalUnitPrice": 17.99,
+      "unitPrice": 17.99
+    },
+    {
+      "itemEan": "",
+      "itemId": "11330ac4-d3e1-4f91-8bce-bc09b447effe",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/4b078b50-2287-4b87-9b92-721ce47c32d2/202609111456_YJ03_i.jpg",
+      "itemName": "Açaí no Copo + Leite Condensado + Leite em Pó ( 300ml )",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 29,
+            "min": 19
+          },
+          "fee": 0,
+          "promotionalFee": 0
+        },
+        "isOpen": true,
+        "merchantId": "4b078b50-2287-4b87-9b92-721ce47c32d2",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/4b078b50-2287-4b87-9b92-721ce47c32d2/202607131554_YBBR_5.png",
+        "merchantName": "Açaí no Copo – Açaíteria Casaçaí",
+        "minimumOrderAmount": 13,
+        "ratingCount": 142,
+        "reviewRating": 5,
+        "straightLineDistanceKm": 1.63
+      },
+      "promotionalUnitPrice": 19.99,
+      "unitPrice": 19.99
+    },
+    {
+      "itemEan": "",
+      "itemId": "5e6fb493-dca2-4a99-8139-a8dd3ab3aa19",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/b818b47a-f7e6-42a4-8e9c-80f3756a23df/202606101405_U10R_i.jpg",
+      "itemName": "Açaí Pote 1l",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 50,
+            "min": 40
+          },
+          "fee": 8,
+          "promotionalFee": 8
+        },
+        "isOpen": true,
+        "merchantId": "b818b47a-f7e6-42a4-8e9c-80f3756a23df",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/b818b47a-f7e6-42a4-8e9c-80f3756a23df/202605181500_zxkT_b.png",
+        "merchantName": "2 Manas Açaí",
+        "minimumOrderAmount": 14,
+        "ratingCount": 104,
+        "reviewRating": 4.900000095367432,
+        "straightLineDistanceKm": 0.47
+      },
+      "promotionalUnitPrice": 79.9,
+      "unitPrice": 79.9
+    },
+    {
+      "itemEan": "",
+      "itemId": "21af3e42-0621-43e6-a012-a6ea80a90756",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/120fc33a-3ac8-4f30-8ca5-5c61b0af30b4/202412231759_U5AN_i.jpg",
+      "itemName": "Açaí Delícia Creme de Avelã 500ml",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 55,
+            "min": 45
+          },
+          "fee": 0,
+          "promotionalFee": 0
+        },
+        "isOpen": true,
+        "merchantId": "fc97a739-eb4b-4582-af9b-be7d15488b85",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/fc97a739-eb4b-4582-af9b-be7d15488b85/202503201634_2mtl_i.jpg",
+        "merchantName": "Republica do Açai",
+        "minimumOrderAmount": 29,
+        "ratingCount": 60,
+        "reviewRating": 4.900000095367432,
+        "straightLineDistanceKm": 2.02
+      },
+      "promotionalUnitPrice": 42,
+      "unitPrice": 42
+    },
+    {
+      "itemEan": "",
+      "itemId": "bb7697c7-124c-43c9-87e8-5caf7e61823c",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/dc91823c-3282-442b-92b6-cd96f6f74df0/202609082106_VO6D_i.jpg",
+      "itemName": "Açaí + Morango + Leite em pó + Granola",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "HIGH_DENSITY",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 60,
+            "min": 45
+          },
+          "fee": 3.99,
+          "promotionalFee": 3.99
+        },
+        "isOpen": true,
+        "merchantId": "4b2fed99-b25c-4696-98e5-cf33a520aa41",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/4b2fed99-b25c-4696-98e5-cf33a520aa41/202412191028_QsKV_i.jpg",
+        "merchantName": "Jah Açaí  e Sorvetes - São Carlos",
+        "minimumOrderAmount": 20,
+        "ratingCount": 146,
+        "reviewRating": 4.900000095367432,
+        "straightLineDistanceKm": 0.15
+      },
+      "promotionalUnitPrice": 21.99,
+      "unitPrice": 29.99
+    },
+    {
+      "itemEan": "",
+      "itemId": "2f91abcc-79a9-4ab5-bb11-30f6f2aec3ce",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/8ef97d1e-4853-4c74-9c41-dacf4e9ab408/202603260949_HG86_i.jpg",
+      "itemName": "Açaí 500ml  - O tamanho perfeito para matar a fome.",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 110,
+            "min": 100
+          },
+          "fee": 3.9,
+          "promotionalFee": 3.9
+        },
+        "isOpen": true,
+        "merchantId": "38c8cf24-9826-44f4-abcc-439a38638145",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/38c8cf24-9826-44f4-abcc-439a38638145/202011151437_wZws_i.jpg",
+        "merchantName": "Açaí da Villa - Santa Felícia",
+        "minimumOrderAmount": 35,
+        "ratingCount": 458,
+        "reviewRating": 4.699999809265137,
+        "straightLineDistanceKm": 2.79
+      },
+      "promotionalUnitPrice": 26.9,
+      "unitPrice": 26.9
+    }
+  ]
+}

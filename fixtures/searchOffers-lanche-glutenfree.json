@@ -1,0 +1,39 @@
+{
+  "agentHints": {
+    "nextStepWhenUserPicksItem": "Retrieve full item details — option groups and applicable promotions — before presenting it to the user."
+  },
+  "hasMore": false,
+  "interpretedQuery": "lanche",
+  "nextPageToken": null,
+  "resultKind": "ITEM",
+  "results": [
+    {
+      "itemEan": "",
+      "itemId": "7722b351-85e0-4563-b0dd-ec77c1bcb801",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/52205842-867c-495b-9b83-877e4aede6cd/202511071912_65M0_i.jpg",
+      "itemName": "Veggie Burger",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 50,
+            "min": 40
+          },
+          "fee": 5.99,
+          "promotionalFee": 5.99
+        },
+        "isOpen": true,
+        "merchantId": "52205842-867c-495b-9b83-877e4aede6cd",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/52205842-867c-495b-9b83-877e4aede6cd/202003231602_wiH1_i.jpg",
+        "merchantName": "Jolly Gastro Lab",
+        "minimumOrderAmount": 20,
+        "ratingCount": 7,
+        "reviewRating": 5,
+        "straightLineDistanceKm": 0.71
+      },
+      "promotionalUnitPrice": 59.8,
+      "unitPrice": 59.8
+    }
+  ]
+}

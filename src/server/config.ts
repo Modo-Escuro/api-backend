@@ -11,6 +11,16 @@ export interface AppConfig {
   tokenFile: string;
   /** Issuer usado para OIDC discovery (verificado em /.well-known/openid-configuration). */
   authServer: string;
+  /** Segredo compartilhado bot→API (Authorization: Bearer). Vazio = rotas do bot desativadas (fail closed). */
+  botApiToken: string | undefined;
+  /** IDs numéricos do Telegram autorizados como organizador. */
+  allowedOrganizerIds: string[];
+  /** Diretório dos vínculos Telegram↔iFood (metadados + tokens; fora do Git). */
+  linksDir: string;
+  /** Base pública do backend para o link de início do login (precisa abrir no navegador da máquina do backend). */
+  publicBaseUrl: string;
+  /** Habilita a sessão global antiga (/api/auth/*, diagnóstico com MCP). Só desenvolvimento; nunca vira vínculo. */
+  devGlobalSession: boolean;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -18,12 +28,21 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     mcpUrl: env.IFOOD_MCP_URL || 'https://consumer-mcp.ifood.com.br/marketplace',
     clientId: env.IFOOD_CLIENT_ID || undefined,
     clientSecret: env.IFOOD_CLIENT_SECRET || undefined,
-    redirectUri: env.IFOOD_REDIRECT_URI || 'http://localhost:8000/callback',
+    // Igual ao redirect registrado no client OAuth (sem barra final, sem /callback).
+    redirectUri: env.IFOOD_REDIRECT_URI || 'http://localhost:8000',
     scope: env.IFOOD_SCOPE || undefined,
     webOrigin: env.WEB_ORIGIN || 'http://localhost:5173',
     port: Number(env.PORT || 8000),
     tokenFile: env.IFOOD_TOKEN_FILE || '.tokens.json',
     authServer: env.IFOOD_AUTH_SERVER || 'https://id.ifood.com.br',
+    botApiToken: env.BOT_API_TOKEN && env.BOT_API_TOKEN.length >= 32 ? env.BOT_API_TOKEN : undefined,
+    allowedOrganizerIds: (env.ALLOWED_ORGANIZER_IDS || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => /^[1-9][0-9]{0,19}$/.test(s)),
+    linksDir: env.IFOOD_LINKS_DIR || '.ifood-links',
+    publicBaseUrl: (env.PUBLIC_BASE_URL || `http://localhost:${Number(env.PORT || 8000)}`).replace(/\/$/, ''),
+    devGlobalSession: env.DEV_GLOBAL_SESSION === 'true',
   };
 }
 
