@@ -36,6 +36,13 @@ npm test
 - Tokens OAuth: memória + arquivo `.tokens.json` em `.gitignore`. Nunca em resposta HTTP/UI.
 - O `userId` é injetado pelo gateway via token — o app nunca manipula `userId`.
 
+## Vínculo Telegram ↔ iFood (F3.5) — contrato em `docs/bot-api.md`
+- Bot→API: `Authorization: Bearer $BOT_API_TOKEN` + `X-Telegram-User-Id` (validado pelo adaptador; nunca do corpo/LLM),
+  conferido contra `ALLOWED_ORGANIZER_IDS`. Rotas: `/api/bot/ifood/{status,connect,confirm,verify,link}`.
+- `/api/addresses` e `/api/evaluate` exigem vínculo confirmado e operacional (`allowedOperations`), com tokens/sessão MCP/cache por vínculo.
+- Token presente ≠ operacional; falha de rede ⇒ `UNAVAILABLE` (não logout); refresh recusado ⇒ `RECONNECT_REQUIRED`.
+- Sessão global antiga só com `DEV_GLOBAL_SESSION=true`; nunca importada como vínculo. Login não aprova compra.
+
 ## Regras de ouro (transversais)
 1. **Nunca inventar IDs** (`addressId`, `merchantId`, `itemId`, `cartId`, `optionId`...): só os retornados pelas respostas.
 2. **`getItem` antes de recomendar/preço final** — `searchOffers` pode mostrar preço promo, mas só `getItem` traz `optionGroups` e limites.

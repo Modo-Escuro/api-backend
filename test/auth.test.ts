@@ -93,4 +93,33 @@ describe('IfoodAuth', () => {
     const a = new IfoodAuth(cfg, fetch);
     expect((await a.status()).authenticated).toBe(false);
   });
+
+  it('callback do login de desenvolvimento rejeita tentativa expirada e state repetido', async () => {
+    const { cfg, calls } = setup();
+    let t = 1_000_000;
+    const fakeFetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/.well-known/openid-configuration')) return Response.json(md);
+      calls.push({ url, body: new URLSearchParams(String(init?.body ?? '')), auth: null });
+      if (url === md.pushed_authorization_request_endpoint) return Response.json({ request_uri: 'urn:par:x' });
+      return Response.json({ access_token: 'at', expires_in: 3600 });
+    }) as typeof fetch;
+    const a = new IfoodAuth(cfg, fakeFetch, { now: () => t });
+    await a.startLogin();
+    const state = calls.at(-1)!.body.get('state')!;
+    t += 11 * 60_000;
+    await expect(a.handleCallback('c', state)).rejects.toMatchObject({ code: 'ATTEMPT_EXPIRED' });
+    await expect(a.handleCallback('c', state)).rejects.toMatchObject({ code: 'INVALID_STATE' });
+    expect(calls.some((c) => c.url === md.token_endpoint)).toBe(false);
+  });
+
+  it('falha de rede no AS vira PROVIDER_UNREACHABLE (não logout)', async () => {
+    const { cfg } = setup();
+    const a = new IfoodAuth(cfg, (async () => {
+      throw new TypeError('fetch failed');
+    }) as typeof fetch, { tokenFile: null });
+    await a.setTokens({ clientId: 'cid', accessToken: 'x', refreshToken: 'r', expiresAt: 1, scope: null, source: 't', obtainedAt: 0 });
+    await expect(a.getAccessToken()).rejects.toMatchObject({ code: 'PROVIDER_UNREACHABLE' });
+    expect((await a.tokenInfo()).present).toBe(true);
+  });
 });

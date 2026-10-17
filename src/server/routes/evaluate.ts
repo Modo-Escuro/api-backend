@@ -1,11 +1,10 @@
 // POST /api/evaluate — avaliação read-only (sem ranking, sem carrinho).
 
-import type { Hono } from 'hono';
+import type { Context, Hono } from 'hono';
 import { z } from 'zod';
 import { ALLERGENS, DIETARY } from '../domain/constraints.js';
 import { SORTS } from '../mcp/types.js';
-import { getItem, listAddresses, searchOffers } from '../mcp/tools.js';
-import { EvaluateInputError, ItemCache, runEvaluation, type EvaluateDeps, type EvaluateRequest } from '../services/evaluate.js';
+import { EvaluateInputError, type EvaluateOutcome, type EvaluateRequest } from '../services/evaluate.js';
 import { evaluateView } from '../services/evaluate-view.js';
 
 const money = z.number().finite().positive().max(10_000);
@@ -55,15 +54,10 @@ export const EvaluateBody = z
   .strict()
   .refine((b) => !(b.addressId && b.userLocation), { message: 'Informe addressId OU userLocation, não ambos' });
 
-export const realEvaluateDeps: EvaluateDeps = {
-  listAddresses: () => listAddresses(),
-  searchOffers: (args, opts) => searchOffers(args, undefined, opts),
-  getItem: (args, opts) => getItem(args, undefined, opts),
-};
-
 const INPUT_STATUS: Record<string, 400 | 409> = { ADDRESS_AMBIGUOUS: 409, NO_ADDRESS: 409 };
 
-export function registerEvaluate(app: Hono, deps: EvaluateDeps = realEvaluateDeps, cache = new ItemCache()) {
+/** `run` executa a avaliação na sessão do vínculo do organizador (definido pelo app). */
+export function registerEvaluate(app: Hono, run: (c: Context, req: EvaluateRequest) => Promise<EvaluateOutcome>) {
   app.post('/api/evaluate', async (c) => {
     let json: unknown;
     try {
@@ -76,7 +70,7 @@ export function registerEvaluate(app: Hono, deps: EvaluateDeps = realEvaluateDep
       return c.json({ error: { kind: 'VALIDATION', message: 'Requisição inválida', issues: parsed.error.issues.map((i) => ({ path: i.path.join('.'), message: i.message })) } }, 400);
     }
     try {
-      const outcome = await runEvaluation(parsed.data as EvaluateRequest, deps, cache);
+      const outcome = await run(c, parsed.data as EvaluateRequest);
       return c.json(evaluateView(outcome));
     } catch (e) {
       if (e instanceof EvaluateInputError) return c.json({ error: { kind: 'INPUT', code: e.code, message: e.message } }, INPUT_STATUS[e.code] ?? 400);

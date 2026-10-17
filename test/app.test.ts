@@ -21,9 +21,10 @@ describe('errorBody', () => {
     expect(r.status).toBe(502);
     expect(r.body.error).toMatchObject({ tool: 'searchOffers', message: 'msg', code: 'C', retryable: true });
   });
-  it('login requerido → 401 com loginUrl', () => {
+  it('login requerido → 401 sem apontar para sessão global', () => {
     const r = errorBody(new AuthError('x', 'LOGIN_REQUIRED', 401));
     expect(r.status).toBe(401);
-    expect(r.body.error).toMatchObject({ loginUrl: '/api/auth/login' });
+    expect(r.body.error).toMatchObject({ kind: 'AUTH_ERROR', code: 'LOGIN_REQUIRED' });
+    expect(r.body.error).not.toHaveProperty('loginUrl');
   });
 });

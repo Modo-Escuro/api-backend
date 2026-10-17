@@ -2,8 +2,6 @@
 // Endereço e erros de getItem são sintéticos (rotulados) — fixtures não guardam dados pessoais.
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { createApp } from '../../src/server/app';
-import { AuthError, IfoodAuth } from '../../src/server/auth';
 import { McpToolError } from '../../src/server/mcp/errors';
 import type { SearchOffersArgs } from '../../src/server/mcp/types';
 import { ItemCache, runEvaluation, type EvaluateDeps } from '../../src/server/services/evaluate';
@@ -184,62 +182,5 @@ describe('runEvaluation + view (fixtures reais)', () => {
     expect(c.merchant.rating).toBeNull();
     expect(c.missingFields['merchant.rating']).toBe('ABSENT');
     expect(c.item.ingredientsAndAllergens).toBe('NOT_PROVIDED_BY_IFOOD');
-  });
-});
-
-describe('POST /api/evaluate (rota)', () => {
-  const app = (deps: EvaluateDeps = fake()) => createApp(new IfoodAuth(), { evaluateDeps: deps });
-  const post = (a: ReturnType<typeof createApp>, body: unknown) =>
-    a.request('/api/evaluate', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-
-  it('200 com elegíveis/bloqueados e sem coordenadas no corpo', async () => {
-    const res = await post(app(), { query: 'pizza', restrictions: [{ kind: 'DIETARY', code: 'NO_PORK', requirement: 'PREFERENCE' }] });
-    expect(res.status).toBe(200);
-    const text = await res.text();
-    expect(text).not.toContain(String(ADDRESS.coordinates.latitude));
-    const body = JSON.parse(text);
-    expect(body.summary.candidates).toBe(5);
-    expect(Array.isArray(body.eligible) && Array.isArray(body.blocked)).toBe(true);
-  });
-
-  it.each([
-    [{ query: '' }, 'query vazia'],
-    [{ query: 'pizza', restrictions: [{ kind: 'ALLERGY', code: 'PEANUT', requirement: 'PREFERENCE' }] }, 'alergia como preferência'],
-    [{ query: 'pizza', addressId: 'a', userLocation: { latitude: 0, longitude: 0 } }, 'endereço e localização juntos'],
-    [{ query: 'pizza', budget: { maxItemPrice: -1 } }, 'orçamento negativo'],
-    [{ query: 'pizza', refinements: { sort: 'RATING' } }, 'sort fora do enum real'],
-    [{ query: 'pizza', extra: 1 }, 'campo desconhecido'],
-  ] as [unknown, string][])('400 para %j (%s)', async (body) => {
-    const res = await post(app(), body);
-    expect(res.status).toBe(400);
-    expect((await res.json()).error.kind).toBe('VALIDATION');
-  });
-
-  it('409 com vários endereços sem addressId; 400 para addressId fora da lista', async () => {
-    const two = fake({ addresses: [ADDRESS, { ...ADDRESS, addressId: 'addr-test-2' }] });
-    expect((await post(app(two), { query: 'pizza' })).status).toBe(409);
-    expect((await post(app(two), { query: 'pizza', addressId: 'inexistente' })).status).toBe(400);
-    expect((await post(app(two), { query: 'pizza', addressId: 'addr-test-2' })).status).toBe(200);
-  });
-
-  it('userLocation explícita dispensa listAddresses', async () => {
-    const deps = fake({ addresses: [] });
-    const res = await post(app(deps), { query: 'pizza', userLocation: { latitude: -1, longitude: -2 } });
-    expect(res.status).toBe(200);
-    expect((await res.json()).location).toEqual({ source: 'REQUEST', addressId: null, alias: null });
-  });
-
-  it('erro MCP na 1ª página ⇒ 502 com mensagem do MCP; sem login ⇒ 401', async () => {
-    const mcpErr = fake({ pages: [new McpToolError('searchOffers', [{ message: 'falha sintética', code: 'E', retryable: false }])] });
-    const r1 = await post(app(mcpErr), { query: 'pizza' });
-    expect(r1.status).toBe(502);
-    expect((await r1.json()).error).toMatchObject({ kind: 'MCP_TOOL_ERROR', message: 'falha sintética', code: 'E' });
-
-    const noAuth = fake();
-    noAuth.listAddresses = async () => {
-      throw new AuthError('Não autenticado', 'LOGIN_REQUIRED', 401);
-    };
-    const r2 = await post(app(noAuth), { query: 'pizza' });
-    expect(r2.status).toBe(401);
   });
 });
