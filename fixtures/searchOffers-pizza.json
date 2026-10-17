@@ -1,0 +1,151 @@
+{
+  "agentHints": {
+    "nextStepWhenUserPicksItem": "Retrieve full item details — option groups and applicable promotions — before presenting it to the user."
+  },
+  "hasMore": true,
+  "interpretedQuery": "pizza",
+  "nextPageToken": "NTsx",
+  "resultKind": "ITEM",
+  "results": [
+    {
+      "itemEan": "",
+      "itemId": "45a7249f-52b5-4d83-ab89-0424f13f88de",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/780e72eb-fc47-4420-9416-59989207ea07/201803221857_35886094.jpg",
+      "itemName": "Promoção pizza grande",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 60,
+            "min": 50
+          },
+          "fee": 4.99,
+          "promotionalFee": 0
+        },
+        "isOpen": true,
+        "merchantId": "780e72eb-fc47-4420-9416-59989207ea07",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/logo - don ra_donra_rante.png",
+        "merchantName": "Don Raffaele Pizze e Ristorante",
+        "minimumOrderAmount": 30,
+        "ratingCount": 251,
+        "reviewRating": 4.900000095367432,
+        "straightLineDistanceKm": 0.86
+      },
+      "promotionalUnitPrice": 78,
+      "unitPrice": 78
+    },
+    {
+      "itemEan": "9900000018443",
+      "itemId": "f3d10467-a8d8-418e-8ac5-57045ce03b35",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202505031705_0frrfjjw5brl.jpeg",
+      "itemName": "1 pizza 22cm + 1 Tomatinho Doce",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 29,
+            "min": 19
+          },
+          "fee": 6.99,
+          "promotionalFee": 6.99
+        },
+        "isOpen": true,
+        "merchantId": "f0671abe-24e0-4d85-b419-caf20570a32b",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/f0671abe-24e0-4d85-b419-caf20570a32b/202010041733_PUrd_.jpeg",
+        "merchantName": "Tomate Cru Pizzaria",
+        "minimumOrderAmount": 29.9,
+        "ratingCount": 862,
+        "reviewRating": 4.900000095367432,
+        "straightLineDistanceKm": 0.32
+      },
+      "promotionalUnitPrice": 33.9,
+      "unitPrice": 43.9
+    },
+    {
+      "itemEan": "",
+      "itemId": "be00553d-e420-4fe3-989f-cdba7b77e1a2",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/6cd03779-c865-462d-8e42-c51bfba0dffc/202605161143_17QV_i.jpg",
+      "itemName": "Combo 2 Pizzas",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 125,
+            "min": 115
+          },
+          "fee": 0,
+          "promotionalFee": 0
+        },
+        "isOpen": true,
+        "merchantId": "6cd03779-c865-462d-8e42-c51bfba0dffc",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/6cd03779-c865-462d-8e42-c51bfba0dffc/202410091905_lbFe_i.jpg",
+        "merchantName": "São Carlos - Pizzaria",
+        "minimumOrderAmount": 20,
+        "ratingCount": 459,
+        "reviewRating": 4.699999809265137,
+        "straightLineDistanceKm": 1
+      },
+      "promotionalUnitPrice": 79.99,
+      "unitPrice": 79.99
+    },
+    {
+      "itemEan": "",
+      "itemId": "7f5481e2-718c-437c-800f-455144d64000",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202610091929_7680_i.jpg",
+      "itemName": "Combo Individual - 1 Pizza 22cm + 1 Pizza Doce 22cm.",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 29,
+            "min": 19
+          },
+          "fee": 6.99,
+          "promotionalFee": 6.99
+        },
+        "isOpen": true,
+        "merchantId": "f0671abe-24e0-4d85-b419-caf20570a32b",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/f0671abe-24e0-4d85-b419-caf20570a32b/202010041733_PUrd_.jpeg",
+        "merchantName": "Tomate Cru Pizzaria",
+        "minimumOrderAmount": 29.9,
+        "ratingCount": 862,
+        "reviewRating": 4.900000095367432,
+        "straightLineDistanceKm": 0.32
+      },
+      "promotionalUnitPrice": 59.9,
+      "unitPrice": 59.9
+    },
+    {
+      "itemEan": "9900000018450",
+      "itemId": "c64fc3db-349f-462a-bbdf-b8de5f9c7ad1",
+      "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/f0671abe-24e0-4d85-b419-caf20570a32b/202505031706_o8090499vh.jpeg",
+      "itemName": "Combo 2 Pizzas -  1 pizza 35cm + 1 pizza 28cm.",
+      "merchant": {
+        "deliveryMethod": {
+          "deliveryMethodId": "DEFAULT",
+          "deliveryMethodMode": "DELIVERY",
+          "estimatedMinutes": {
+            "max": 29,
+            "min": 19
+          },
+          "fee": 6.99,
+          "promotionalFee": 6.99
+        },
+        "isOpen": true,
+        "merchantId": "f0671abe-24e0-4d85-b419-caf20570a32b",
+        "merchantLogoUrl": "https://static.ifood-static.com.br/image/upload/t_thumbnail/logosgde/f0671abe-24e0-4d85-b419-caf20570a32b/202010041733_PUrd_.jpeg",
+        "merchantName": "Tomate Cru Pizzaria",
+        "minimumOrderAmount": 29.9,
+        "ratingCount": 862,
+        "reviewRating": 4.900000095367432,
+        "straightLineDistanceKm": 0.32
+      },
+      "promotionalUnitPrice": 97.9,
+      "unitPrice": 97.9
+    }
+  ]
+}

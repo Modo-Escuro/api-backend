@@ -1,0 +1,85 @@
+{
+  "agentHints": {
+    "nextStep": "Add this item to the active cart with the chosen quantity and any selected options."
+  },
+  "appDeeplink": "ifood://dish-details/780e72eb-fc47-4420-9416-59989207ea07/45a7249f-52b5-4d83-ab89-0424f13f88de",
+  "itemDescription": "Escolha sua pizza com mais de 20% de desconto: Presunto, Calabria, Marguerita, Indivia alla moda, Gigione e Porthoguesa, Pollastra, Al Catupiry, Presunto . Pizza grande de 8 pedaços.",
+  "itemId": "45a7249f-52b5-4d83-ab89-0424f13f88de",
+  "itemImageUrl": "https://static.ifood-static.com.br/image/upload/t_medium/pratos/780e72eb-fc47-4420-9416-59989207ea07/201803221857_35886094.jpg",
+  "itemName": "Promoção pizza grande",
+  "merchantId": "780e72eb-fc47-4420-9416-59989207ea07",
+  "merchantMinimumOrderAmount": 30,
+  "merchantName": "Don Raffaele Pizze e Ristorante",
+  "optionGroups": [
+    {
+      "maxSelections": 2,
+      "minSelections": 2,
+      "name": "Escolha até 2 Sabores.",
+      "optionGroupId": "bdb10f6c-a571-4e87-b2bd-8ca526bd8088",
+      "options": [
+        {
+          "additionalPrice": 39,
+          "description": "Muçarela e presunto",
+          "name": "Presunto",
+          "optionId": "b9fdc6be-dd75-4d81-bf75-3dd38a204a4e"
+        },
+        {
+          "additionalPrice": 39,
+          "description": "Lombo canadense, Catupiry e muçarela",
+          "name": "Filetto canadense al Catupiry",
+          "optionId": "ff934acb-e563-446f-aadb-71060ddd9692"
+        },
+        {
+          "additionalPrice": 39,
+          "description": "Catupiry e muçarela",
+          "name": "Al Catupiry",
+          "optionId": "07e25612-4e36-4f69-b4c9-992abf97e04f"
+        },
+        {
+          "additionalPrice": 39,
+          "description": "Frango desfiado, milho, Catupiry e muçarela",
+          "name": "Pollastra",
+          "optionId": "82f6d258-31e3-4f31-9815-9d387bc6a716"
+        },
+        {
+          "additionalPrice": 39,
+          "description": "Linguiça de pernil, muçarela, tomate, manjericão e azeitonas",
+          "name": "Gigione",
+          "optionId": "6b0b877f-fc2c-402c-844d-d9f1fd40b78c"
+        },
+        {
+          "additionalPrice": 39,
+          "description": "Presunto, muçarela, palmito, ovos, ervilha, cebola e azeitona",
+          "name": "Porthoghesa",
+          "optionId": "12934fad-5f22-46fb-b9fc-04b2ec0df4f8"
+        },
+        {
+          "additionalPrice": 39,
+          "description": "Escarola, muçarela e bacon",
+          "name": "Indivia alla moda",
+          "optionId": "c28e1938-0a06-482f-9f21-068756e9ea4a"
+        },
+        {
+          "additionalPrice": 39,
+          "description": "Calabresa, muçarela, cebola, azeitona e fatias de bacon",
+          "name": "Calabria",
+          "optionId": "de32e566-53cb-4055-8b40-2e72c0e2cb3e"
+        },
+        {
+          "additionalPrice": 39,
+          "description": "Muçarela, tomate, alface temperada, maionese e bacon",
+          "name": "Insalata verde",
+          "optionId": "87f4f85a-0225-4542-ad0b-adf855d9e6d5"
+        },
+        {
+          "additionalPrice": 39,
+          "description": "Muçarela, tomate, manjericão e parmesão",
+          "name": "Margherita",
+          "optionId": "2dc4bc55-57bb-4d68-9e85-0f03e845cf4e"
+        }
+      ]
+    }
+  ],
+  "promotionalUnitPrice": 65,
+  "unitPrice": 78
+}

@@ -1,0 +1,5 @@
+{
+  "_note": "Resposta real do MCP (2026-10-17) para searchOffers com query vazia: isError=true, sem structuredContent.",
+  "isError": true,
+  "content": [{"type":"text","text":"{\"error\":\"Error: text search requires the `query` parameter with descriptive text for the intent (e.g. dish type, brand, or item). Split the user's wording: qualifiers (price, distance, time) belong in `refinements`, not in `query`. Call again with `query` filled in.\"}"}]
+}
