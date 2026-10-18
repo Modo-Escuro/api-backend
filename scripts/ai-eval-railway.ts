@@ -23,6 +23,9 @@ if (process.argv.includes('--check-keys')) {
 } else if (!Object.values(scope).every(Boolean)) {
   console.error(JSON.stringify({ audit: 'AI-01', status: 'BLOCKED', reason: 'RAILWAY_SCOPE_MISMATCH', inferenceCalled: false }));
   process.exitCode = 1;
+} else if (process.argv.includes('--check-availability')) {
+  try { await import('./check-ai-availability.js'); }
+  catch { console.error(JSON.stringify({ audit: 'AI-01', status: 'BLOCKED', reason: 'METADATA_CHECK_FAILED_NO_PRIVATE_DETAILS', inferenceCalled: false })); process.exitCode = 1; }
 } else {
   await import('./evaluate-ai.js');
 }

@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import { EVALUATION_CORPUS } from './evaluation-corpus.js';
-import { EvaluationDecisionSchema, SYSTEM_PROMPT, scoreDecision, sha, type EvaluationCase } from './evaluation-contract.js';
+import { EvaluationDecisionSchema, SYSTEM_PROMPT, scoreDecision, sha, evaluationWireSchema, type EvaluationCase } from './evaluation-contract.js';
 import { EVALUATION_LIMITS, EVALUATION_MODELS, EvaluationFailure, evaluationPrompt, type EvaluationProvider, type Invoker } from './evaluation-provider.js';
 
-export const EVALUATION_PROTOCOL = Object.freeze({ version: '1.0', criticalRepetitions: 3, taskPassRate: 0.90,
+export const EVALUATION_PROTOCOL = Object.freeze({ version: '1.1', criticalRepetitions: 3, taskPassRate: 0.90,
   structuralSafetyRate: 1, structuredOutputRate: 1, endToEndP95TargetMs: 10_000, endToEndSamples: 40,
   freeTierAttestationRequired: true, authorizedSpendUsd: 0, ...EVALUATION_LIMITS });
 export interface EvaluationRow {
@@ -35,11 +35,12 @@ export async function runEvaluation(options: RunOptions) {
   let stopReason: string | null = null;
   let tokensChargedToBudget = 0;
   let lastStart = -Infinity;
+  let unavailableStreak = 0;
   for (const { test, repetition } of schedule) {
     if (options.signal?.aborted) { stopReason = 'CANCELLED'; break; }
     if (rows.length >= EVALUATION_PROTOCOL.maxCallsPerModel) { stopReason = 'CALL_BUDGET'; break; }
     // Estimativa conservadora para a reserva, não substitui tokens medidos pelo provedor.
-    const estimatedInput = Math.ceil(Buffer.byteLength(SYSTEM_PROMPT + evaluationPrompt(test) + JSON.stringify(z.toJSONSchema(EvaluationDecisionSchema))) / 3);
+    const estimatedInput = Math.ceil(Buffer.byteLength(SYSTEM_PROMPT + evaluationPrompt(test) + JSON.stringify(evaluationWireSchema())) / 3);
     const reserve = estimatedInput + EVALUATION_PROTOCOL.maxOutputTokens;
     if (estimatedInput > EVALUATION_PROTOCOL.maxEstimatedInputTokens || tokensChargedToBudget + reserve > EVALUATION_PROTOCOL.maxTokensPerModel) { stopReason = 'TOKEN_BUDGET'; break; }
     if (mode === 'LIVE') {
@@ -69,6 +70,8 @@ export async function runEvaluation(options: RunOptions) {
     // Erro/usage ausente consome a reserva: a requisição pode ter sido processada antes de perder a resposta.
     if (mode === 'LIVE') tokensChargedToBudget += row.inputTokens !== null && row.outputTokens !== null ? row.inputTokens + row.outputTokens : reserve;
     await options.onRow?.(row);
+    unavailableStreak = ['UNAVAILABLE','TIMEOUT'].includes(row.error ?? '') ? unavailableStreak + 1 : 0;
+    if (unavailableStreak >= 3) { stopReason = 'PROVIDER_UNAVAILABLE'; break; }
     if (['QUOTA', 'AUTH', 'PROVIDER_CONFIGURATION', 'KEY_MISSING', 'FREE_TIER_NOT_CONFIRMED', 'CANCELLED'].includes(row.error ?? '')) { stopReason = row.error; break; }
     if (row.inputTokens !== null && row.inputTokens > EVALUATION_PROTOCOL.maxEstimatedInputTokens) { stopReason = 'INPUT_TOKEN_LIMIT'; break; }
   }
@@ -99,7 +102,7 @@ export function selectCandidate(results: ModelEvaluation[], reviewedProviders: E
 
 export function evaluationManifest() {
   return { protocol: EVALUATION_PROTOCOL, corpusSha256: sha(EVALUATION_CORPUS), promptSha256: sha(SYSTEM_PROMPT),
-    schemaSha256: sha(z.toJSONSchema(EvaluationDecisionSchema)), corpusSize: EVALUATION_CORPUS.length,
+    schemaSha256: sha(z.toJSONSchema(EvaluationDecisionSchema)), wireSchemaSha256: sha(evaluationWireSchema()), corpusSize: EVALUATION_CORPUS.length,
     callsPerModel: evaluationSchedule().length, models: Object.fromEntries(Object.entries(EVALUATION_MODELS).map(([k,v]) => [k,v.id])),
     temperature: 0, reasoning: 'low', maxRetries: 0, businessToolsCalled: false, endToEndMeasured: false,
     immutableProviderRevisionAvailable: false, authorizedSpendUsd: 0, actualBillingObserved: false };

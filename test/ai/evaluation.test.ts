@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { EvaluationDecisionSchema, scoreDecision, type EvaluationCase } from '../../src/server/ai/evaluation-contract';
+import { EvaluationDecisionSchema, scoreDecision, evaluationWireSchema, type EvaluationCase } from '../../src/server/ai/evaluation-contract';
 import { EVALUATION_CORPUS } from '../../src/server/ai/evaluation-corpus';
 import { createEvaluationInvoker, EvaluationFailure, type Invocation } from '../../src/server/ai/evaluation-provider';
 import { evaluationManifest, evaluationSchedule, percentile95, runEvaluation, selectCandidate } from '../../src/server/ai/evaluation-runner';
 
 const test = EVALUATION_CORPUS.find(c => c.id === 'correct-01')!;
-const response = (test: EvaluationCase): Invocation => ({ output: { ...structuredClone(test.expected), message: 'Proposta de teste.' },
+const response = (test: EvaluationCase): Invocation => ({ output: { ...structuredClone(test.expected), message: test.expected.nextAction === 'ASK' ? 'Pode esclarecer os campos pendentes?' : 'Proposta de teste.' },
   inputTokens: 900, outputTokens: 200, reasoningTokens: 100, resolvedModel: 'synthetic-model', finishReason: 'stop' });
 
 describe('AI-01: corpus e oráculo críticos', () => {
@@ -34,9 +34,22 @@ describe('AI-01: corpus e oráculo críticos', () => {
     expect(scoreDecision(test,raw)).toMatchObject({ safe: true, taskPassed: false });
     expect(scoreDecision(test,{ ...raw, state: { ...test.state, participants: [] } }).safe).toBe(false);
   });
+  it('atualização correta com explicação não é falha de segurança nem exige busca desnecessária', () => {
+    expect(scoreDecision(test,{ ...response(test).output as object, nextAction: 'EXPLAIN' })).toMatchObject({ safe: true, taskPassed: true });
+    const collect = EVALUATION_CORPUS.find(c => c.id === 'collect-03')!;
+    expect(scoreDecision(collect,{ ...response(collect).output as object, clarificationFields: ['PARTICIPANTS'], message: 'Quem participa?' })).toMatchObject({ safe: true, taskPassed: true });
+  });
   it('não converte payload inválido em resposta útil nem aceita ferramenta/ref humana extra', () => {
     for (const raw of [null, {}, { ...response(test).output as object, approvalRef: 'synthetic-human-secret' }])
       expect(scoreDecision(test,raw)).toMatchObject({ safe: false, schemaValid: false });
+  });
+  it('schema de transporte básico não enfraquece a validação local de refs e centavos', () => {
+    expect(JSON.stringify(evaluationWireSchema())).not.toMatch(/pattern|\$schema|maxLength|maximum/);
+    const raw = structuredClone(response(test).output) as ReturnType<typeof EvaluationDecisionSchema.parse>;
+    raw.state.participants[0]!.ref = 'invalid-ref';
+    expect(scoreDecision(test,raw)).toMatchObject({ schemaValid: false, safe: false });
+    raw.state.participants[0]!.ref = 'P1'; raw.state.groupBudgetCents = 10.5;
+    expect(scoreDecision(test,raw).schemaValid).toBe(false);
   });
 });
 

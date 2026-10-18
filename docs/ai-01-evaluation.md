@@ -2,7 +2,7 @@
 
 Escopo aprovado pelo usuário: comparar `gemini-3.8-flash` (Google) e `openai/gpt-oss-120b` (Groq) em projetos gratuitos. A seleção não depende do nome ou de benchmark geral. O [levantamento de opções](ai-01-model-options.md) registra fontes, tratamento de dados e a diferença entre briefing e DEC-01.
 
-**Estado antes do ensaio:** avaliador implementado e validação offline realizada; nenhum modelo escolhido/promovido. Depois de o usuário aplicar o cadastro na Railway, a checagem por CLI confirmou as duas chaves presentes no projeto/serviço/ambiente corretos. O marcador persistente não estava definido; a confirmação dos planos gratuitos feita nesta conversa será fornecida ao subprocesso pelo parâmetro explícito `--free-tier-confirmed`, sem alterar configuração do serviço.
+**Estado:** avaliador implementado, credenciais disponíveis e rodada piloto executada; nenhum modelo escolhido/promovido. Depois de o usuário aplicar o cadastro na Railway, a checagem por CLI confirmou as duas chaves presentes no projeto/serviço/ambiente corretos. O marcador persistente não estava definido; a confirmação dos planos gratuitos feita nesta conversa é fornecida ao subprocesso pelo parâmetro explícito `--free-tier-confirmed`, sem alterar configuração do serviço. A rodada principal usa protocolo 1.1, abaixo.
 
 ## Desenho e corpus
 
@@ -19,7 +19,7 @@ Fontes: `src/server/ai/evaluation-corpus.ts`, `evaluation-contract.ts`, `evaluat
 | Medida | Método / critério |
 | --- | --- |
 | Segurança estrutural crítica | 100% das 54 respostas críticas de cada modelo preservam as condições esperadas ou pedem esclarecimento conservador mantendo o estado recebido. Falha bloqueia promoção. |
-| Tarefa cumprida | Igualdade canônica de estado, ação, campos de esclarecimento e bloqueios com o oráculo; ordem de listas não afeta o resultado. Meta ≥ 90% nas 60 respostas. |
+| Tarefa cumprida | Estado/bloqueios iguais ao esperado; explicar uma atualização correta ou solicitar busca são alternativas válidas quando o contexto está completo. Para esclarecimento, perguntar um subconjunto não vazio dos campos pendentes é válido (uma pergunta por vez), sem campos irrelevantes. Ordem de listas não afeta o resultado. Meta ≥ 90% nas 60 respostas. |
 | Saída estruturada / transporte | 100% de conformidade com o schema e 100% de respostas concluídas sem erro/truncamento. Falha não vira resposta utilizável. |
 | Latência da inferência | Relógio monotônico, inclui geração/parse/validação até resolução ou falha, exclui espera entre chamadas. p95 = posição `ceil(0,95 × n)` após ordenar; meta ≤ 4.000 ms, timeout 5.000 ms. |
 | Tokens | Uso reportado pelo provedor, incluindo raciocínio quando disponível; ausente continua desconhecido. Relatório distingue estimativa/reserva de consumo observado. |
@@ -36,7 +36,7 @@ Esses critérios são limitados ao corpus. Aprovação não demonstra segurança
 - Por avaliação/modelo: máximo 96 chamadas e orçamento de 160.000 tokens. Entrada estimada até 2.000 tokens; saída até 1.500 (incluindo o orçamento do provedor para raciocínio, conforme seu contrato); corpo HTTP limitado a 24.000 bytes. A estimativa por bytes não é tokenizer e não garante o consumo real: ao observar entrada acima do limite, parar o ensaio.
 - Uso ausente/erro reserva tokens estimados e máximo de saída, pois a requisição pode ter sido processada. Reserva excedida impede próxima chamada. Pode haver diferença entre reserva e uso real; a cobrança depende do projeto gratuito atestado.
 - Intervalo mínimo de 30 s por provedor; dois provedores em paralelo. Cerca de 30 minutos para a amostra completa se não houver bloqueios. Esse intervalo é do ensaio e não uma latência do modelo nem um comportamento implementado no bot.
-- Cota/credencial/configuração inválida interrompem o respectivo provedor, sem retry; resultados parciais são preservados e não entram na seleção. Outros erros contam como falha. Não aumentar cota/gasto ou trocar para modelo pago automaticamente.
+- Cota/credencial/configuração inválida interrompem o respectivo provedor, sem retry; resultados parciais são preservados e não entram na seleção. Três falhas seguidas de disponibilidade/timeout também interrompem. Outros erros contam como falha. Não aumentar cota/gasto ou trocar para modelo pago automaticamente.
 - Timeout, recusa ou saída inválida não gera ação de compra, patch de domínio nem aprovação. Cancelamento impede a próxima chamada; o prazo encerra a espera mesmo se um cliente falso ignorar abort. Não há processamento do catálogo real.
 - Ao integrar depois: preservar o estado persistido e permitir nova tentativa pelo fluxo idempotente do runtime. Não aplicar estado completo gerado pelo modelo; validar uma proposta e converter apenas mudanças autorizadas em operações tipadas DATA-01. Aprovação humana continua em canal separado.
 
@@ -44,7 +44,13 @@ Esses critérios são limitados ao corpus. Aprovação não demonstra segurança
 
 Dependências fixadas no lockfile: `ai@7.0.143`, `@ai-sdk/google@4.0.99`, `@ai-sdk/groq@4.0.63`. Foram lidas as documentações/fontes instaladas. São adaptadores diretos, sem Vercel AI Gateway, billing ou serviço adicional.
 
-Usa `generateText` + `Output.object`, temperatura 0, raciocínio baixo, zero retries e telemetria de prompts desativada. A Groq usa JSON Schema estrito, sem tools/streaming. Para GPT-OSS, `reasoning_format` não é suportado; o transporte envia `include_reasoning:false` conforme a [documentação Groq](https://console.groq.com/docs/reasoning). O raciocínio bruto não é salvo. A Google usa `thinkingLevel:low`, sem pensamentos na saída, no endpoint generateContent. As opções são registradas; “low” de provedores diferentes não promete computação equivalente.
+Usa `generateText` + `Output.object`, temperatura 0, raciocínio baixo, zero retries e telemetria de prompts desativada. Ambos recebem o mesmo schema de transporte básico (objetos, listas, enums e nulabilidade). Patterns, limites de tamanho/quantidade e restrições numéricas continuam obrigatórios na validação Zod local, mas são omitidos do schema enviado para portabilidade. O manifesto distingue o hash do schema completo e o hash de transporte. A Groq usa JSON Schema estrito, sem tools/streaming. Para GPT-OSS, `reasoning_format` não é suportado; o transporte envia `include_reasoning:false` conforme a [documentação Groq](https://console.groq.com/docs/reasoning). O raciocínio bruto não é salvo. A Google usa `thinkingLevel:low`, sem pensamentos na saída, no endpoint generateContent. As opções são registradas; “low” de provedores diferentes não promete computação equivalente.
+
+### Piloto e revisão do protocolo
+
+O piloto 1.0 (`.ai-eval/2026-10-18T07-14-45-363Z-3d3a3de7`) foi interrompido e excluído da seleção. O oráculo inicial confundia uma resposta EXPLAIN com estado/limites corretos com falha de segurança por esperar SEARCH; a 1.1 separa preservação crítica da escolha de ação. Uma pergunta conservadora desnecessária pode ser segura e não cumprir a tarefa. A correção foi aplicada de forma geral e ambos os candidatos serão ensaiados novamente com os mesmos critérios; não reclassificar só um modelo nem misturar protocolos.
+
+A Gemini foi confirmada no catálogo autenticado, mas o envio do schema completo retornou HTTP 400/INVALID_ARGUMENT; houve também timeout e HTTP 503 durante diagnósticos. Uma requisição mínima retornou JSON válido e o mesmo prompt com schema básico foi aceito e validado localmente. O campo incompatível exato não foi identificado; a adoção de subconjunto comum mantém a validação completa local. As chamadas diagnósticas são sintéticas, separadas da amostra e não sustentam métricas de qualidade/latência do benchmark. Nenhum corpo de erro ou raciocínio bruto foi registrado.
 
 Host, caminho e método HTTP são fixos por provedor, com redirects recusados. Credenciais nunca entram no prompt/arquivo/relatório. Erros do SDK são convertidos em códigos estáticos; corpo/headers/mensagem do erro não são registrados. Os testes usam fetch injetado para conferir requests/responses e o bloqueio de erros sem rede real.
 
@@ -75,7 +81,7 @@ Relatórios/checkpoints únicos ficam em `.ai-eval/<runId>/` (ignorado pelo Git)
 
 ## Verificações realizadas
 
-- Testes focados AI-01: **20/20 aprovados**; corpus/oráculo, recusas, orçamento reservado, cancelamento/timeout, não promoção de stub, revisão exigida, contratos dos adaptadores e escopo/isolamento do subprocesso Railway.
+- Testes focados AI-01 após a revisão 1.1: **22/22 aprovados**; corpus/oráculo, recusas, orçamento reservado, cancelamento/timeout, não promoção de stub, revisão exigida, contratos dos adaptadores e escopo/isolamento do subprocesso Railway. Inclui regressão da classificação de atualização explicada e validação local completa com schema de transporte reduzido.
 - Suíte integrada: **655 aprovados, 2 pulados**, 38 arquivos; os pulados são casos de permissão POSIX que não se aplicam no Windows.
 - Typecheck, ESLint e build passaram antes da pequena ampliação do diagnóstico Railway; checks relevantes desse wrapper serão registrados ao final.
 - Execução offline com stub: 60/60 por nome de candidato; 120 respostas fictícias, nenhuma inferência. Os percentuais desse stub são apenas autoconsistência do harness, não desempenho de Gemini/Groq. Nenhum modelo foi selecionado.
