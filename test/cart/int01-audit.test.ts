@@ -54,21 +54,27 @@ describe('INT-01: saída desconhecida não confirma escrita', () => {
     expect(callTool).toHaveBeenCalledTimes(1);
   });
 
-  it('resposta perdida/malformada após efeito não permite segundo envio com a mesma nem outra chave', async () => {
+  it.each(['addItemToCart', 'updateCartItem', 'removeItemFromCart'] as const)('%s: resposta malformada após efeito bloqueia reenvio com a mesma ou outra chave', async (tool) => {
     const f = await ready();
     const original = f.fake.call.getMockImplementation()!;
-    f.fake.call.mockImplementation(async (token, tool, args) => {
-      const result = await original(token, tool, args);
-      return tool === 'addItemToCart' ? { queued: true } : result;
+    const cartItemId = f.cart.items[0]!.cartItemId;
+    const write = (requestId: string) => tool === 'addItemToCart'
+      ? f.carts.addItemToCart(ORG_A, f.linkId, f.cart.cartRef, requestId, f.item)
+      : tool === 'updateCartItem'
+        ? f.carts.updateCartItem(ORG_A, f.linkId, f.cart.cartRef, requestId, cartItemId, { ...f.item, quantity: 2 })
+        : f.carts.removeItemFromCart(ORG_A, f.linkId, f.cart.cartRef, requestId, cartItemId);
+    f.fake.call.mockImplementation(async (token, name, args) => {
+      const result = await original(token, name, args);
+      return name === tool ? { queued: true } : result;
     });
     const requestId = randomUUID();
-    await expect(f.carts.addItemToCart(ORG_A, f.linkId, f.cart.cartRef, requestId, f.item)).rejects.toMatchObject({ code: 'RESULT_UNKNOWN' });
+    await expect(write(requestId)).rejects.toMatchObject({ code: 'RESULT_UNKNOWN' });
     expect((await f.carts.getCart(ORG_A, f.linkId, f.cart.cartRef)).state).toBe('RESULT_UNKNOWN');
-    // Mesmo que getCart mostre a linha, não há confirmação de que uma escrita tardia terminou.
+    // A presença/ausência da linha em getCart não prova que uma escrita tardia terminou.
     for (const id of [requestId, randomUUID()]) {
-      await expect(f.carts.addItemToCart(ORG_A, f.linkId, f.cart.cartRef, id, f.item)).rejects.toMatchObject({ code: 'RESULT_UNKNOWN' });
+      await expect(write(id)).rejects.toMatchObject({ code: 'RESULT_UNKNOWN' });
     }
-    expect(f.fake.call.mock.calls.filter((c) => c[1] === 'addItemToCart')).toHaveLength(1);
+    expect(f.fake.call.mock.calls.filter((c) => c[1] === tool)).toHaveLength(1);
   });
 
   it('erro dentro de data não pode ser descartado por projeção de getCart', async () => {
