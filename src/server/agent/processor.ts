@@ -9,10 +9,12 @@
 //  - Nenhuma ferramenta MCP, carrinho, aprovação ou escrita externa é exposta ao modelo (D8).
 //  - Logs: só códigos; nunca mensagem, nomes, restrições ou saída do modelo.
 import { ContractError } from '../contracts/guards.js';
+import { evaluatePlan, planCoverage, type GroupResult } from '../domain/group.js';
+import { DomainError, type PurchaseState } from '../domain/purchase.js';
 import type { TurnContext, TurnProcessor, TurnResult } from '../turns/runtime.js';
 import { AgentProposalSchema, type ConversationModel } from './model.js';
 import { buildModelInput, missingQuestions, planActions } from './policy.js';
-import { renderSnapshot } from './render.js';
+import { renderSnapshot, SNAPSHOT_BUDGET_BYTES } from './render.js';
 
 export interface AgentOptions {
   model: ConversationModel;
@@ -22,6 +24,13 @@ export interface AgentOptions {
   timeoutMs?: number;
   /** Teto de tokens de saída repassado ao provedor (padrão 1024). */
   maxOutputTokens?: number;
+  /**
+   * GRP-01: composição de propostas por leitura MCP (ex.: `linkedProposalProvider`). Ausente ⇒ sugestões
+   * indisponíveis (pendência), sem afetar o resto do turno.
+   */
+  proposals?(organizerId: string, state: PurchaseState, query: string, signal: AbortSignal): Promise<GroupResult & { linkId?: string }>;
+  /** Prazo da busca de propostas (padrão 30 s). */
+  proposalsTimeoutMs?: number;
 }
 
 const DEFAULT_TIMEOUT_MS = 20_000;
@@ -36,6 +45,20 @@ function fail(code: string): never {
  * Corre `work` contra o sinal do turno + prazo. Dependência que ignore o sinal (provedor, consulta de vínculo) não
  * segura o turno: a corrida termina no prazo e o código distingue prazo de cancelamento/perda de lease.
  */
+class StaleLinkError extends Error {}
+
+/** Mensagem específica por causa (sem dados pessoais); nada de "deu erro" genérico quando a causa é conhecida. */
+function proposalFailureText(e: unknown): string {
+  if (e instanceof StaleLinkError) return 'A conta iFood mudou durante a busca; peça as sugestões de novo.';
+  if (e instanceof DomainError) return 'A compra mudou enquanto eu buscava; peça as sugestões de novo.';
+  const code = typeof e === 'object' && e !== null && 'code' in e ? String((e as { code: unknown }).code) : '';
+  if (code === 'ADDRESS_AMBIGUOUS') return 'Há mais de um endereço salvo no iFood e nenhum foi escolhido para esta compra; não busquei para não usar o endereço errado.';
+  if (code === 'ADDRESS_NOT_FOUND') return 'O endereço escolhido não está mais na conta iFood; escolha outro antes de pedir sugestões.';
+  if (code === 'IFOOD_LINK_REQUIRED') return 'Conecte e confirme uma conta iFood antes de pedir sugestões.';
+  if (code === 'IFOOD_RECONNECT_REQUIRED') return 'A conexão com o iFood precisa ser refeita antes de pedir sugestões.';
+  return 'Não consegui buscar opções agora; seus dados foram mantidos. Tente de novo em instantes.';
+}
+
 async function withDeadline<T>(signal: AbortSignal, turn: AbortSignal, work: (signal: AbortSignal) => Promise<T>): Promise<T> {
   let onAbort: (() => void) | undefined;
   const aborted = new Promise<never>((_, reject) => {
@@ -76,9 +99,51 @@ export function createAgentProcessor(opts: AgentOptions): TurnProcessor {
     const parsed = AgentProposalSchema.safeParse(raw);
     if (!parsed.success) fail('MODEL_OUTPUT_INVALID');
 
-    const plan = planActions(ctx.purchase, parsed.data, (change) => ctx.previewDomain(change), linkId, ctx.event.input.text);
-    const pending = [...plan.notes, ...missingQuestions(plan.state)];
-    const snapshot = renderSnapshot(ctx.snapshot, plan.state, plan.applied, pending);
+    // Só propostas exibidas no último snapshot podem ser escolhidas (nada de escolha às cegas).
+    const visible = new Set(ctx.snapshot.blocks.flatMap((b) => (b.kind === 'PROPOSAL' ? [b.proposalRef] : [])));
+    const plan = planActions(ctx.purchase, parsed.data, (change) => ctx.previewDomain(change), linkId, ctx.event.input.text, visible);
+    const extraNotes: string[] = [];
+    if (plan.suggest !== null) {
+      const state = plan.state;
+      if (!state || !state.participants.length) extraNotes.push('Diga quem vai participar antes de pedir sugestões.');
+      else if (!opts.proposals) extraNotes.push('Sugestões de itens ainda não estão disponíveis nesta etapa.');
+      else {
+        try {
+          const proposalSignal = AbortSignal.any([ctx.signal, AbortSignal.timeout(opts.proposalsTimeoutMs ?? 30_000)]);
+          const result = await withDeadline(proposalSignal, ctx.signal, (s) => opts.proposals!(ctx.principal.organizerId, state, plan.suggest!, s));
+          if (result.linkId !== undefined && result.linkId !== linkId) throw new StaleLinkError();
+          const op = { op: 'SET_PROPOSALS' as const, proposals: result.proposals.map((p) => p.proposal) };
+          plan.state = ctx.previewDomain({ ops: [...plan.ops, op], ...(linkId ? { linkId } : {}) });
+          plan.ops.push(op);
+          plan.applied.push(result.proposals.length ? `Encontrei ${result.proposals.length} proposta(s) para "${plan.suggest}".` : `Nenhuma proposta válida para "${plan.suggest}".`);
+          extraNotes.push(...result.explanation);
+        } catch (e) {
+          extraNotes.push(proposalFailureText(e));
+          console.error('[agente] sugestões indisponíveis:', reason(e, 'PROPOSALS'));
+        }
+      }
+    }
+    const render = () => {
+      const final = plan.state;
+      const views = {
+        proposals: final?.proposals?.map((p) => evaluatePlan(final, p, planCoverage(final, p))) ?? [],
+        bag: final?.bag ? evaluatePlan(final, final.bag, planCoverage(final, final.bag)) : null,
+      };
+      // Avisos da busca primeiro (o de "busca limitada" nunca pode ser cortado pelo limite de pendências).
+      const pending = [...extraNotes, ...plan.notes, ...missingQuestions(plan.state)];
+      return renderSnapshot(ctx.snapshot, plan.state, plan.applied, pending, views);
+    };
+    let snapshot = render();
+    // A revisão da sacola nunca é cortada. Se ela não couber no limite de resposta, a escolha não é gravada
+    // (sacola sem revisão visível não existe) e o usuário recebe o motivo.
+    if (Buffer.byteLength(JSON.stringify(snapshot)) > SNAPSHOT_BUDGET_BYTES && plan.ops.some((o) => o.op === 'SELECT_PROPOSAL')) {
+      const kept = plan.ops.filter((o) => o.op !== 'SELECT_PROPOSAL');
+      plan.ops.splice(0, plan.ops.length, ...kept);
+      plan.state = kept.length ? ctx.previewDomain({ ops: kept, ...(linkId ? { linkId } : {}) }) : ctx.purchase;
+      plan.applied = plan.applied.filter((t) => !t.includes('colocada na sacola simulada'));
+      extraNotes.unshift('O grupo é grande demais para mostrar a revisão da sacola; a escolha não foi registrada. Reduza o grupo ou as condições e tente de novo.');
+      snapshot = render();
+    }
     return {
       snapshot,
       completeness: plan.notes.length ? 'PARTIAL' : 'COMPLETE',
