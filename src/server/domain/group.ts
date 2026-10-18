@@ -119,6 +119,8 @@ export interface GroupResult {
   /** Pessoas com plano válido que ficaram fora das propostas exibidas pelo corte. */
   lostByCut: string[];
   rankerId: string;
+  diagnosis: { issues: ('FOOD_EVIDENCE' | 'BUDGET' | 'COVERAGE' | 'CATALOG' | 'INCOMPATIBILITY' | 'MISSING_DATA')[];
+    participants: { participantId: string; reason: string }[] };
 }
 
 const hash = (...parts: string[]) => createHash('sha256').update(JSON.stringify(['GRP-01', ...parts])).digest('base64url').slice(0, 24);
@@ -481,10 +483,11 @@ export function composeProposals(
     candidates: pool.length, merchants: merchants.length, plansEvaluated: evaluated.length, validPlans: valid.length,
     truncated: [...new Set(truncated)], discarded,
   };
+  const diagnosis: GroupResult['diagnosis'] = { issues: [], participants: [] };
+  const explanation = explain(state, search, evaluated, valid, proposals, matrix, lost, merchantFilter, dropped, overCap, diagnosis);
   return {
     proposals, matrix, lostByCut: lost,
-    explanation: explain(state, search, evaluated, valid, proposals, matrix, lost, merchantFilter, dropped, overCap),
-    search, rankerId: ranker.id,
+    explanation, diagnosis, search, rankerId: ranker.id,
   };
 }
 
@@ -496,13 +499,15 @@ const REASON_TEXT: Record<string, string> = {
   CAP_COMBINATION: 'ficaram de fora para a combinação caber nos tetos pelos preços observados; outra combinação pode existir',
   CUT: 'há opção válida fora das 4 propostas exibidas; peça sugestões mais específicas',
   DATA_INSUFFICIENT: 'os itens avaliados não trazem informação suficiente para confirmar a segurança alimentar',
+  CATALOG_DATA_INSUFFICIENT: 'faltam dados de preço, opções ou disponibilidade para avaliar os itens',
+  CATALOG_UNAVAILABLE: 'as lojas dos itens encontrados estão fechadas',
   NO_COMPATIBLE_ITEM: 'nenhum dos itens avaliados é compatível com as restrições declaradas',
   NO_ITEMS: 'nenhum item foi avaliado nesta busca',
   COMBINATION_LIMIT: 'há itens compatíveis, mas nenhuma combinação válida com os tetos e o pedido mínimo',
 };
 
 function explain(state: PurchaseState, search: GroupResult['search'], all: PlanEvaluation[], valid: PlanEvaluation[],
-  chosen: PlanEvaluation[], matrix: MatrixCell[], lost: string[], merchantFilter: string | null, dropped: Map<string, string>, overCap: Set<string>): string[] {
+  chosen: PlanEvaluation[], matrix: MatrixCell[], lost: string[], merchantFilter: string | null, dropped: Map<string, string>, overCap: Set<string>, diagnosis: GroupResult['diagnosis']): string[] {
   const out: string[] = [];
   // Aviso de limite da busca SEMPRE primeiro (não pode ser cortado pelo limite de pendências).
   const anyCap = [...dropped.keys()].length > 0 || overCap.size > 0;
@@ -527,10 +532,14 @@ function explain(state: PurchaseState, search: GroupResult['search'], all: PlanE
       if (capReason) reason = capReason;
       else if (!cells.length) reason = 'NO_ITEMS';
       else if (cells.some((c) => c.status === 'COMPATIBLE')) reason = 'COMBINATION_LIMIT';
-      else if (cells.some((c) => c.status === 'NEEDS_VERIFICATION')) reason = 'DATA_INSUFFICIENT';
-      else reason = 'NO_COMPATIBLE_ITEM';
+      else if (cells.some((c) => c.status === 'NEEDS_VERIFICATION')) reason = cells.some((c) =>
+        c.reasons.some((r) => ['RESTRICTIONS_UNKNOWN', 'RESTRICTION_UNVERIFIED', 'ALLERGY_UNVERIFIED', 'ALLERGY_OPTIONS_UNVERIFIED'].includes(r)))
+        ? 'DATA_INSUFFICIENT' : 'CATALOG_DATA_INSUFFICIENT';
+      else reason = cells.every((c) => c.reasons.includes('MERCHANT_CLOSED')) ? 'CATALOG_UNAVAILABLE'
+        : cells.some((c) => c.reasons.includes('RESTRICTION_FAIL')) ? 'NO_COMPATIBLE_ITEM' : 'CATALOG_DATA_INSUFFICIENT';
     }
     byReason.set(reason, [...(byReason.get(reason) ?? []), p.displayName]);
+    diagnosis.participants.push({ participantId: p.participantId, reason });
   }
   for (const [reason, names] of byReason) {
     const shown = names.slice(0, 10).join(', ') + (names.length > 10 ? ` e mais ${names.length - 10}` : '');
@@ -545,5 +554,23 @@ function explain(state: PurchaseState, search: GroupResult['search'], all: PlanE
     out.push(`Teto do grupo: a menor soma de preços observados encontrada é ${formatCents(min)} (sem taxa de serviço).`);
   }
   if (anyCap) out.push('Os tetos foram comparados com preços observados no catálogo; cupons, descontos ou frete de assinatura não visíveis podem mudar o valor no carrinho. Quem ficou de fora por teto pode caber — confirme se quiser incluir.');
+  const reasons = new Set(byReason.keys());
+  if (reasons.has('DATA_INSUFFICIENT') || reasons.has('RESTRICTIONS_UNKNOWN')) diagnosis.issues.push('FOOD_EVIDENCE');
+  if (anyCap) diagnosis.issues.push('BUDGET');
+  const partial = chosen.length > 0 && !chosen.some((p) => p.coverage.every((c) => c.status === 'COVERED'));
+  if (reasons.has('COMBINATION_LIMIT') || reasons.has('CUT') || partial) diagnosis.issues.push('COVERAGE');
+  if (!search.candidates || reasons.has('CATALOG_UNAVAILABLE') || all.some((p) => p.violations.includes('BELOW_MINIMUM_ORDER'))) diagnosis.issues.push('CATALOG');
+  if (reasons.has('NO_COMPATIBLE_ITEM')) diagnosis.issues.push('INCOMPATIBILITY');
+  if (reasons.has('CATALOG_DATA_INSUFFICIENT')) diagnosis.issues.push('MISSING_DATA');
+  if (byReason.size || partial) {
+    if (diagnosis.issues.includes('FOOD_EVIDENCE')) {
+      out.push('Falta evidência alimentar, não uma prova de que o orçamento é insuficiente. Sem confirmação, a pessoa afetada continua sem item liberado.');
+      out.push('Próximo passo: consulte o restaurante sobre a restrição e contaminação cruzada. Não há canal de confirmação rastreável habilitado nesta demo; uma mensagem no chat não libera a alergia.');
+    }
+    if (anyCap) out.push('Posso buscar opções mais baratas mantendo as restrições e o teto atual.');
+    if (diagnosis.issues.includes('COVERAGE')) out.push('Cobertura parcial: ainda não há proposta única que atenda todas as pessoas. Esta demo compõe uma loja por proposta.');
+    out.push('Para outra busca, diga um tipo de comida, por exemplo “Sugere arroz”. Vou manter as restrições e o orçamento; Retomar conversa apenas recupera a resposta anterior.');
+    if (!chosen.length) out.push('Orçamento ainda não validado: o total com todas as taxas é desconhecido.');
+  }
   return out;
 }

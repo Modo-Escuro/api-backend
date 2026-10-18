@@ -166,7 +166,11 @@ export function createAgentProcessor(opts: AgentOptions): TurnProcessor {
           const op = { op: 'SET_PROPOSALS' as const, proposals: result.proposals.map((p) => p.proposal) };
           plan.state = ctx.previewDomain({ ops: [...plan.ops, ...addressOps, op], ...(linkId ? { linkId } : {}) });
           plan.ops.push(...addressOps, op);
-          plan.applied.push(result.proposals.length ? `Encontrei ${result.proposals.length} proposta(s) para "${plan.suggest}".` : `Nenhuma proposta válida para "${plan.suggest}".`);
+          const fullCoverage = result.proposals.some((p) => p.coverage.every((c) => c.status === 'COVERED'));
+          plan.applied.push(result.proposals.length
+            ? fullCoverage ? `Encontrei ${result.proposals.length} proposta(s) para "${plan.suggest}".`
+              : `Encontrei ${result.proposals.length} proposta(s) parcial(is) para "${plan.suggest}"; ainda não há uma que atenda todo o grupo.`
+            : `Não consegui montar uma proposta verificável para "${plan.suggest}". Os motivos e próximos passos estão abaixo.`);
           extraNotes.push(...result.explanation);
         } catch (e) {
           extraNotes.push(e instanceof AddressError && e.code === 'ADDRESS_REQUIRED'

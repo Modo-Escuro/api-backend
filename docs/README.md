@@ -2,6 +2,8 @@
 
 [Continuidade e endereço iFood](continuidade-enderecos.md): correção da entrega automática no bot, confirmação humana de endereço e sequência coordenada de deploy, ainda sem ativação operacional.
 
+[Busca progressiva GRP-01](grp-01-busca-progressiva.md): incremento de código para ampliar a leitura quando falta cobertura verificável e explicar ausência de propostas, preservando alergias e orçamento. Publicação em PR de continuação sobre a main que já integra #47/#48; sem ativação operacional. As seções de revisão documental abaixo mantêm o retrato histórico de suas bases.
+
 Esta revisão altera somente documentação. A implementação CART-01 local, suas rotas e resultados de testes não fazem parte das mains remotas conferidas.
 
 [Estado remoto/local](estado-remoto-local.md): SHAs conferidos, merges, decisão vigente e código CART-01 ainda não publicado. A DEC-01 permite preparação real confirmada; esta revisão documental não habilita a operação.
