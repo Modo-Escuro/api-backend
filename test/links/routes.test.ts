@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../../src/server/app';
 import { IfoodAuth } from '../../src/server/auth';
+import { IfoodLinkService } from '../../src/server/links/service';
 import { ADDRESS, BOT_TOKEN, ORG_A, ORG_B, authorize, connectAndConfirm, fx, setup } from '../helpers/fakes';
 
 function mk(over: Parameters<typeof setup>[0] = {}) {
@@ -97,34 +98,20 @@ describe('fluxo HTTP completo', () => {
     expect(cb.headers.get('referrer-policy')).toBe('no-referrer');
     const html = await cb.text();
     expect(html).toContain('Maria S.');
-    expect(html).toContain('Confirmar conexão');
+    expect(html).toContain('Conta conectada');
     expect(html).not.toMatch(/oauth-code-xyz|at-\d|rt-\d|Souza|99999/);
 
-    // Antes de confirmar: nada liberado; status traz confirmationId e identidade mascarada
-    expect((await call('GET', '/api/addresses')).status).toBe(409);
-    const pending = await (await call('GET', '/api/bot/ifood/status')).json();
-    expect(pending).toMatchObject({
-      state: 'AWAITING_CONFIRMATION',
-      account: null,
-      attempt: { status: 'PENDING_CONFIRMATION', accountIdentity: { displayName: 'Maria S.', emailMasked: 'm***@example.com' } },
-    });
-    const confirmationId: string = pending.attempt.confirmationId;
-    expect(confirmationId.length).toBeLessThanOrEqual(64); // cabe em callback_data do Telegram
-
-    // Replay do callback
+    // O retorno do MESMO navegador já persiste o vínculo; login não aprova compras.
+    const connected = await (await call('GET', '/api/bot/ifood/status')).json();
+    expect(connected).toMatchObject({ state: 'CONNECTED', operational: true,
+      purchaseAuthorized: false, attempt: null, account: { identity: { displayName: 'Maria S.' } } });
+    expect(JSON.stringify(connected)).not.toMatch(/at-\d|rt-\d|oauth-code/);
     expect((await browser(`/?state=${encodeURIComponent(state)}&code=outra`, cookie)).status).toBe(410);
-
-    // Botão "Confirmar conexão"
-    const conf = await call('POST', '/api/bot/ifood/confirm', { body: { confirmationId } });
-    expect(conf.status).toBe(200);
-    const confJson = await conf.json();
-    expect(confJson).toMatchObject({ state: 'CONNECTED', operational: true, purchaseAuthorized: false, account: { identity: { displayName: 'Maria S.' } } });
-    expect(JSON.stringify(confJson)).not.toMatch(/at-\d|rt-\d|oauth-code/);
-
-    // Clique repetido
-    const again = await call('POST', '/api/bot/ifood/confirm', { body: { confirmationId } });
-    expect(again.status).toBe(410);
-    expect((await again.json()).error).toMatchObject({ kind: 'ALREADY_CONFIRMED', state: 'CONNECTED' });
+    const after = await (await call('GET', '/api/bot/ifood/status')).json();
+    expect(after.linkId).toBe(connected.linkId);
+    const restarted = new IfoodLinkService({ cfg: env.cfg, sessionFactory: env.mcp.factory, fetchImpl: env.as.fetch, now: env.clock.now });
+    expect((await restarted.status(ORG_A)).linkId).toBe(connected.linkId);
+    expect((await restarted.status(ORG_B)).linkId).toBeNull();
 
     // Operações
     const addr = await call('GET', '/api/addresses');
