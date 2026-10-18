@@ -1,5 +1,8 @@
 # AI-01 — Escolha do modelo e avaliação
 
+> **Histórico (PR #35).** Comparação de candidatos que levou à escolha do Gemini. Os caminhos Groq/Anthropic e os
+> scripts citados aqui foram removidos na consolidação #35 + #36; ver [montagem AI-01](ai-01-montagem-ensaio.md).
+
 Escopo aprovado pelo usuário: comparar `gemini-3.8-flash` (Google) e `openai/gpt-oss-120b` (Groq) em projetos gratuitos. A seleção não depende do nome ou de benchmark geral. O [levantamento de opções](ai-01-model-options.md) registra fontes, tratamento de dados e a diferença entre briefing e DEC-01.
 
 **Decisão:** `gemini-3.8-flash` escolhido para a demo após a rodada curta no contrato real da AI-02: **16/16 tarefas, 12/12 críticas, 16/16 saídas válidas, p95 3.175 ms**. Custo estimado pela tarifa Standard vigente e uso reportado: **US$ 0,015005**; a fatura não foi observada. [Resultado, limites e ativação](ai-01-result.md). Há adaptador real, instalação por opt-in no runtime e teste de integração com SQLite; não houve merge/deploy/ativação na Railway por este trabalho.

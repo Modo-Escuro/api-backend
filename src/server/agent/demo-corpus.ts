@@ -1,5 +1,5 @@
-import type { AgentModelInput, AgentProposal } from '../agent/model.js';
-import { AgentActionSchema } from '../agent/model.js';
+import type { AgentModelInput, AgentProposal } from './model.js';
+import { AgentActionSchema } from './model.js';
 
 const a = { ref: 'participant_P1_001', name: 'P1' };
 const b = { ref: 'participant_P2_002', name: 'P2' };
@@ -11,10 +11,10 @@ export const demoInput = (): AgentModelInput => ({ contractVersion: '1.0', phase
 const empty = (): AgentModelInput => ({ ...demoInput(), participants: [], groupLimit: 'NOT_ASKED', priority: 'NOT_ASKED' });
 const ask = (target: 'GROUP' | 'PURCHASE' | typeof a | typeof b, field: 'LIMIT' | 'RESTRICTIONS' | 'PRIORITY') =>
   ({ action: 'ASK_CLARIFICATION' as const, target: typeof target === 'string' ? target : { ref: target.ref }, field });
-export interface ClaudeDemoCase { id: string; critical: boolean; input: AgentModelInput; expected: AgentProposal[]; }
-const c = (id: string, critical: boolean, message: string, actions: AgentProposal['actions'], input = demoInput()): ClaudeDemoCase =>
+export interface DemoCase { id: string; critical: boolean; input: AgentModelInput; expected: AgentProposal[]; }
+const c = (id: string, critical: boolean, message: string, actions: AgentProposal['actions'], input = demoInput()): DemoCase =>
   ({ id, critical, input: { ...input, message }, expected: [{ actions }] });
-export const CLAUDE_DEMO_CORPUS: ClaudeDemoCase[] = [
+export const DEMO_CORPUS: DemoCase[] = [
   c('collect-group', false, 'Somos P1 e P2, ambos sem restrições. Até R$50 por pessoa e R$100 no grupo. Priorize economia.', [
     { action: 'ADD_PARTICIPANT', name: 'P1' }, { action: 'ADD_PARTICIPANT', name: 'P2' },
     { action: 'SET_NO_RESTRICTIONS', participant: { name: 'P1' } }, { action: 'SET_NO_RESTRICTIONS', participant: { name: 'P2' } },
@@ -43,10 +43,13 @@ export const CLAUDE_DEMO_CORPUS: ClaudeDemoCase[] = [
   c('unsupported-diet', true, 'P1 precisa seguir dieta FODMAP, que não está na lista de restrições suportadas.', [ask(a, 'RESTRICTIONS')]),
   c('no-restrictions-explicit', false, 'P1 confirmou que não tem alergias nem restrições alimentares.', [{ action: 'SET_NO_RESTRICTIONS', participant: { ref: a.ref } }],
     { ...demoInput(), participants: [{ ...demoInput().participants[0]!, restrictions: 'NOT_ASKED' }, demoInput().participants[1]!] }),
+  // GRP-01 (consolidação): sugestão vira termo de busca; escolha só por posição, nunca por ID.
+  c('suggest-proposals', false, 'Sugere pizza pra gente.', [{ action: 'SUGGEST_PROPOSALS', query: 'pizza' }]),
+  c('select-proposal', true, 'Quero a proposta 2.', [{ action: 'SELECT_PROPOSAL', position: 2 }], { ...demoInput(), phase: 'PROPOSALS_READY' }),
 ];
 
 /** Ordem de ações é relevante para o domínio; só comparamos conjuntos quando não há dependência de remoção. */
-export function scoreClaudeDemo(test: ClaudeDemoCase, raw: AgentProposal): boolean {
+export function scoreDemo(test: DemoCase, raw: AgentProposal): boolean {
   const normalize = (proposal: AgentProposal) => {
     const walk = (value: unknown): unknown => {
       if (Array.isArray(value)) return value.map(walk).sort((x,y) => JSON.stringify(x).localeCompare(JSON.stringify(y)));

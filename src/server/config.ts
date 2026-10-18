@@ -1,5 +1,19 @@
 // Configuração lida exclusivamente do ambiente. Nunca logar segredos.
-import type { OpenAIModelConfig } from './agent/openai-model.js';
+import { GEMINI_BOUNDS, GEMINI_MODEL } from './agent/gemini-model.js';
+
+/** Configuração do modelo conversacional (AI-01). A chave só existe aqui; nunca é logada nem enviada ao modelo. */
+export interface ConversationModelConfig {
+  provider: 'google';
+  model: typeof GEMINI_MODEL;
+  apiKey: string;
+  timeoutMs: number;
+  maxOutputTokens: number;
+  /** Chamadas por processo (obrigatório ao habilitar). */
+  maxRequests: number;
+  maxRequestsPerConversation: number;
+  /** Reserva local de gasto em micro-USD (não substitui o limite de cobrança do provedor). */
+  budgetMicroUsd: number;
+}
 
 export interface AppConfig {
   mcpUrl: string;
@@ -28,8 +42,8 @@ export interface AppConfig {
   cartEnabled: boolean;
   /** Opt-in da infraestrutura RUN-01; o modelo tem opt-in separado. */
   conversationRuntime?: { dbFile: string; botId: string };
-  /** AI-01 candidato: opt-in separado, modelo explícito e tentativas limitadas por processo. */
-  conversationModel?: OpenAIModelConfig;
+  /** AI-01: opt-in separado (CONVERSATION_MODEL_ENABLED), provedor Gemini, limites explícitos. */
+  conversationModel?: ConversationModelConfig;
 }
 
 /**
@@ -100,41 +114,36 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     if (storage.durability === 'EPHEMERAL') throw new Error('RUN-01 exige banco em armazenamento persistente.');
     conversationRuntime = { dbFile, botId };
   }
-  let conversationModel: OpenAIModelConfig | undefined;
+  let conversationModel: ConversationModelConfig | undefined;
   if (env.CONVERSATION_MODEL_ENABLED && !['true', 'false'].includes(env.CONVERSATION_MODEL_ENABLED)) {
     throw new Error('CONVERSATION_MODEL_ENABLED deve ser true ou false.');
   }
   if (env.CONVERSATION_MODEL_ENABLED === 'true') {
-    const model = env.CONVERSATION_MODEL ?? '';
-    const apiKey = env.OPENAI_API_KEY ?? '';
-    const organizers = (env.ALLOWED_ORGANIZER_IDS ?? '').split(',').map(s => s.trim());
-    if (!conversationRuntime || !env.BOT_API_TOKEN || env.BOT_API_TOKEN.length < 32 || !organizers.length || organizers.some(s => !/^[1-9][0-9]{0,19}$/.test(s))) {
+    const apiKey = env.GEMINI_API_KEY ?? '';
+    const organizers = (env.ALLOWED_ORGANIZER_IDS ?? '').split(',').map((s) => s.trim());
+    if (!conversationRuntime || !env.BOT_API_TOKEN || env.BOT_API_TOKEN.length < 32 || !organizers.length || organizers.some((s) => !/^[1-9][0-9]{0,19}$/.test(s))) {
       throw new Error('AI-01 exige runtime e adaptador autenticado configurados.');
     }
-    if (env.CONVERSATION_MODEL_PROVIDER !== 'openai' || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/.test(model) || !apiKey.trim() || /\s/.test(apiKey)) {
-      throw new Error('AI-01 exige provedor openai, modelo explícito e OPENAI_API_KEY válida.');
+    if (env.CONVERSATION_MODEL_PROVIDER !== 'google' || env.CONVERSATION_MODEL !== GEMINI_MODEL || !apiKey.trim() || /\s/.test(apiKey)) {
+      throw new Error(`AI-01 exige CONVERSATION_MODEL_PROVIDER=google, CONVERSATION_MODEL=${GEMINI_MODEL} e GEMINI_API_KEY válida.`);
     }
     if (env.IFOOD_CART_ENABLED === 'true' || env.DEV_GLOBAL_SESSION === 'true') throw new Error('AI-01 exige DEC-01: F7 e sessão global desligadas.');
-    const integer = (key: string, fallback: string, min: number, max: number) => {
+    const integer = (key: string, fallback: string, b: { min: number; max: number }) => {
       const raw = env[key] ?? fallback;
       const value = Number(raw);
-      if (!/^[0-9]+$/.test(raw) || !Number.isSafeInteger(value) || value < min || value > max) throw new Error(`AI-01: ${key} inválido.`);
+      if (!/^[0-9]+$/.test(raw) || !Number.isSafeInteger(value) || value < b.min || value > b.max) throw new Error(`AI-01: ${key} inválido.`);
       return value;
     };
-    conversationModel = { provider: 'openai', model, apiKey,
-      timeoutMs: integer('CONVERSATION_MODEL_TIMEOUT_MS', '8000', 100, 20000),
-      maxOutputTokens: integer('CONVERSATION_MODEL_MAX_OUTPUT_TOKENS', '2048', 256, 4096),
-      maxRequests: integer('CONVERSATION_MODEL_MAX_REQUESTS', '', 1, 1000),
+    const B = GEMINI_BOUNDS;
+    conversationModel = { provider: 'google', model: GEMINI_MODEL, apiKey,
+      timeoutMs: integer('CONVERSATION_MODEL_TIMEOUT_MS', String(B.timeoutMs.default), B.timeoutMs),
+      maxOutputTokens: integer('CONVERSATION_MODEL_MAX_OUTPUT_TOKENS', String(B.maxOutputTokens.default), B.maxOutputTokens),
+      maxRequests: integer('CONVERSATION_MODEL_MAX_REQUESTS', '', B.maxRequests),
+      maxRequestsPerConversation: integer('CONVERSATION_MODEL_MAX_REQUESTS_PER_CONVERSATION', String(B.maxRequestsPerConversation.default), B.maxRequestsPerConversation),
+      budgetMicroUsd: integer('CONVERSATION_MODEL_BUDGET_MICRO_USD', String(B.budgetMicroUsd.default), B.budgetMicroUsd),
     };
   }
   const links = resolveLinksStorage(env);
-  let conversationModel: AppConfig['conversationModel'];
-  if (env.CONVERSATION_MODEL && env.CONVERSATION_MODEL !== 'off') {
-    if (env.CONVERSATION_MODEL !== 'gemini-3.8-flash' || !conversationRuntime || !env.GEMINI_API_KEY || /\s/.test(env.GEMINI_API_KEY)) {
-      throw new Error('Modelo conversacional exige opção suportada, runtime configurado e GEMINI_API_KEY válida.');
-    }
-    conversationModel = { id: 'gemini-3.8-flash', apiKey: env.GEMINI_API_KEY };
-  }
   return {
     mcpUrl: env.IFOOD_MCP_URL || 'https://consumer-mcp.ifood.com.br/marketplace',
     clientId: env.IFOOD_CLIENT_ID || undefined,

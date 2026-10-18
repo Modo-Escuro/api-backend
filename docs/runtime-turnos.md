@@ -7,8 +7,8 @@
 Implementada a infraestrutura de aceite, fila, execução limitada, consulta, cancelamento local e recuperação em SQLite real. As rotas v1 estão registradas no aplicativo. A ativação é explícita e permanece **desligada por padrão**. Nenhum schema da API-01 foi alterado.
 
 Sem opt-in separado do modelo, novos eventos continuam retornando **503 UNAVAILABLE**, mesmo com a infraestrutura ativa.
-A [montagem AI-01](ai-01-montagem-ensaio.md) conecta um candidato OpenAI ao processador da AI-02 somente com
-configuração explícita; escolha do modelo, avaliação externa e ensaio operacional permanecem pendentes.
+A [montagem AI-01](ai-01-montagem-ensaio.md) conecta o Gemini 3.8 Flash ao processador da AI-02 (com as sugestões
+da GRP-01) somente com configuração explícita; ensaio operacional e D10 permanecem pendentes.
 O domínio da DATA-01 já está integrado ao armazenamento ([data-01-compra](data-01-compra.md)). Replays e consultas
 de operações existentes continuam possíveis. Não há executor de compra instalado.
 

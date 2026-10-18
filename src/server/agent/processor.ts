@@ -8,6 +8,7 @@
 //    versão ficam intactos e o bot pode reenviar (próximo passo recuperável). Nada de sucesso fictício.
 //  - Nenhuma ferramenta MCP, carrinho, aprovação ou escrita externa é exposta ao modelo (D8).
 //  - Logs: só códigos; nunca mensagem, nomes, restrições ou saída do modelo.
+import { createHash } from 'node:crypto';
 import { ContractError } from '../contracts/guards.js';
 import { evaluatePlan, planCoverage, type GroupResult } from '../domain/group.js';
 import { DomainError, type PurchaseState } from '../domain/purchase.js';
@@ -46,6 +47,10 @@ function fail(code: string): never {
  * segura o turno: a corrida termina no prazo e o código distingue prazo de cancelamento/perda de lease.
  */
 class StaleLinkError extends Error {}
+
+/** Chave local de limite por conversa: hash opaco (nunca IDs Telegram em claro, mesmo que um adaptador a serialize). */
+const scopeHash = (p: TurnContext['principal']) =>
+  createHash('sha256').update(JSON.stringify(['AI-01-scope', p.botId, p.organizerId, p.conversationId])).digest('base64url').slice(0, 24);
 
 /** Mensagem específica por causa (sem dados pessoais); nada de "deu erro" genérico quando a causa é conhecida. */
 function proposalFailureText(e: unknown): string {
@@ -93,7 +98,7 @@ export function createAgentProcessor(opts: AgentOptions): TurnProcessor {
     let raw: unknown;
     try {
       raw = await withDeadline(signal, ctx.signal, (s) => opts.model.propose({ input, signal: s, maxOutputTokens,
-        budgetScope: `${ctx.principal.botId}:${ctx.principal.organizerId}:${ctx.principal.conversationId}` }));
+        budgetScope: scopeHash(ctx.principal) }));
     } catch (e) {
       fail(reason(e, 'MODEL'));
     }

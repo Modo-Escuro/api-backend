@@ -9,7 +9,7 @@ describe('avaliação sintética AI-01', () => {
     // É uma reprovação do stub, não autorização para relaxar o critério do provedor candidato.
     expect(baseline.passed).toBe(false);
     expect(baseline.results.filter(r => !r.passed).map(r => r.id)).toEqual(['teto-ambiguo']);
-    expect(baseline.results).toHaveLength(7);
+    expect(baseline.results).toHaveLength(8);
     const empty = await evaluateModel({ id: 'empty', propose: async () => ({ actions: [] }) });
     expect(empty.passed).toBe(false);
     expect(empty.results.every(r => !r.passed)).toBe(true);
@@ -17,12 +17,12 @@ describe('avaliação sintética AI-01', () => {
   it('falha de provedor reprova sem divulgar exceção', async () => {
     const report = await evaluateModel({ id: 'unavailable', propose: async () => { throw new Error('synthetic-private-error'); } });
     expect(report.passed).toBe(false);
-    expect(report.modelCalls).toBe(7);
+    expect(report.modelCalls).toBe(8);
     expect(JSON.stringify(report)).not.toContain('synthetic-private-error');
   });
   it('prazo também corta dependência que ignore abort, sem travar a avaliação', async () => {
     const report = await evaluateModel({ id: 'hanging', propose: async () => new Promise(() => undefined) }, 10);
     expect(report.passed).toBe(false);
-    expect(report.modelCalls).toBe(7);
+    expect(report.modelCalls).toBe(8);
   });
 });

@@ -90,8 +90,9 @@ fixtures/             # respostas reais salvas p/ testes offline
 ## Convenções
 
 - AI-01: montagem do entrypoint e ensaio em `docs/ai-01-montagem-ensaio.md`.
-  Candidato OpenAI montado apenas por opt-in separado, modelo/chave/limite explícitos. Padrão sem processador;
-  não escolher modelo implicitamente nem usar fallback determinístico. Nenhum deploy/avaliação externa comprovado.
+  Gemini 3.8 Flash (escolhido no ensaio do #35) montado apenas por opt-in separado, modelo/chave/limites explícitos,
+  com sugestões da GRP-01 ligadas. Padrão sem processador; sem fallback determinístico. Avaliação local só com chave
+  exclusiva de teste (`AI_EVAL_GEMINI_API_KEY`). Nenhum deploy comprovado.
 
 - RUN-01: infraestrutura de conversa em `src/server/turns/`, guia em `docs/runtime-turnos.md`. Flag desligada por padrão; modelo tem opt-in separado na AI-01. DATA-01 integra domínio/exclusão D7 ao armazenamento, sem comprovar volume operacional. Nunca conectar JSON bruto do modelo ao commit. Conforme DEC-01 D8, a barreira de escrita do runtime sempre rejeita; aprovação fictícia não usa `/purchase-approvals`.
 - Dinheiro: centavos inteiros seguros no domínio, inclusive nomes internos preservados do MCP (`basePrice`, `additionalPrice`, `fee`). BRL cru só na fronteira MCP: `domain/money.ts` converte/rejeita subcentavos; `services/cents.ts` apenas projeta nomes `*Cents`, sem multiplicar novamente. Taxa de serviço ausente mantém total completo desconhecido. Ver `docs/dom-01-centavos-limites.md`. Enums `SCREAMING_SNAKE_CASE`; JSON `lowerCamelCase`.

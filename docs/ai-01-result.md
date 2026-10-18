@@ -38,36 +38,42 @@ O protocolo curto foi definido antes de suas chamadas: 100% dos 12 críticos, �
 
 Claude Max pode oferecer créditos incluídos após resgate no Console, mas criar uma chave não seleciona um modelo nem comprova saldo. Não é fallback ativo. Os dois transportes reais implementam a mesma interface fechada e validam o JSON integralmente com Zod; restrições omitidas do schema de transporte continuam obrigatórias localmente.
 
-## Implementação e limites da demo
+## Implementação e limites da demo (atualizado na consolidação #35 + #36)
 
-- `createGeminiModel` implementa `ConversationModel` da AI-02; `index.ts` instala o processador somente com opt-in. O serviço de vínculos é compartilhado pela API e pelo agente; o link vem do organizador autenticado, sem consulta MCP neste passo.
-- Uma chamada por turno. Máximo **12 tentativas por conversa/organizador/bot por processo**, mais restritivo que 12 por compra; a chave do contador é metadado local e não chega ao modelo. Máximo **20 chamadas / US$ 0,50 de reserva por processo** no adaptador de demo; ensaio curto usa 16 / US$ 0,25. Contadores são em memória e reinício os zera; não constituem teto mensal de cobrança. Definir limite de gasto no provedor antes de ampliar uso.
-- Contexto por allowlist: estado estruturado mínimo + mensagem atual; sem histórico completo ou metadados de conta. Entrada de contexto até 8.000 bytes; corpo HTTP até 24.000 bytes. Até **800 tokens de saída**, incluindo raciocínio conforme contabilizado pelo SDK. Raciocínio bruto não é registrado. Dados reais sensíveis continuam fora dos ensaios.
-- Modelo: `thinkingLevel:low`, sem pensamentos na saída, schema nativo básico, validação local estrita, sem ferramentas/streaming, sem temperatura forçada na rodada curta. Deadline do modelo **8 s**; vínculo + modelo têm **9 s** no processador. Não há retry ou fallback automático.
-- Antes de cada chamada, reserva conservadora por bytes + folga de protocolo + saída máxima; depois, custo estimado do uso reportado. Uso desconhecido/erro mantém reserva. Não é tokenizer nem fatura: orçamento de aplicação não substitui controle de billing. Valores em micros de dólar inteiros; dinheiro da compra continua em centavos.
-- Timeout, cota, recusa ou saída inválida não produzem compra/aprovação. Erros deixam estado/versão intactos; novo turno pode tentar novamente dentro dos limites. Recusa descarta ações e usa resposta do servidor. Credenciais ficam na API, fora do prompt e dos logs.
-- Servidor valida cada ação e renderiza fatos persistidos; nenhum estado completo gerado pelo modelo é aplicado ao banco. Sacola simulada e MCP somente leitura continuam sob DEC-01.
+- O adaptador vive em `src/server/agent/gemini-model.ts` (antes `ai/claude-model.ts`). A montagem é a do #36
+  (`createConversationRuntime`), com as sugestões da GRP-01 ligadas. Configuração e limites: ver
+  [montagem AI-01](ai-01-montagem-ensaio.md#configuração-explícita-na-api).
+- O teto fixo **20 chamadas por processo / 12 por conversa** desta rodada foi substituído por limites configuráveis
+  (`CONVERSATION_MODEL_MAX_REQUESTS*`, `CONVERSATION_MODEL_BUDGET_MICRO_USD`), porque travava a demo depois de 20
+  mensagens. Prazo, 800 tokens de saída, reserva conservadora, ausência de retry e de ferramentas foram mantidos.
+- Os caminhos Groq e Anthropic e o harness de comparação foram removidos do código; esta página e as evidências
+  em `docs/evidence/ai-01/` permanecem como histórico da seleção.
 
 ## Reproduzir e ativar após revisão
 
 ```text
 npm run ai:demo:offline
-railway run --project <projeto-autorizado> --environment production --service api-backend --no-local -- node --import tsx scripts/ai-eval-railway.ts --claude-demo --live --provider=google
+AI_EVAL_GEMINI_API_KEY=<chave exclusiva de teste> npm run ai:demo:gemini
 ```
 
-O segundo comando faz inferência paga conforme a conta e tem teto de aplicação de US$ 0,25; o offline não usa chaves/rede nem promove modelo. O wrapper verifica o serviço autorizado e remove as demais variáveis antes de importar os adaptadores.
+O ensaio ao vivo tem teto de aplicação de US$ 0,25 e usa só a chave de teste. O script antigo via
+`railway run --environment production` foi removido: avaliação local não deve puxar credenciais de produção.
 
-Depois de merge/deploy, para instalar o agente no serviço:
+Depois de merge/deploy, para instalar o agente no serviço (ver tabela completa na montagem AI-01):
 
 ```text
-GEMINI_API_KEY=<já cadastrada na Railway>
-CONVERSATION_MODEL=gemini-3.8-flash
 CONVERSATION_RUNTIME_ENABLED=true
 CONVERSATION_DB_FILE=<banco em volume persistente configurado na RUN-01>
 BOT_TELEGRAM_ID=<ID do bot, não token>
+CONVERSATION_MODEL_ENABLED=true
+CONVERSATION_MODEL_PROVIDER=google
+CONVERSATION_MODEL=gemini-3.8-flash
+GEMINI_API_KEY=<cadastrada só no ambiente secreto da API>
+CONVERSATION_MODEL_MAX_REQUESTS=<limite autorizado>
 ```
 
-Chave presente sozinha não ativa modelo. `CONVERSATION_MODEL=off` mantém o runtime sem processador; sem opt-in de runtime, as rotas seguem desativadas. Não foi alterada configuração remota por este incremento. O ensaio D10 de Telegram/API/MCP, com 40 execuções e p95 ≤ 10 s, fica para validação integrada da demo; a amostra isolada não o substitui.
+Chave presente sozinha não ativa modelo. Não foi alterada configuração remota. O ensaio D10 de Telegram/API/MCP,
+com 40 execuções e p95 ≤ 10 s, fica para validação integrada da demo; a amostra isolada não o substitui.
 
 ## Verificações
 

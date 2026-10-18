@@ -74,13 +74,11 @@ Logs do agente: só códigos (`MODEL_TIMEOUT`, `MODEL_OUTPUT_INVALID`, ...), nun
 
 ## Integração e dependências
 
-- **Montagem implementada:** `index.ts` compartilha o serviço de vínculos com `createConversationRuntime`.
-  Sem `CONVERSATION_MODEL_ENABLED=true`, permanece sem processador (eventos novos → 503). Com opt-in/configuração
-  válida, instala o candidato OpenAI e este agente. Isso não informa versão ou configuração implantada.
-- **AI-01 (#15):** [montagem e avaliação](ai-01-montagem-ensaio.md) implementadas como preparação; escolha final,
-  comparação/custo, avaliação externa e metas D10 continuam pendentes. Modelo determinístico só em testes e avaliação offline.
-- **Configuração padrão:** `index.ts` cria o runtime sem processador; apenas `CONVERSATION_RUNTIME_ENABLED=true` continua recusando eventos novos com 503 `UNAVAILABLE`. O modelo determinístico não é importado fora de testes.
-- **AI-01 (#15):** implementa o provedor real e seleciona Gemini após ensaio curto. Com runtime configurado, `CONVERSATION_MODEL=gemini-3.8-flash` e chave válida, o código instala o agente com contexto mínimo, 800 tokens de saída e prazo de 9 s para vínculo + modelo. A chave sozinha não ativa IA. Ver [resultado, limites e passos de ativação](ai-01-result.md). Merge/deploy/ativação remota não são comprovados por esse ensaio; D10 ponta a ponta continua separada.
+- **Montagem implementada (AI-01, consolidação #35 + #36):** `index.ts` compartilha o serviço de vínculos com
+  `createConversationRuntime`. Sem `CONVERSATION_MODEL_ENABLED=true`, permanece sem processador (eventos novos → 503).
+  Com opt-in e configuração válida, instala o Gemini 3.8 Flash, este agente e as sugestões da GRP-01. A chave sozinha
+  não ativa IA. Ver [montagem](ai-01-montagem-ensaio.md) e [resultado da seleção](ai-01-result.md). Deploy e D10 não
+  comprovados. Modelo determinístico só em testes e avaliação offline.
 - **BUY-01 (#19):** confirmação humana por botão (para remoções/encerramento) e revisão/aprovação fictícia.
 - **GRP-01 (#17):** propostas, consumo por participante e rateio (DOM-01) — fora deste agente.
 - **DOM-01:** ao integrar rateio, teto `UNCLEAR` deve bloquear (ver auditoria DATA-01 × DOM-01).

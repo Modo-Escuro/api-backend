@@ -1,5 +1,8 @@
 # AI-01 — Revisão das respostas sintéticas
 
+> **Histórico (PR #35).** Comparação de candidatos que levou à escolha do Gemini. Os caminhos Groq/Anthropic e os
+> scripts citados aqui foram removidos na consolidação #35 + #36; ver [montagem AI-01](ai-01-montagem-ensaio.md).
+
 Rodada inicial: `2026-10-18T07-25-19-608Z-68434b2f`, protocolo 1.1, revisão de execução `19c300f6e4ff43dddbd0a7670e5a27cba72a89c5`. Este registro complementa o oráculo estrutural; não altera suas notas nem mistura o piloto excluído. Google parou após 13 chamadas por cota; Groq foi interrompida com 46/60 após o usuário pedir ensaio menor. Nenhum candidato promovido pelo protocolo 1.1. O [registro final](ai-01-result.md) contém a nova rodada curta e a escolha posterior.
 
 ## Groq — GPT OSS 120B

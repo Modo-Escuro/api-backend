@@ -1,5 +1,8 @@
 # AI-01 — Pré-seleção de modelos gratuitos
 
+> **Histórico (PR #35).** Comparação de candidatos que levou à escolha do Gemini. Os caminhos Groq/Anthropic e os
+> scripts citados aqui foram removidos na consolidação #35 + #36; ver [montagem AI-01](ai-01-montagem-ensaio.md).
+
 Pesquisa inicial em 18/10/2026 para [AI-01 #15](https://github.com/Modo-Escuro/api-backend/issues/15). Base dessa pesquisa: `d2883f120419385c5ec902740330c3743f130b44`. Este documento preserva a pré-seleção feita antes das inferências. O [protocolo de avaliação](ai-01-evaluation.md) registra a execução posterior autorizada e o estado atual; as hipóteses desta pesquisa não são resultados medidos.
 
 ## Contexto e escopo
