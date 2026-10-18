@@ -1,5 +1,7 @@
 # Documentação da API
 
+**Hackathon:** [entrega dos seis entregáveis](entrega-hackathon.md) · [roteiro do pitch](pitch-hackathon.md).
+
 [Acesso por senha no bot](acesso-bot-senha.md): opt-in para usuários admitidos pelo adaptador autenticado,
 com vínculos isolados e sem ampliar a fronteira de compra da DEC-01.
 
