@@ -153,7 +153,11 @@ export function createAgentProcessor(opts: AgentOptions): TurnProcessor {
 
     // Só propostas exibidas no último snapshot podem ser escolhidas (nada de escolha às cegas).
     const visible = new Set(ctx.snapshot.blocks.flatMap((b) => (b.kind === 'PROPOSAL' ? [b.proposalRef] : [])));
-    const plan = planActions(ctx.purchase, parsed.data, (change) => ctx.previewDomain(change), linkId, direct?.policyMessage ?? ctx.event.input.text, visible);
+    const human = direct?.human;
+    const plan = human
+      ? { ops: [...human.ops], state: human.ops.length ? ctx.previewDomain({ ops: human.ops, ...(linkId ? { linkId } : {}) }) : ctx.purchase,
+          applied: human.ops.length ? [human.note] : [], notes: human.ops.length ? [] : [human.note], suggest: null as string | null }
+      : planActions(ctx.purchase, parsed.data, (change) => ctx.previewDomain(change), linkId, direct?.policyMessage ?? ctx.event.input.text, visible);
     const extraNotes: string[] = [];
     if (plan.suggest !== null) {
       const state = plan.state;
