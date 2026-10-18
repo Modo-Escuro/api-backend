@@ -105,7 +105,7 @@ export function createApp(auth: IfoodAuth = defaultAuth, opts: AppOptions = {}) 
   });
 
   // ---------- Bot → API (autenticado; identidade do organizador vem do adaptador) ----------
-  const requireBot = botAuth({ token: cfg.botApiToken, allowedOrganizerIds: cfg.allowedOrganizerIds });
+  const requireBot = botAuth({ token: cfg.botApiToken, allowedOrganizerIds: cfg.allowedOrganizerIds, passwordAccess: cfg.botPasswordAccess });
   app.use('/api/bot/v1/*', async (c, next) => { c.header('Cache-Control', 'no-store'); await next(); });
   app.use('/api/bot/*', requireBot);
   app.use('/api/addresses', requireBot);
@@ -208,7 +208,7 @@ export function createApp(auth: IfoodAuth = defaultAuth, opts: AppOptions = {}) 
         clientId: mask(cfg.clientId),
         clientSecretSet: Boolean(cfg.clientSecret),
         redirectUri: cfg.redirectUri,
-        botApiConfigured: Boolean(cfg.botApiToken && cfg.allowedOrganizerIds.length),
+        botApiConfigured: Boolean(cfg.botApiToken && (cfg.allowedOrganizerIds.length || cfg.botPasswordAccess)),
         allowedOrganizers: cfg.allowedOrganizerIds.length,
         devGlobalSession: cfg.devGlobalSession,
       },

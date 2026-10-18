@@ -1,0 +1,16 @@
+{
+  "audit": "AI-01",
+  "protocol": "AI02_DEMO_1",
+  "runId": "2026-10-18T07-55-20-109Z-google-2fdb51b1",
+  "selectedModel": "gemini-3.8-flash",
+  "provider": "google",
+  "reviewedResponses": 16,
+  "review": "PROPOSALS_REVIEWED_FOR_TARGETS_RESTRICTIONS_APPROVAL_AND_INJECTION",
+  "reviewPassed": true,
+  "quantitativeGate": true,
+  "usageCostEstimateUsd": 0.015005,
+  "billingObserved": false,
+  "decisionScope": "SYNTHETIC_HACKATHON_DEMO_NOT_GENERAL_SAFETY",
+  "runtimeDeployed": false,
+  "reportSha256": "b5ecf55a4d34eb85cebd594e7e8945adb74efb2c0818d50eb1857d9afa7393a9"
+}

@@ -4,7 +4,7 @@
 
 ## Estado deste incremento
 
-Entrega parcial. O que não depende de GRP-01 nem de CART-01 foi implementado e testado offline: logs estruturados, métricas agregadas, orçamento de execução/gasto do modelo, status operacional separado, liberação gradual por organizador, verificação de permissões de storage e regressões de rollback. A CART-01 (dependência da issue) não está concluída. Por isso, a instrumentação de sacola/envio se limita a reportar `DISABLED`. Nada aqui habilita escrita no MCP (DEC-01 D8).
+Entrega parcial, integrada à GRP-01 e à AI-01 (Gemini, #36). O que não depende de CART-01 foi implementado e testado offline: logs estruturados, métricas agregadas, orçamento de execução/gasto do modelo, status operacional separado, liberação gradual por organizador, verificação de permissões de storage e regressões de rollback. A CART-01 (dependência da issue) não está concluída. Por isso, a instrumentação de sacola/envio se limita a reportar `DISABLED`. Nada aqui habilita escrita no MCP (DEC-01 D8).
 
 ## Logs (`src/server/ops/log.ts`)
 
@@ -30,6 +30,7 @@ Ficam em memória por processo e zeram ao reiniciar. Os rótulos permitidos são
 | `mcp_tool_calls_total{tool,outcome,code}`, `mcp_tool_duration_ms` | Chamadas de leitura MCP, erros inline (`TOOL_ERROR` + código) e de transporte |
 | `turn_queue_wait_ms`, `turn_run_duration_ms`, `turn_operations_total{outcome}` | Fila, execução e resultado dos turnos |
 | `model_calls_total`, `model_call_duration_ms`, `model_tokens_total{kind}` | Chamadas ao modelo e tokens (`input`, `output` ou `reserved_unreported` quando o provedor não reporta) |
+| `model_cost_micro_usd_total` | Custo estimado do Gemini pelo preço de referência do adaptador (não é fatura) |
 | `agent_turns_total`, `agent_budget_exceeded_total{kind}` | Resultado do agente e paradas por orçamento |
 | `retention_purged_total`, `retention_purge_failed_total` | Expurgo D7 |
 
@@ -51,10 +52,17 @@ Exige o mesmo `BOT_API_TOKEN` e um organizador autorizado, e responde com `Cache
 
 1. Antes de chamar o provedor, reserva `estimativa da entrada + maxOutputTokens`.
 2. Estourou ⇒ `ContractError('LIMIT_EXCEEDED')` **antes da chamada**. A operação termina `FAILED/LIMIT_EXCEEDED` (HTTP 429 no contrato), e o snapshot e a compra ficam na versão anterior. Assim que a janela vira, um novo evento continua do estado preservado (teste de regressão).
-3. Depois da chamada, `ModelRequest.reportUsage` (opcional, implementado pelo provedor da AI-01) ajusta a reserva ao uso real. Sem esse relato, a reserva conservadora é mantida.
+3. Depois da chamada, `ModelRequest.reportUsage` ajusta a reserva ao uso real. O adaptador Gemini (`agent/gemini-model.ts`) reporta os tokens de entrada e saída devolvidos pelo provedor e o custo calculado pelo preço de referência.
+   - Recusa antes da rede (limite próprio do adaptador, prompt grande, configuração): reporta uso zero, a reserva é devolvida e só a chamada fica contada.
+   - Timeout, rede ou HTTP de erro sem uso reportado: a reserva é mantida (conservador) e expira com a janela. Não fica presa além dela.
+   - Cada reserva é ajustada uma única vez. Relato que chega depois do prazo do turno é ignorado, então nada é cobrado duas vezes.
 4. Chaves são hashes da conversa. `sweep()` remove janelas vencidas (limpeza de referências).
 
-Os valores padrão são proteções técnicas, não metas de produto: AI-01 deve calibrá-los com o custo real do modelo escolhido. O processador ainda não é instalado em `index.ts`, então o orçamento entra junto com a AI-01.
+Os valores padrão são proteções técnicas, não metas de produto, e devem ser calibrados com o custo observado do Gemini. `index.ts` cria um `SpendBudget` quando `CONVERSATION_MODEL_ENABLED=true` e passa o mesmo objeto a `createConversationRuntime` (agente) e a `createApp` (status).
+
+Há dois conjuntos de limites, ambos em memória por processo e zerados ao reiniciar. Nenhum é teto financeiro durável nem global entre instâncias; o limite de cobrança fica no console do provedor.
+- **OPS-02** (`SpendBudget`): chamadas e tokens por conversa e global, em janela de 1 h.
+- **AI-01** (`CONVERSATION_MODEL_MAX_REQUESTS*`, `CONVERSATION_MODEL_BUDGET_MICRO_USD`): chamadas e micro-USD por processo, sem janela.
 
 ## Flags e liberação gradual
 
@@ -91,7 +99,7 @@ Estes ensaios exigem plataforma ou conta real e não foram feitos neste incremen
 ## Integração com GRP-01 e AI-01
 
 - **GRP-01** (main `8191a0f`): integrada nesta branch. O processador mantém a busca de propostas; a falha de sugestões passou a usar o log estruturado (`agent.proposals_unavailable`) e a métrica `agent_proposals_total`. As chamadas MCP da busca entram em `mcp_tool_calls_total`, mas **não** são cobradas pelo `SpendBudget`, que só conta chamadas ao modelo.
-- **AI-01** (PR #36, ainda não mergeada): conflitos só textuais em `config.ts`, `index.ts` e `docs/README.md`, e os dois lados se somam. Ao integrar: (1) `createConversationRuntime` deve passar `budget: new SpendBudget(...)` ao `createAgentProcessor` e repassar o mesmo objeto a `createApp({ budget })`; (2) `OpenAIConversationModel` deve chamar `request.reportUsage({ inputTokens: body.usage.input_tokens, outputTokens: body.usage.output_tokens })`, senão o orçamento fica só na reserva estimada; (3) `CONVERSATION_MODEL_MAX_REQUESTS` da AI-01 é outro teto por processo e convive com este. Nenhum dos dois é teto financeiro durável.
+- **AI-01** (#36, mergeada em `dc448f9`): integrada. O orçamento entra pela montagem (`conversation-runtime.ts`) e o adaptador Gemini chama `reportUsage`. Regressões em `test/ops/gemini-integration.test.ts`, com rede sintética: uso real substituindo a reserva, `LIMIT_EXCEEDED` antes da chamada, limite global, recusa antes da rede, timeout, concorrência, reinício e status com logs sanitizados.
 
 ## Lacunas
 
@@ -99,4 +107,4 @@ Estes ensaios exigem plataforma ou conta real e não foram feitos neste incremen
 - Orçamento e métricas são em memória e por processo; reiniciar zera a janela. Aceitável enquanto houver uma única instância (RUN-01). Para várias instâncias, persistir no SQLite.
 - Não há exportador Prometheus/OTel; o JSON de `/api/ops/status` é a interface.
 - A retenção de 7 dias dos logs depende da configuração da plataforma.
-- O provedor real (AI-01) precisa chamar `reportUsage`; sem isso, o custo é estimado pela reserva.
+- O custo em micro-USD é estimado pelo preço de referência do adaptador, não pela fatura do Google.

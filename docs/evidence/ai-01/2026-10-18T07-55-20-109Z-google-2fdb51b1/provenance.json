@@ -1,0 +1,27 @@
+{
+  "sourceCommit": "81cab8b",
+  "verifiedManifestHashes": [
+    "prompt",
+    "corpus",
+    "wireSchema",
+    "packageLock"
+  ],
+  "actualSdkVersions": {
+    "ai": "7.0.143",
+    "@ai-sdk/google": "4.0.99",
+    "@ai-sdk/anthropic": "4.0.82"
+  },
+  "originalSdkVersionFieldRefersTo": "@ai-sdk/anthropic",
+  "effectiveTestLimits": {
+    "maxCalls": 16,
+    "budgetMicroUsd": 250000,
+    "timeoutMs": 8000,
+    "maxOutputTokens": 800,
+    "inputMicroUsdPerToken": 0.75,
+    "outputMicroUsdPerToken": 3.75
+  },
+  "originalArtifactsPreserved": true,
+  "metadataCorrectionOnly": true,
+  "modelOnly": true,
+  "realTelegramMcpEndToEndMeasured": false
+}

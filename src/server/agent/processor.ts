@@ -8,6 +8,7 @@
 //    versão ficam intactos e o bot pode reenviar (próximo passo recuperável). Nada de sucesso fictício.
 //  - Nenhuma ferramenta MCP, carrinho, aprovação ou escrita externa é exposta ao modelo (D8).
 //  - Logs: só códigos; nunca mensagem, nomes, restrições ou saída do modelo.
+import { createHash } from 'node:crypto';
 import { ContractError } from '../contracts/guards.js';
 import { evaluatePlan, planCoverage, type GroupResult } from '../domain/group.js';
 import { DomainError, type PurchaseState } from '../domain/purchase.js';
@@ -60,9 +61,13 @@ const count = (n: unknown) => (typeof n === 'number' && Number.isSafeInteger(n) 
  */
 class StaleLinkError extends Error {}
 
+/** Chave local de limite por conversa: hash opaco (nunca IDs Telegram em claro, mesmo que um adaptador a serialize). */
+const scopeHash = (p: TurnContext['principal']) =>
+  createHash('sha256').update(JSON.stringify(['AI-01-scope', p.botId, p.organizerId, p.conversationId])).digest('base64url').slice(0, 24);
+
 /** Mensagem específica por causa (sem dados pessoais); nada de "deu erro" genérico quando a causa é conhecida. */
 function proposalFailureText(e: unknown): string {
-  if (e instanceof StaleLinkError) return 'A conta iFood mudou durante a busca; peça as sugestões de novo.';
+  if (e instanceof StaleLinkError) return 'A conexão com a conta iFood mudou durante a busca; peça as sugestões de novo.';
   if (e instanceof DomainError) return 'A compra mudou enquanto eu buscava; peça as sugestões de novo.';
   const code = typeof e === 'object' && e !== null && 'code' in e ? String((e as { code: unknown }).code) : '';
   if (code === 'ADDRESS_AMBIGUOUS') return 'Há mais de um endereço salvo no iFood e nenhum foi escolhido para esta compra; não busquei para não usar o endereço errado.';
@@ -113,26 +118,32 @@ export function createAgentProcessor(opts: AgentOptions): TurnProcessor {
       metrics.inc('agent_turns_total', { outcome: 'FAILED', code: 'LIMIT_EXCEEDED' });
       throw new ContractError('LIMIT_EXCEEDED');
     }
-    let usage: { inputTokens: number | null; outputTokens: number | null } | null = null;
-    const reportUsage = (u: { inputTokens?: number; outputTokens?: number }) => {
-      usage = { inputTokens: count(u?.inputTokens), outputTokens: count(u?.outputTokens) };
+    let usage: { inputTokens: number | null; outputTokens: number | null; costMicroUsd: number | null } | null = null;
+    let settledUsage = false;
+    // Relato tardio (depois do prazo do turno, quando a reserva já foi fechada) é ignorado: nada é cobrado duas vezes.
+    const reportUsage = (u: { inputTokens?: number; outputTokens?: number; costMicroUsd?: number }) => {
+      if (settledUsage) return;
+      usage = { inputTokens: count(u?.inputTokens), outputTokens: count(u?.outputTokens), costMicroUsd: count(u?.costMicroUsd) };
     };
     let raw: unknown;
     const t0 = now();
     try {
-      raw = await withDeadline(signal, ctx.signal, (s) => opts.model.propose({ input, signal: s, maxOutputTokens, reportUsage }));
+      raw = await withDeadline(signal, ctx.signal, (s) => opts.model.propose({ input, signal: s, maxOutputTokens, reportUsage,
+        budgetScope: scopeHash(ctx.principal) }));
       metrics.inc('model_calls_total', { outcome: 'OK' });
     } catch (e) {
       metrics.inc('model_calls_total', { outcome: reason(e, 'MODEL') });
       fail(reason(e, 'MODEL'));
     } finally {
       metrics.observe('model_call_duration_ms', {}, now() - t0);
-      const u = usage as { inputTokens: number | null; outputTokens: number | null } | null;
+      settledUsage = true;
+      const u = usage as { inputTokens: number | null; outputTokens: number | null; costMicroUsd: number | null } | null;
       const used = u && u.inputTokens !== null && u.outputTokens !== null ? u.inputTokens + u.outputTokens : null;
       if (reserved?.ok) reserved.reservation.settle(used);
       if (u?.inputTokens != null) metrics.inc('model_tokens_total', { kind: 'input' }, u.inputTokens);
       if (u?.outputTokens != null) metrics.inc('model_tokens_total', { kind: 'output' }, u.outputTokens);
       if (used === null) metrics.inc('model_tokens_total', { kind: 'reserved_unreported' }, reservedTokens);
+      if (u?.costMicroUsd != null && u.costMicroUsd > 0) metrics.inc('model_cost_micro_usd_total', {}, u.costMicroUsd);
     }
     const parsed = AgentProposalSchema.safeParse(raw);
     if (!parsed.success) fail('MODEL_OUTPUT_INVALID');

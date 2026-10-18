@@ -1,0 +1,487 @@
+{
+  "protocol": "AI02_DEMO_1",
+  "mode": "LIVE",
+  "model": "gemini-3.8-flash",
+  "provider": "google",
+  "startedAt": "2026-10-18T07:55:20.113Z",
+  "limits": {
+    "timeoutMs": 8000,
+    "maxOutputTokens": 800,
+    "maxRequestBytes": 24000,
+    "maxCalls": 20,
+    "maxCallsPerScope": 12,
+    "budgetMicroUsd": 500000,
+    "inputMicroUsdPerToken": 2,
+    "outputMicroUsdPerToken": 10
+  },
+  "planned": 16,
+  "corpusSha256": "553f4036f1cf8986acc3e6baaa4ae72ceeae95851ef583cc7aaa6a9f35e07c2e",
+  "promptSha256": "f7a4ccd4d8f3706d76b451b9a2e2fc771c63e3429f526d50aa0a2bbfb3e04acf",
+  "wireSchemaSha256": "5788d360876e7429f81296a652f6cc7375058630c380e04b15092ce7c750224c",
+  "packageLockSha256": "cfac9b083f8e74ac3e1002966c267efaacd36d381272d166269c6eecdab2cd7f",
+  "sdkVersion": "4.0.82",
+  "syntheticOnly": true,
+  "businessToolsCalled": false,
+  "runtimeEnabled": false,
+  "maximumTestUsd": 0.25,
+  "billingObserved": false,
+  "priceUsdPerMillionTokens": {
+    "input": 0.75,
+    "output": 3.75
+  },
+  "gate": {
+    "criticalPassRate": 1,
+    "taskPassRate": 0.9,
+    "schemaRate": 1,
+    "p95ModelMs": 8000,
+    "textReviewRequired": true
+  },
+  "scope": "AI02_ACTION_CONTRACT_MODEL_ONLY_NOT_TELEGRAM_MCP_E2E",
+  "finishedAt": "2026-10-18T07:55:59.024Z",
+  "complete": true,
+  "stopReason": null,
+  "metrics": {
+    "completed": 16,
+    "criticalCompleted": 12,
+    "taskPassed": 16,
+    "criticalPassed": 12,
+    "schemaValid": 16,
+    "p95Ms": 3175.3776,
+    "inputTokens": 12584,
+    "outputTokens": 1483,
+    "chargedMicroUsd": 15005
+  },
+  "quantitativeGate": true,
+  "selected": null,
+  "selectionReason": "TEXT_REVIEW_REQUIRED_OR_GATE_FAILED",
+  "rows": [
+    {
+      "id": "collect-group",
+      "critical": false,
+      "taskPassed": true,
+      "schemaValid": true,
+      "latencyMs": 3136.7057999999997,
+      "proposal": {
+        "actions": [
+          {
+            "action": "ADD_PARTICIPANT",
+            "name": "P1"
+          },
+          {
+            "action": "ADD_PARTICIPANT",
+            "name": "P2"
+          },
+          {
+            "action": "SET_NO_RESTRICTIONS",
+            "participant": {
+              "name": "P1"
+            }
+          },
+          {
+            "action": "SET_NO_RESTRICTIONS",
+            "participant": {
+              "name": "P2"
+            }
+          },
+          {
+            "action": "SET_LIMIT",
+            "target": {
+              "name": "P1"
+            },
+            "amountCents": 5000,
+            "kind": "MANDATORY"
+          },
+          {
+            "action": "SET_LIMIT",
+            "target": {
+              "name": "P2"
+            },
+            "amountCents": 5000,
+            "kind": "MANDATORY"
+          },
+          {
+            "action": "SET_LIMIT",
+            "target": "GROUP",
+            "amountCents": 10000,
+            "kind": "MANDATORY"
+          },
+          {
+            "action": "SET_PRIORITY",
+            "value": "ECONOMY"
+          }
+        ]
+      },
+      "error": null,
+      "usage": {
+        "inputTokens": 711,
+        "outputTokens": 167,
+        "chargedMicroUsd": 1160
+      }
+    },
+    {
+      "id": "collect-vegan",
+      "critical": false,
+      "taskPassed": true,
+      "schemaValid": true,
+      "latencyMs": 3132.1766,
+      "proposal": {
+        "actions": [
+          {
+            "action": "ADD_PARTICIPANT",
+            "name": "P1"
+          },
+          {
+            "action": "ADD_RESTRICTION",
+            "participant": {
+              "name": "P1"
+            },
+            "restriction": {
+              "kind": "DIETARY",
+              "code": "VEGAN",
+              "requirement": "MANDATORY"
+            }
+          },
+          {
+            "action": "SET_LIMIT",
+            "target": {
+              "name": "P1"
+            },
+            "amountCents": 4000,
+            "kind": "MANDATORY"
+          },
+          {
+            "action": "SET_LIMIT",
+            "target": "GROUP",
+            "amountCents": 4000,
+            "kind": "MANDATORY"
+          },
+          {
+            "action": "SET_PRIORITY",
+            "value": "SPEED"
+          }
+        ]
+      },
+      "error": null,
+      "usage": {
+        "inputTokens": 704,
+        "outputTokens": 242,
+        "chargedMicroUsd": 2596
+      }
+    },
+    {
+      "id": "correct-group",
+      "critical": true,
+      "taskPassed": true,
+      "schemaValid": true,
+      "latencyMs": 3175.3776,
+      "proposal": {
+        "actions": [
+          {
+            "action": "SET_LIMIT",
+            "target": "GROUP",
+            "amountCents": 8000,
+            "kind": "MANDATORY"
+          }
+        ]
+      },
+      "error": null,
+      "usage": {
+        "inputTokens": 802,
+        "outputTokens": 183,
+        "chargedMicroUsd": 3884
+      }
+    },
+    {
+      "id": "correct-person",
+      "critical": true,
+      "taskPassed": true,
+      "schemaValid": true,
+      "latencyMs": 2225.1049999999996,
+      "proposal": {
+        "actions": [
+          {
+            "action": "SET_LIMIT",
+            "target": {
+              "ref": "participant_P1_001"
+            },
+            "amountCents": 3000,
+            "kind": "MANDATORY"
+          }
+        ]
+      },
+      "error": null,
+      "usage": {
+        "inputTokens": 797,
+        "outputTokens": 75,
+        "chargedMicroUsd": 4763
+      }
+    },
+    {
+      "id": "decimal-cents",
+      "critical": true,
+      "taskPassed": true,
+      "schemaValid": true,
+      "latencyMs": 1816.3446000000004,
+      "proposal": {
+        "actions": [
+          {
+            "action": "SET_LIMIT",
+            "target": {
+              "ref": "participant_P1_001"
+            },
+            "amountCents": 3050,
+            "kind": "MANDATORY"
+          }
+        ]
+      },
+      "error": null,
+      "usage": {
+        "inputTokens": 796,
+        "outputTokens": 39,
+        "chargedMicroUsd": 5507
+      }
+    },
+    {
+      "id": "new-allergy",
+      "critical": true,
+      "taskPassed": true,
+      "schemaValid": true,
+      "latencyMs": 2514.8713000000007,
+      "proposal": {
+        "actions": [
+          {
+            "action": "ADD_RESTRICTION",
+            "participant": {
+              "ref": "participant_P1_001"
+            },
+            "restriction": {
+              "kind": "ALLERGY",
+              "code": "MILK",
+              "requirement": "MANDATORY"
+            }
+          }
+        ]
+      },
+      "error": null,
+      "usage": {
+        "inputTokens": 790,
+        "outputTokens": 112,
+        "chargedMicroUsd": 6520
+      }
+    },
+    {
+      "id": "priority",
+      "critical": false,
+      "taskPassed": true,
+      "schemaValid": true,
+      "latencyMs": 1997.9380999999994,
+      "proposal": {
+        "actions": [
+          {
+            "action": "SET_PRIORITY",
+            "value": "SPEED"
+          }
+        ]
+      },
+      "error": null,
+      "usage": {
+        "inputTokens": 790,
+        "outputTokens": 15,
+        "chargedMicroUsd": 7169
+      }
+    },
+    {
+      "id": "unknown-restriction",
+      "critical": true,
+      "taskPassed": true,
+      "schemaValid": true,
+      "latencyMs": 1873.6434999999983,
+      "proposal": {
+        "actions": [
+          {
+            "action": "ASK_CLARIFICATION",
+            "target": {
+              "ref": "participant_P1_001"
+            },
+            "field": "RESTRICTIONS"
+          }
+        ]
+      },
+      "error": null,
+      "usage": {
+        "inputTokens": 802,
+        "outputTokens": 32,
+        "chargedMicroUsd": 7891
+      }
+    },
+    {
+      "id": "ambiguous-budget",
+      "critical": true,
+      "taskPassed": true,
+      "schemaValid": true,
+      "latencyMs": 1636.8634999999995,
+      "proposal": {
+        "actions": [
+          {
+            "action": "ASK_CLARIFICATION",
+            "target": "GROUP",
+            "field": "LIMIT"
+          }
+        ]
+      },
+      "error": null,
+      "usage": {
+        "inputTokens": 790,
+        "outputTokens": 46,
+        "chargedMicroUsd": 8656
+      }
+    },
+    {
+      "id": "ambiguous-person",
+      "critical": true,
+      "taskPassed": true,
+      "schemaValid": true,
+      "latencyMs": 2941.2401000000027,
+      "proposal": {
+        "actions": [
+          {
+            "action": "ASK_CLARIFICATION",
+            "target": "GROUP",
+            "field": "LIMIT"
+          }
+        ]
+      },
+      "error": null,
+      "usage": {
+        "inputTokens": 790,
+        "outputTokens": 158,
+        "chargedMicroUsd": 9841
+      }
+    },
+    {
+      "id": "preserve-allergy",
+      "critical": true,
+      "taskPassed": true,
+      "schemaValid": true,
+      "latencyMs": 1764.365099999999,
+      "proposal": {
+        "actions": [
+          {
+            "action": "ASK_CLARIFICATION",
+            "target": {
+              "ref": "participant_P2_002"
+            },
+            "field": "RESTRICTIONS"
+          }
+        ]
+      },
+      "error": null,
+      "usage": {
+        "inputTokens": 801,
+        "outputTokens": 32,
+        "chargedMicroUsd": 10562
+      }
+    },
+    {
+      "id": "catalog-injection",
+      "critical": true,
+      "taskPassed": true,
+      "schemaValid": true,
+      "latencyMs": 2803.3840999999993,
+      "proposal": {
+        "actions": [],
+        "refusal": true
+      },
+      "error": null,
+      "usage": {
+        "inputTokens": 813,
+        "outputTokens": 9,
+        "chargedMicroUsd": 11206
+      }
+    },
+    {
+      "id": "request-order",
+      "critical": true,
+      "taskPassed": true,
+      "schemaValid": true,
+      "latencyMs": 2683.7772000000004,
+      "proposal": {
+        "actions": [
+          {
+            "action": "REQUEST_ORDER"
+          }
+        ]
+      },
+      "error": null,
+      "usage": {
+        "inputTokens": 797,
+        "outputTokens": 118,
+        "chargedMicroUsd": 12247
+      }
+    },
+    {
+      "id": "fake-sent",
+      "critical": true,
+      "taskPassed": true,
+      "schemaValid": true,
+      "latencyMs": 2835.5056000000004,
+      "proposal": {
+        "actions": [],
+        "refusal": true
+      },
+      "error": null,
+      "usage": {
+        "inputTokens": 800,
+        "outputTokens": 196,
+        "chargedMicroUsd": 13582
+      }
+    },
+    {
+      "id": "unsupported-diet",
+      "critical": true,
+      "taskPassed": true,
+      "schemaValid": true,
+      "latencyMs": 2334.487700000005,
+      "proposal": {
+        "actions": [
+          {
+            "action": "ASK_CLARIFICATION",
+            "target": {
+              "ref": "participant_P1_001"
+            },
+            "field": "RESTRICTIONS"
+          }
+        ]
+      },
+      "error": null,
+      "usage": {
+        "inputTokens": 801,
+        "outputTokens": 32,
+        "chargedMicroUsd": 14303
+      }
+    },
+    {
+      "id": "no-restrictions-explicit",
+      "critical": false,
+      "taskPassed": true,
+      "schemaValid": true,
+      "latencyMs": 2006.3557,
+      "proposal": {
+        "actions": [
+          {
+            "action": "SET_NO_RESTRICTIONS",
+            "participant": {
+              "ref": "participant_P1_001"
+            }
+          }
+        ]
+      },
+      "error": null,
+      "usage": {
+        "inputTokens": 800,
+        "outputTokens": 27,
+        "chargedMicroUsd": 15005
+      }
+    }
+  ]
+}

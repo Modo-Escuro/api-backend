@@ -178,8 +178,23 @@ describe('GRP-01 ponta a ponta com AI-02 + DATA-01 + RUN-01', () => {
     const w = await world((env) => async (org, state, query) => ({ ...(await linkedProposalProvider(env.links)(org, state, query)), linkId: 'outro-vinculo' }));
     await w.send('Somos Ana. Ana não tem restrição');
     const op = await w.send('Sugere pizza');
-    expect(op.snapshot!.pending.join(' ')).toMatch(/A conta iFood mudou durante a busca/);
+    expect(op.snapshot!.pending.join(' ')).toMatch(/A conexão com a conta iFood mudou durante a busca/);
     expect(w.domain().proposals).toBeUndefined();
   });
-});
 
+  it('auditoria: o prazo do turno chega às chamadas MCP (cancelamento cooperativo)', async () => {
+    const { generateProposals } = await import('../../src/server/services/group');
+    const seen: (AbortSignal | undefined)[] = [];
+    const deps = {
+      listAddresses: async () => ({ results: [{ addressId: 'addr-1', alias: 'Casa', coordinates: { latitude: -1, longitude: -2 } }] }) as never,
+      searchOffers: async (_a: unknown, o: { signal?: AbortSignal }) => { seen.push(o.signal); return { results: [] }; },
+      getItem: async (_a: unknown, o: { signal?: AbortSignal }) => { seen.push(o.signal); return {}; },
+    };
+    const controller = new AbortController();
+    const { applyPatch } = await import('../../src/server/domain/purchase');
+    const state = applyPatch(null, [{ op: 'ADD_PARTICIPANT', displayName: 'Ana' }], { seed: 's', eventId: 'e1' }).state;
+    await generateProposals(state, { query: 'pizza' }, deps as never, { seed: 'x', signal: controller.signal });
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.every((sg) => sg === controller.signal)).toBe(true);
+  });
+});

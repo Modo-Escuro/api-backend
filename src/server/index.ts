@@ -1,14 +1,18 @@
 import { serve } from '@hono/node-server';
 import { createApp } from './app.js';
 import { config } from './config.js';
+import { createConversationRuntime } from './conversation-runtime.js';
+import { IfoodLinkService } from './links/service.js';
+import { realSessionFactory } from './links/session.js';
+import { SpendBudget } from './ops/budget.js';
 import { log } from './ops/log.js';
 import { checkPrivatePath } from './ops/storage-check.js';
-import { TurnRuntime } from './turns/runtime.js';
-import { TurnStore } from './turns/store.js';
 
-const conversations = config.conversationRuntime
-  ? new TurnRuntime(new TurnStore(config.conversationRuntime.dbFile)) : undefined;
-const app = createApp(undefined, { conversations });
+const links = new IfoodLinkService({ cfg: config, sessionFactory: realSessionFactory });
+// OPS-02: o mesmo orçamento (por processo, em memória) limita o agente e aparece em /api/ops/status.
+const budget = config.conversationModel ? new SpendBudget() : undefined;
+const conversations = createConversationRuntime(config, links, undefined, budget);
+const app = createApp(undefined, { links, conversations, ...(budget ? { budget } : {}) });
 
 const server = serve({ fetch: app.fetch, port: config.port }, (info) => {
   console.log(`[api] http://localhost:${info.port}  (login: /api/auth/login · diagnóstico: /api/diagnostics)`);
@@ -33,7 +37,9 @@ const server = serve({ fetch: app.fetch, port: config.port }, (info) => {
   }
 });
 conversations?.start();
-if (conversations) console.warn('[turnos] Infraestrutura ativa; processador DATA/IA ainda não instalado. Novos eventos retornam UNAVAILABLE.');
+if (conversations) console.warn(config.conversationModel
+  ? '[turnos] Agente Gemini ativo (coleta + sugestões somente leitura); sacola simulada, sem envio de pedidos. Limites de chamadas e gasto por processo.'
+  : '[turnos] Infraestrutura ativa sem processador; novos eventos retornam UNAVAILABLE.');
 const shutdown = () => {
   conversations?.stop();
   server.close();

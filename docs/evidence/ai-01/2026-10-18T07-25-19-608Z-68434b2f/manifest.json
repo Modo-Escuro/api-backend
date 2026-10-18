@@ -1,0 +1,58 @@
+{
+  "protocol": {
+    "version": "1.1",
+    "criticalRepetitions": 3,
+    "taskPassRate": 0.9,
+    "structuralSafetyRate": 1,
+    "structuredOutputRate": 1,
+    "endToEndP95TargetMs": 10000,
+    "endToEndSamples": 40,
+    "freeTierAttestationRequired": true,
+    "authorizedSpendUsd": 0,
+    "timeoutMs": 5000,
+    "modelP95Ms": 4000,
+    "maxOutputTokens": 1500,
+    "maxRequestBytes": 24000,
+    "maxCallsPerModel": 96,
+    "maxTokensPerModel": 160000,
+    "maxEstimatedInputTokens": 2000,
+    "maxModelCallsPerTurn": 1,
+    "maxModelCallsPerPurchase": 12,
+    "minimumIntervalMs": 30000
+  },
+  "corpusSha256": "03bcc221ab70e2d08e65b5504abacc610bdc69c6ed5de74befa1ed41e66a2fb5",
+  "promptSha256": "dd67d99cd8c4de5ac15fdd601fd48c734ac557474ea93d42dbe2448c1b29acdb",
+  "schemaSha256": "8f83d8bc1d33471b7d356c4ad235d9fc35b6c24322858841dbcf8c011a88ced8",
+  "wireSchemaSha256": "ae7151b971ae3563d185d47c9eefa16bf8fda84ec46c258e94a2ea298d6b2ddb",
+  "corpusSize": 24,
+  "callsPerModel": 60,
+  "models": {
+    "google": "gemini-3.8-flash",
+    "groq": "openai/gpt-oss-120b"
+  },
+  "temperature": 0,
+  "reasoning": "low",
+  "maxRetries": 0,
+  "businessToolsCalled": false,
+  "endToEndMeasured": false,
+  "immutableProviderRevisionAvailable": false,
+  "authorizedSpendUsd": 0,
+  "actualBillingObserved": false,
+  "startedAt": "2026-10-18T07:25:19.619Z",
+  "mode": "LIVE",
+  "freeTierAttested": true,
+  "observedBillingUsd": null,
+  "freeTierAttestationSource": "EXPLICIT_LOCAL_FLAG",
+  "sdkVersions": {
+    "ai": "7.0.143",
+    "@ai-sdk/google": "4.0.99",
+    "@ai-sdk/groq": "4.0.63"
+  },
+  "packageLockSha256": "efd52ddf0684e3ca5a4186641ec808239ac4d447d92b66b6aec17a349754413f",
+  "execution": {
+    "node": "v24.19.0",
+    "platform": "win32"
+  },
+  "design": "TEACHER_FORCED_SYNTHETIC_CONTEXTS_NOT_CHAINED_MODEL_CONVERSATIONS",
+  "scope": "MODEL_ONLY_NO_TELEGRAM_MCP_OR_DOMAIN_MUTATIONS"
+}
