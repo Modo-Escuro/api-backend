@@ -1,8 +1,10 @@
-# AI-01 — Protocolo de avaliação dos dois modelos
+# AI-01 — Escolha do modelo e avaliação
 
 Escopo aprovado pelo usuário: comparar `gemini-3.8-flash` (Google) e `openai/gpt-oss-120b` (Groq) em projetos gratuitos. A seleção não depende do nome ou de benchmark geral. O [levantamento de opções](ai-01-model-options.md) registra fontes, tratamento de dados e a diferença entre briefing e DEC-01.
 
-**Estado:** avaliador implementado, credenciais disponíveis e rodada piloto executada; nenhum modelo escolhido/promovido. Depois de o usuário aplicar o cadastro na Railway, a checagem por CLI confirmou as duas chaves presentes no projeto/serviço/ambiente corretos. O marcador persistente não estava definido; a confirmação dos planos gratuitos feita nesta conversa é fornecida ao subprocesso pelo parâmetro explícito `--free-tier-confirmed`, sem alterar configuração do serviço. A rodada principal usa protocolo 1.1, abaixo.
+**Decisão:** `gemini-3.8-flash` escolhido para a demo após a rodada curta no contrato real da AI-02: **16/16 tarefas, 12/12 críticas, 16/16 saídas válidas, p95 3.175 ms**. Custo estimado pela tarifa Standard vigente e uso reportado: **US$ 0,015005**; a fatura não foi observada. [Resultado, limites e ativação](ai-01-result.md). Há adaptador real, instalação por opt-in no runtime e teste de integração com SQLite; não houve merge/deploy/ativação na Railway por este trabalho.
+
+O restante deste documento preserva o protocolo inicial 1.1, que não foi usado para promover um modelo. Depois, o usuário pediu testes mais simples por se tratar de hackathon/pitch de cinco minutos, indicou Claude Max e informou configuração de billing na Gemini. A mudança de escopo gerou o protocolo curto **AI02_DEMO_1**, sem misturar notas ou alegar comparação controlada entre contratos diferentes.
 
 ## Desenho e corpus
 
@@ -18,7 +20,7 @@ Fontes: `src/server/ai/evaluation-corpus.ts`, `evaluation-contract.ts`, `evaluat
 
 A execução principal foi iniciada na revisão `19c300f6e4ff43dddbd0a7670e5a27cba72a89c5`. Durante o ensaio, foi incorporada a `main` com a interface `ConversationModel` da AI-02. Corpus, prompt, schemas, adaptadores e lockfile da avaliação permaneceram iguais; essa incorporação não altera o protocolo em execução.
 
-O contrato avaliado propõe um estado completo sintético; o contrato da AI-02 propõe ações tipadas (`AgentProposalSchema`). Portanto, este ensaio serve como pré-seleção e não comprova qualidade no contrato da AI-02. Nenhum resultado pode ser aplicado diretamente ao domínio. Antes de ativar um provedor no bot, ainda é necessário implementar `ConversationModel`, avaliar seu prompt/schema de ações, aplicar os limites por turno/compra e validar o fluxo integrado. O processador de produção continua sem modelo instalado.
+O protocolo 1.1 propõe um estado completo sintético; o contrato da AI-02 propõe ações tipadas (`AgentProposalSchema`). Por isso, aquele protocolo serve como pré-seleção. O incremento posterior implementa `ConversationModel` e avalia as ações reais no protocolo curto; os resultados e limites por conversa/processo estão no [registro final](ai-01-result.md). Nenhum estado completo gerado pela IA é aplicado ao domínio.
 
 ## Métricas e critérios fixados antes do ensaio
 
@@ -64,6 +66,8 @@ Host, caminho e método HTTP são fixos por provedor, com redirects recusados. C
 
 ## Execução local com variáveis da Railway
 
+**Seção histórica do protocolo gratuito 1.1.** Com billing Google agora configurado, usar o [ensaio curto com orçamento financeiro](ai-01-result.md); não atestar free tier com `--free-tier-confirmed` para a conta paga atual.
+
 No serviço **api-backend**, ambiente **production**, cadastrar pela interface operada pelo usuário:
 
 ```text
@@ -90,9 +94,9 @@ Relatórios/checkpoints únicos ficam em `.ai-eval/<runId>/` (ignorado pelo Git)
 ## Verificações realizadas
 
 - Testes focados AI-01 após a revisão 1.1: **22/22 aprovados**; corpus/oráculo, recusas, orçamento reservado, cancelamento/timeout, não promoção de stub, revisão exigida, contratos dos adaptadores e escopo/isolamento do subprocesso Railway. Inclui regressão da classificação de atualização explicada e validação local completa com schema de transporte reduzido.
-- Suíte integrada após incorporar a AI-02 e demais mudanças da equipe: **728 aprovados, 2 pulados**, 43 arquivos; os pulados são casos de permissão POSIX que não se aplicam no Windows.
+- Suíte integrada após o adaptador real e instalação por opt-in: **736 aprovados, 2 pulados**, 44 arquivos; os pulados são casos de permissão POSIX que não se aplicam no Windows.
 - Typecheck, ESLint completo e build Vite passaram nessa revisão integrada.
 - Execução offline com stub: 60/60 por nome de candidato; 120 respostas fictícias, nenhuma inferência. Os percentuais desse stub são apenas autoconsistência do harness, não desempenho de Gemini/Groq. Nenhum modelo foi selecionado.
 - Inferência autenticada com as duas credenciais foi executada. CI/Linux, conversa encadeada real, execução Telegram/MCP e cobrança observada continuam sem avaliação nesta etapa.
 
-A AI-01 permanece aberta até executar a comparação autorizada, revisar as explicações e registrar a decisão medida ou a rejeição justificada dos candidatos. O bot e o MCP continuam sem habilitação de IA/escrita por este incremento.
+A decisão da AI-01 e a implementação estão disponíveis para revisão. A ativação exige merge/deploy e opt-in explícito descrito no resultado; o MCP continua sem escrita. A medição D10 ponta a ponta pertence ao ensaio integrado da demo.

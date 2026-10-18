@@ -39,6 +39,8 @@ A integração de servidor usa uma chave da organização do Console (`ANTHROPIC
 
 Na [lista atual de modelos](https://platform.claude.com/docs/en/models/overview), Sonnet 5.5 (`claude-sonnet-5-5`) é candidato para uma nova avaliação. Sua adequação ao português, ao contrato de ações e à meta de latência ainda não foi medida neste projeto. Claude não integra a rodada Google/Groq nem está habilitado como fallback; sua eventual avaliação terá manifesto próprio e revisão dos casos críticos.
 
+Atualização posterior: a chave foi cadastrada, mas tentativas iniciais de Sonnet foram rejeitadas com HTTP 400. Sem amostra de qualidade Claude aprovada. Após a mudança de billing informada pelo usuário, Gemini concluiu o ensaio curto no contrato real e foi escolhida; ver [resultado final](ai-01-result.md).
+
 ## Tratamento de dados
 
 Nos serviços gratuitos da Google, prompts e respostas podem ser usados para melhoria de produtos e passar por revisão humana; os [termos Gemini](https://ai.google.dev/gemini-api/terms) orientam não enviar conteúdo pessoal, sensível ou confidencial. O corpus e a demonstração com esse free tier devem usar pessoas/restrições fictícias. Trocar nomes por aliases não basta para considerar uma alergia real como dado sintético.

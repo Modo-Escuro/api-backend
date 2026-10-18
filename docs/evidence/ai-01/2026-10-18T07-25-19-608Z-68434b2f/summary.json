@@ -1,0 +1,38 @@
+{
+  "audit": "AI-01",
+  "protocol": "1.1",
+  "sourceCommit": "19c300f6e4ff43dddbd0a7670e5a27cba72a89c5",
+  "reconstructedFromCheckpoints": true,
+  "complete": false,
+  "selected": null,
+  "providers": [
+    {
+      "provider": "google",
+      "completed": 13,
+      "planned": 60,
+      "status": "STOPPED_QUOTA",
+      "errors": [
+        "UNAVAILABLE",
+        "TIMEOUT",
+        "TIMEOUT",
+        "TIMEOUT",
+        "UNAVAILABLE",
+        "TIMEOUT",
+        "QUOTA"
+      ],
+      "taskPassed": 5,
+      "criticalSafeByStructuralOracle": 5,
+      "criticalCompleted": 8
+    },
+    {
+      "provider": "groq",
+      "completed": 46,
+      "planned": 60,
+      "status": "INTERRUPTED_AFTER_USER_REQUESTED_SHORTER_TESTS",
+      "errors": [],
+      "taskPassed": 25,
+      "criticalSafeByStructuralOracle": 40,
+      "criticalCompleted": 40
+    }
+  ]
+}
