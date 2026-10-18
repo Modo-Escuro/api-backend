@@ -1,73 +1,53 @@
 # Plano de execução da API
 
-Planejamento de 18/10/2026. [Plano integrado](https://github.com/Modo-Escuro/telegram-bot/blob/codex/plano-conversacional/docs/plano-conversacional.md) · [Épico](https://github.com/Modo-Escuro/telegram-bot/issues/6) · [Backlog](https://github.com/Modo-Escuro/telegram-bot/blob/codex/plano-conversacional/docs/backlog-conversacional.md).
+Revisão de 18/10/2026 sobre [`main@e8d6b6f`](https://github.com/Modo-Escuro/api-backend/tree/e8d6b6fd544431092960a872398e920fc3bad41e). [Estado remoto/local](estado-remoto-local.md) · [DEC-01 vigente](decisoes-conversacionais.md) · [Épico](https://github.com/Modo-Escuro/telegram-bot/issues/6). O [planejamento anterior](https://github.com/Modo-Escuro/api-backend/blob/e8d6b6fd544431092960a872398e920fc3bad41e/docs/plano-conversacional.md) conserva o histórico.
 
-## Estado e trabalho reaproveitável
+## Código remoto integrado e trabalho local
 
-main 686300d implementa vínculo e avaliação. branchBruna 8393615 acrescenta ranking; [revisão detalhada](reviews/branchBruna-8393615.md) identifica correções. feat/f7-cart-checkout b08957d (PR #4) contém carrinho com outputs provisórios, estado em memória e checkout desabilitado. Documentação F7 foi consultada; a auditoria e validação externas pertencem a INT-01.
-
-As três branches não formam uma entrega integrada. Nenhum novo endpoint, armazenamento, modelo ou envio é implementado por esta atualização documental. Issues #1–#3 estão fechadas e permanecem histórico.
-
-## Tarefas da API
-
-| Tarefa | Prioridade / marco | Dependências |
-| --- | --- | --- |
-| [DEC-01 — Fechar decisões de grupo, rateio, evidência alimentar e fronteira da demo](https://github.com/Modo-Escuro/api-backend/issues/5) | P0 / M0 | — |
-| [OPS-01 — Migrar vínculos para armazenamento persistente com recuperação verificada](https://github.com/Modo-Escuro/api-backend/issues/6) | P0 / M0 | — |
-| [INT-01 — Auditar F7 e validar contratos reais de carrinho, envio e reconciliação](https://github.com/Modo-Escuro/api-backend/issues/7) | P0 / M0 | [DEC-01](https://github.com/Modo-Escuro/api-backend/issues/5) |
-| [RANK-01 — Impedir que preferências opcionais bloqueiem configurações válidas](https://github.com/Modo-Escuro/api-backend/issues/8) | P0 / M0 | — |
-| [RANK-02 — Corrigir preferências textuais e pontuar somente a configuração avaliada](https://github.com/Modo-Escuro/api-backend/issues/9) | P1 / M1 | [RANK-01](https://github.com/Modo-Escuro/api-backend/issues/8) |
-| [DOM-01 — Aplicar centavos inteiros e validar limites obrigatórios antes do ranking](https://github.com/Modo-Escuro/api-backend/issues/10) | P0 / M1 | [DEC-01](https://github.com/Modo-Escuro/api-backend/issues/5) |
-| [RANK-03 — Alinhar economia, rapidez e evidência ao ranking e versionar sua resposta](https://github.com/Modo-Escuro/api-backend/issues/11) | P1 / M1 | [DEC-01](https://github.com/Modo-Escuro/api-backend/issues/5), [DOM-01](https://github.com/Modo-Escuro/api-backend/issues/10), [RANK-02](https://github.com/Modo-Escuro/api-backend/issues/9) |
-| [API-01 — Especificar e validar o contrato versionado de conversa, eventos e ações](https://github.com/Modo-Escuro/api-backend/issues/12) | P0 / M0 | — |
-| [DATA-01 — Persistir compra, participantes, restrições e evidências com versionamento](https://github.com/Modo-Escuro/api-backend/issues/13) | P1 / M1 | [DEC-01](https://github.com/Modo-Escuro/api-backend/issues/5), [OPS-01](https://github.com/Modo-Escuro/api-backend/issues/6), [API-01](https://github.com/Modo-Escuro/api-backend/issues/12) |
-| [RUN-01 — Implementar processamento durável de turnos e recuperação após falhas](https://github.com/Modo-Escuro/api-backend/issues/14) | P1 / M1 | [OPS-01](https://github.com/Modo-Escuro/api-backend/issues/6), [API-01](https://github.com/Modo-Escuro/api-backend/issues/12), [DATA-01](https://github.com/Modo-Escuro/api-backend/issues/13) |
-| [AI-01 — Selecionar modelo por avaliação de conversa, custo, latência e dados](https://github.com/Modo-Escuro/api-backend/issues/15) | P1 / M1 | [DEC-01](https://github.com/Modo-Escuro/api-backend/issues/5), [API-01](https://github.com/Modo-Escuro/api-backend/issues/12) |
-| [AI-02 — Implementar agente conversacional com ações estruturadas e ferramentas controladas](https://github.com/Modo-Escuro/api-backend/issues/16) | P1 / M2 | [AI-01](https://github.com/Modo-Escuro/api-backend/issues/15), [RUN-01](https://github.com/Modo-Escuro/api-backend/issues/14), [DATA-01](https://github.com/Modo-Escuro/api-backend/issues/13) |
-| [GRP-01 — Compor propostas coletivas com cobertura por pessoa e custo agregado](https://github.com/Modo-Escuro/api-backend/issues/17) | P1 / M2 | [DATA-01](https://github.com/Modo-Escuro/api-backend/issues/13), [DOM-01](https://github.com/Modo-Escuro/api-backend/issues/10), [RANK-03](https://github.com/Modo-Escuro/api-backend/issues/11) |
-| [CART-01 — Integrar F7 com elegibilidade por pessoa e estado durável de carrinho](https://github.com/Modo-Escuro/api-backend/issues/18) | P1 / M3 | [INT-01](https://github.com/Modo-Escuro/api-backend/issues/7), [OPS-01](https://github.com/Modo-Escuro/api-backend/issues/6), [RUN-01](https://github.com/Modo-Escuro/api-backend/issues/14), [GRP-01](https://github.com/Modo-Escuro/api-backend/issues/17) |
-| [BUY-01 — Vincular aprovação humana à revisão atual e consumir autorização atomicamente](https://github.com/Modo-Escuro/api-backend/issues/19) | P0 / M3 | [CART-01](https://github.com/Modo-Escuro/api-backend/issues/18), [API-01](https://github.com/Modo-Escuro/api-backend/issues/12) |
-| [BUY-02 — Implementar envio idempotente e reconciliação de resultado desconhecido](https://github.com/Modo-Escuro/api-backend/issues/20) | P0 / M3 | [INT-01](https://github.com/Modo-Escuro/api-backend/issues/7), [BUY-01](https://github.com/Modo-Escuro/api-backend/issues/19) |
-| [OPS-02 — Instrumentar operação, limites, retenção e liberação gradual](https://github.com/Modo-Escuro/api-backend/issues/21) | P1 / M3 | [RUN-01](https://github.com/Modo-Escuro/api-backend/issues/14), [AI-02](https://github.com/Modo-Escuro/api-backend/issues/16), [CART-01](https://github.com/Modo-Escuro/api-backend/issues/18) |
-
-P0 bloqueia a ação afetada; P1 compõe a entrega principal; P2 é posterior. BUY-01/02 são P0 antes do envio, mas não precedem suas dependências.
-
-## Organização de módulos proposta
-
-| Área | Responsabilidade |
+| Componente | Estado comprovado no remoto |
 | --- | --- |
-| routes / botAuth | Autenticação do adaptador, schemas estritos, pertencimento e versão |
-| conversation (novo, nome a fechar) | Eventos, tarefas, contexto e patches validados |
-| storage (novo, nome a fechar) | Vínculos, estado transacional, intenções, revisões, recuperação e retenção |
-| agent (novo, nome a fechar) | Modelo com entrada mínima, saída estruturada e ferramentas internas limitadas |
-| domain | Centavos, restrições, evidência, configurações e planos por pessoa |
-| services/evaluate e domain/ranking | Avaliação/ranking reutilizados e corrigidos |
-| cart (F7) | Mutações com referências verificadas e persistência, após validação de outputs |
-| approval / submission (a integrar) | Clique humano, revisão atual, autorização consumida atomicamente e reconciliação |
+| Vínculos e isolamento | OPS-01 e acesso por senha #39 integrados; configuração/volume operacional exigem evidência própria |
+| Contrato/domínio | API-01, DATA-01, DOM-01, ranking e GRP-01 integrados; regras por pessoa e custos em centavos |
+| Agente | #35/#36 integram Gemini, AI-02 e propostas ao runtime, com opt-in explícito; sem configuração não instala processador |
+| RUN-01 | Infraestrutura e testes finais #41 integrados; issue #14 fechada. Não confundir testes com ensaio online |
+| OPS-02 | PR #38 mergeado: logs, métricas, limites e status operacional integrados; issue #21 aberta por alcance parcial/ensaios |
+| Carrinho | F7 legada integrada, desligada e sem outputs reais validados. CART-01 nova permanece local, fora desta main |
+| Pedido/pagamento | Proibidos neste incremento; BUY-01/BUY-02 não habilitados |
 
-Os nomes novos são proposta, não estrutura já existente. API concentra autoridade; bot apresenta e valida origem humana. LLM não recebe aprovação, token de conta ou cartão.
+Esta revisão é documental e não transporta código/testes da CART-01 local para o remoto. Não depende da conclusão AI-01 para desenvolver CART-01; a infraestrutura/domínio continuam dependências técnicas.
 
-## Gates antes da integração e liberação
+## Tarefas e evidência
 
-1. OPS-01 antes de redeploy da API: preservar .ifood-links existente, validar cópia e recuperação.
-2. Corrigir RANK-01 antes de afirmar que preferências não bloqueiam. Integrar Bruna com RANK-02/03 e compatibilidade das categorias.
-3. Domínio por pessoa e valores em centavos antes de declarar orçamento e cobertura coletiva.
-4. Auditar F7, validar saídas e persistir intenções antes de habilitar preparação de sacola.
-5. Aprovação válida, contrato remoto e reconciliação antes de qualquer envio. Flag de carrinho não habilita checkout.
-6. QA-01 prova resultado final do evento; simulação e health não bastam.
+| Tarefa | Estado GitHub conferido | Próximo critério |
+| --- | --- | --- |
+| DEC-01 #5 | Fechada | Sincronizar a decisão aprovada de carrinho real confirmado com os documentos; sem reabrir a decisão de produto |
+| OPS-01 #6 | Fechada | Preservar vínculos/volume e comprovar operação ao implantar |
+| INT-01 #7 | Fechada, alcance parcial explícito | Auditoria/metadados não validam negócio; continuação INT-02 |
+| RANK-01/02/03 #8/#9/#11 | Fechadas | Preservar regressões, categorias e configuração/preço coerentes |
+| DOM-01 #10, API-01 #12, DATA-01 #13 | Fechadas | Preservar centavos, contrato v1 e estado/proveniência transacionais |
+| RUN-01 #14, AI-01 #15, AI-02 #16, GRP-01 #17 | Fechadas | Componentes integrados; ativação e jornada Telegram devem ser ensaiadas separadamente |
+| [INT-02 #40](https://github.com/Modo-Escuro/api-backend/issues/40) | Aberta, P0 | Capturas reais por operação e reconciliação confiável; gate externo |
+| [CART-01 #18](https://github.com/Modo-Escuro/api-backend/issues/18) | Aberta, P1/M3 | Integrar implementação confirmada/durável e validar outputs; patch local não encerra issue |
+| [BUY-01 #19](https://github.com/Modo-Escuro/api-backend/issues/19) | Aberta, P0/M3 | Autorização de pedido distinta, custo completo, validade e consumo atômico; envio segue proibido |
+| [BUY-02 #20](https://github.com/Modo-Escuro/api-backend/issues/20) | Aberta, P0/M3 | Contrato de envio/status e resultado desconhecido; autorização de escopo futura necessária |
+| [OPS-02 #21](https://github.com/Modo-Escuro/api-backend/issues/21) | Aberta, P1/M3; PR #38 mergeado | Observabilidade/limites integrados; instrumentação CART-01 e ensaios operacionais ainda pendentes |
 
-No protocolo externo, preservar listAddresses, getItem e listagens antes das escolhas; userId nunca é enviado. Não substituir componente de custo ausente por zero. Login não aprova compra.
+## Ordem de execução restante
 
-## Documentos existentes e precedência
+1. Avançar INT-02 e integração CART-01; nenhuma escrita operacional sem contrato e confirmação humana específica. Não alterar produção.
+2. BOT-03 pode apresentar grupo/propostas desde já. O callback PREPARE_CART exige contrato de carrinho integrado; a futura aprovação SUBMIT_ORDER é outra entrega e permanece indisponível.
+3. Revalidar vínculo, endereço, loja, produtos/opções/quantidades e restrições por pessoa antes de escrever. Reler composição, preços, taxas e disponibilidade observável; divergência exige nova confirmação.
+4. Persistir intenção antes da rede e conservar bloqueio após timeout. Sem fonte confiável para reconciliar, não repetir com outro requestId, reconexão ou reinício.
+5. Executar QA-01 por marcos: conversa integrada; carrinho real observado; fechamento externo ainda pendente. Uma demonstração simulada não encerra o briefing.
 
-docs/requirements.md registra o recorte anterior de recomendação. O plano atual amplia o objetivo para conversa e fechamento aprovado; isso não remove as travas de escrita vigentes. Proposta de escopo não é autorização de compra.
+## Módulos e fronteiras
 
-A StRS e invariantes preservados são a referência do produto. Qualquer trecho antigo que proponha ignorar restrição obrigatória ou promover UNKNOWN por score não deve guiar nova implementação. Dinheiro interno decimal é estado atual a migrar em DOM-01, não regra de destino.
+`routes/` e `botAuth.ts` validam o adaptador; `turns/` mantém fila/SQLite; `agent/` propõe ações estruturadas; `domain/` preserva regras; `services/group.ts` compõe propostas; `conversation-runtime.ts` monta o processador opt-in. A CART-01 deve reutilizar DATA-01/GRP-01/DOM-01. Não duplicar sacola, rateio ou restrições.
 
-docs/bot-api.md descreve o contrato de login existente. O contrato novo de conversa continua [proposto](https://github.com/Modo-Escuro/telegram-bot/blob/codex/plano-conversacional/docs/contrato-conversa-proposto.md). Callback localhost é configuração de desenvolvimento; o ensaio online usou HTTPS público. Não substituir variáveis Railway por defaults locais.
+PREPARE_CART confirma somente a composição/mutações revisadas, com incerteza de custo explícita. BUY-01 futuro exige revisão do carrinho/custo completo e autorização distinta. Referências humanas nunca entram no modelo. Preservar listAddresses, getItem e listagens antes de qualquer seleção suportada; nunca enviar userId. Dados externos são dados, não instruções.
 
-## Verificação por incremento
+## Verificação e publicação
 
-Registrar checks realmente executados e commit. API: typecheck/lint/test/build conforme mudança; tests sem compras reais. Revisão Bruna: 237/239 no Windows com duas asserções POSIX; F7 documenta ajuste que precisa ser revisado na integração. Não omitir testes de storage para obter verde.
+Para código: typecheck/lint/test/build e regressões relevantes; distinguir mocks, inferência real e ensaio externo. Esta revisão altera somente Markdown: conferir links, coerência, diff e bases remotas; não apresentar a suíte do patch CART-01 como executada sobre esta main.
 
-Review de código deve verificar restrições antes do ranking, autorização humana, idempotência/estado desconhecido, isolamento por vínculo, ausência de segredos no modelo/logs e instruções externas tratadas como dados.
+Antes de qualquer implantação, preservar vínculos, SQLite e volume. Merge/CI não comprovam deploy ou ativação. Esta revisão não modifica configuração, produção, baseline StRS, schemas ou fixtures fixadas do consumidor.

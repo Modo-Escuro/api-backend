@@ -1,5 +1,9 @@
 # Documentação da API
 
+Esta revisão altera somente documentação. A implementação CART-01 local, suas rotas e resultados de testes não fazem parte das mains remotas conferidas.
+
+[Estado remoto/local](estado-remoto-local.md): SHAs conferidos, merges, decisão vigente e código CART-01 ainda não publicado. A DEC-01 permite preparação real confirmada; esta revisão documental não habilita a operação.
+
 [Acesso por senha no bot](acesso-bot-senha.md): opt-in para usuários admitidos pelo adaptador autenticado,
 com vínculos isolados e sem ampliar a fronteira de compra da DEC-01.
 
@@ -15,11 +19,12 @@ com vínculos isolados e sem ampliar a fronteira de compra da DEC-01.
 10. [Agente conversacional (AI-02)](ai-02-agente.md): vocabulário fechado de ações, política do servidor, falhas e integração com AI-01.
 11. [Propostas coletivas e sacola simulada (GRP-01)](grp-01-propostas.md): matriz por pessoa, custos DOM-01, tetos, corte em 4 e sacola simulada.
 12. [Montagem AI-01 e ensaio BOT-02](ai-01-montagem-ensaio.md): Gemini 3.8 Flash (seleção do #35), configuração explícita, limites, avaliações e pendências operacionais.
+
 13. [Operação (OPS-02)](ops-02-operacao.md): logs sanitizados, métricas, orçamento do modelo, status operacional, rollout/rollback e ensaios pendentes.
 
-Plano completo e contrato futuro estão no [telegram-bot](https://github.com/Modo-Escuro/telegram-bot/blob/codex/plano-conversacional/docs/plano-conversacional.md). A [StRS preservada](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/baseline/stakeholder-requirements-specification.md) continua em validação.
+O [plano revisado do telegram-bot](https://github.com/Modo-Escuro/telegram-bot/blob/codex/revisao-escopo-cart01/docs/plano-conversacional.md) acompanha esta revisão em branch separada; publicação em branch/PR não significa merge. A [StRS preservada](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/baseline/stakeholder-requirements-specification.md) continua em validação.
 
-F7 foi incorporada pelo [PR #4](https://github.com/Modo-Escuro/api-backend/pull/4) e permanece desabilitada por padrão. Outputs provisórios e testes simulados não comprovam carrinho real. A [DEC-01](decisoes-conversacionais.md) define demo com sacola simulada e MCP somente leitura; aprovação fictícia não pode usar a rota de compra da API-01.
+F7 foi incorporada pelo [PR #4](https://github.com/Modo-Escuro/api-backend/pull/4) e permanece desabilitada por padrão. Outputs provisórios e testes simulados não comprovam carrinho real. A [DEC-01 vigente](decisoes-conversacionais.md) permite carrinho real somente após confirmação humana específica. A nova CART-01 continua local e a validação externa está na [INT-02 #40](https://github.com/Modo-Escuro/api-backend/issues/40). Preparação não usa a rota de aprovação de pedido; envio/pagamento continuam proibidos.
 
 A infraestrutura RUN-01 mantém os schemas da API-01; a montagem do modelo tem opt-in separado na AI-01.
 [Validação histórica de API-01](api-01-validation.md) e testes SQLite são evidências offline; não comprovam operação implantada.

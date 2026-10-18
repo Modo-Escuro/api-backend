@@ -79,7 +79,7 @@ Logs do agente: só códigos (`MODEL_TIMEOUT`, `MODEL_OUTPUT_INVALID`, ...), nun
   Com opt-in e configuração válida, instala o Gemini 3.8 Flash, este agente e as sugestões da GRP-01. A chave sozinha
   não ativa IA. Ver [montagem](ai-01-montagem-ensaio.md) e [resultado da seleção](ai-01-result.md). Deploy e D10 não
   comprovados. Modelo determinístico só em testes e avaliação offline.
-- **BUY-01 (#19):** confirmação humana por botão (para remoções/encerramento) e revisão/aprovação fictícia.
+- **BUY-01 (#19):** caminho humano dedicado para ações sensíveis e contrato de revisão. A [DEC-01 vigente](decisoes-conversacionais.md) distingue PREPARE_CART de futura SUBMIT_ORDER; não converter aprovação simulada em autorização real. CART-01 permanece local, fora desta main, e depende da INT-02 para ativação.
 - **GRP-01 (#17):** propostas, consumo por participante e rateio (DOM-01) — fora deste agente.
 - **DOM-01:** ao integrar rateio, teto `UNCLEAR` deve bloquear (ver auditoria DATA-01 × DOM-01).
 - O contrato v1 só aceita eventos `TEXT`; ações por botão (`CALLBACK`) dependem de evolução da RUN-01/API-01.

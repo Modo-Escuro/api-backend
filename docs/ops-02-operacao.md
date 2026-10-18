@@ -4,7 +4,9 @@
 
 ## Estado deste incremento
 
-Entrega parcial, integrada à GRP-01 e à AI-01 (Gemini, #36). O que não depende de CART-01 foi implementado e testado offline: logs estruturados, métricas agregadas, orçamento de execução/gasto do modelo, status operacional separado, liberação gradual por organizador, verificação de permissões de storage e regressões de rollback. A CART-01 (dependência da issue) não está concluída. Por isso, a instrumentação de sacola/envio se limita a reportar `DISABLED`. Nada aqui habilita escrita no MCP (DEC-01 D8).
+Atualização documental de 18/10/2026: PR #38 mergeado na main conferida `e8d6b6f`; issue #21 continua aberta pelo alcance parcial e ensaios abaixo. A [DEC-01 vigente](decisoes-conversacionais.md) já permite PREPARE_CART confirmado. O código CART-01 auditado permanece local e separado desta revisão; a preparação real exige integração e INT-02 #40. Envio e pagamento continuam proibidos.
+
+Entrega parcial, integrada à GRP-01 e à AI-01 (Gemini, #36). O que não depende de CART-01 foi implementado e testado offline: logs estruturados, métricas agregadas, orçamento de execução/gasto do modelo, status operacional separado, liberação gradual por organizador, verificação de permissões de storage e regressões de rollback. A CART-01 (dependência da issue) não está concluída. Por isso, a instrumentação de sacola/envio se limita a reportar `DISABLED`. Nada neste código OPS-02 habilita escrita no MCP. A decisão aprovada de carrinho confirmado não instala o executor nem substitui seus gates.
 
 ## Logs (`src/server/ops/log.ts`)
 
@@ -44,7 +46,7 @@ Exige o mesmo `BOT_API_TOKEN` e um organizador autorizado, e responde com `Cache
 - `linksStorage`: estado e durabilidade (OPS-01), mais `permissions`.
 - `sessions`: `confirmed`, `operational` (última verificação OK), `unavailable`, `reconnectRequired`, `unverified`. A contagem usa o estado conhecido, sem chamada remota. Token presente ≠ operacional.
 - `conversation`: `enabled`, `rollout`, `runtime` (`accepting`, `healthy`, `processorInstalled`, `storage` = `OK`/`UNAVAILABLE`/`CLOSED`, fila, `resultUnknown`, compras ativas), permissões do diretório do banco e resumo do orçamento.
-- `purchase`: `capable: false`, `cartPreparation`, `submission: DISABLED`, `submitFlagIgnored`, `reason: DEC01_D8_READ_ONLY`.
+- `purchase`: `capable: false`, `cartPreparation`, `submission: DISABLED`, `submitFlagIgnored`, `reason: DEC01_D8_READ_ONLY`. Esse código é o identificador legado emitido pela implementação atual; não descreve a decisão vigente de permitir preparação confirmada. Só alterar a mensagem não habilita a operação.
 
 ## Limites de execução/gasto (`src/server/ops/budget.ts`)
 
@@ -81,7 +83,7 @@ Rollout sugerido: (1) ligar a conversa com `CONVERSATION_ORGANIZER_IDS=<1 organi
 
 | Dado | Onde | Retenção |
 | --- | --- | --- |
-| Compra/participantes/restrições | SQLite RUN-01 | Exclusão ao encerrar e `purge()` após 24 h inativa (DATA-01); escopos com `RESULT_UNKNOWN` são preservados |
+| Compra/participantes/restrições | SQLite RUN-01 | Exclusão ao encerrar e `purge()` após 24 h inativa (DATA-01); escopos com `RESULT_UNKNOWN` são preservados pela implementação atual; minimização/tombstones do requisito D7 da CART-01 ainda não integrados |
 | Logs técnicos | stdout da plataforma | **Até 7 dias**: configurar a retenção de logs do serviço (Railway). Não é aplicado pelo código |
 | Métricas | memória | Até reiniciar o processo |
 | Orçamento | memória | Janela (1 h) + `sweep()` |
@@ -103,7 +105,7 @@ Estes ensaios exigem plataforma ou conta real e não foram feitos neste incremen
 
 ## Lacunas
 
-- CART-01/BUY-01/02 não existem: não há métrica de sacola, intenção ou envio, e `purchase.capable` é constante.
+- CART-01 nova ainda não está integrada nesta main (há implementação local auditada); BUY-01/02 continuam pendentes: não há métrica de sacola, intenção ou envio, e `purchase.capable` é constante.
 - Orçamento e métricas são em memória e por processo; reiniciar zera a janela. Aceitável enquanto houver uma única instância (RUN-01). Para várias instâncias, persistir no SQLite.
 - Não há exportador Prometheus/OTel; o JSON de `/api/ops/status` é a interface.
 - A retenção de 7 dias dos logs depende da configuração da plataforma.
