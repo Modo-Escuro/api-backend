@@ -8,6 +8,7 @@ import type { TurnRuntime } from '../turns/runtime.js';
 import type { DeliveryAddresses } from '../services/delivery-addresses.js';
 import { addressFailure } from '../services/delivery-addresses.js';
 import { z } from 'zod';
+import { scopeKey } from '../turns/store.js';
 
 const prefix = '/api/bot/v1/conversations/:conversationId';
 const numericId = (s: string) => /^[1-9][0-9]{0,19}$/.test(s) && s.trim() === s;
@@ -65,12 +66,29 @@ export function registerConversationRoutes(
     return { organizerId, botId, conversationId };
   };
   const safe = (handler: (c: Context) => Response | Promise<Response>) => async (c: Context) => {
-    try { return await handler(c); }
+    try {
+      const p = principal(c);
+      return await runtime!.withAccount(p, c.req.header('x-conversation-session'), () => handler(c),
+        (c.req.method === 'GET' && !c.req.header('x-conversation-session')) || c.req.path.endsWith('/addresses/select'));
+    }
     catch (error) {
       const result = contractErrorResponse(error instanceof ContractError ? error.code : 'INTERNAL');
       return c.json(result.body, result.status);
     }
   };
+  app.get(`${prefix}/account-context`, safe(c => c.json({ enabled: runtime!.accountGroupsEnabled,
+    ...(runtime!.accountGroupsEnabled ? { sessionRef: String(runtime!.store.db.prepare('SELECT session_ref FROM conversation_accounts WHERE scope=?').get(scopeKey(principal(c)))!['session_ref']) } : {}) })));
+  app.get(`${prefix}/group`, safe(c => {
+    if (!runtime!.accountGroupsEnabled) throw new ContractError('ACTION_UNAVAILABLE');
+    return c.json(runtime!.store.group(principal(c)));
+  }));
+  for (const method of ['post', 'delete'] as const) app[method](`${prefix}/group`, safe(async c => {
+    if (!runtime!.accountGroupsEnabled) throw new ContractError('ACTION_UNAVAILABLE');
+    const parsed = z.object({ source: z.literal('TELEGRAM_CALLBACK'), expectedVersion: z.number().int().nonnegative(),
+      ...(method === 'post' ? { ops: z.array(z.unknown()).min(1).max(100) } : {}) }).strict().safeParse(await body(c));
+    if (!parsed.success) throw new ContractError('INVALID_REQUEST');
+    return c.json(runtime!.store.editGroup(principal(c), parsed.data.expectedVersion, 'ops' in parsed.data ? parsed.data.ops as unknown[] : null));
+  }));
   app.post(`${prefix}/events`, safe(async c => {
     const p = principal(c), parsed = EventSchema.safeParse(await body(c));
     if (!parsed.success) throw new ContractError('INVALID_REQUEST');

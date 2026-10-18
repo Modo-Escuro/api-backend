@@ -36,10 +36,10 @@ describe('GRP-01 ponta a ponta com AI-02 + DATA-01 + RUN-01', () => {
     let runtime = make();
     cleanup.push(() => { runtime.stop(); dir.clean(); });
     let n = 0;
-    const send = async (text: string, org = ORG_A): Promise<Operation> => {
+    const send = async (text: string, org = ORG_A, callback?: ConversationEvent): Promise<Operation> => {
       const p = principalOf(org);
       const version = (() => { try { return runtime.store.snapshot(p).version; } catch { return 0; } })();
-      const a = runtime.accept(p, msg(++n, text, version, org));
+      const a = runtime.accept(p, callback ?? msg(++n, text, version, org));
       for (let i = 0; i < 80; i++) {
         runtime.tick(); await flush();
         const op = runtime.store.operation(p, a.operation.operationId);
@@ -55,6 +55,32 @@ describe('GRP-01 ponta a ponta com AI-02 + DATA-01 + RUN-01', () => {
     const restart = () => { runtime.stop(); runtime = make(); };
     return { env, send, domain, restart, get runtime() { return runtime; } };
   }
+
+  it('recupera o ciclo da imagem após reinício: não / não tenho / botão avançam sem outra confirmação', async () => {
+    for (const answer of ['não', 'não tenho', 'button']) {
+      const propose = vi.fn().mockResolvedValue({ actions: [{ action: 'ADD_PARTICIPANT', name: 'Você' },
+        { action: 'SET_NO_RESTRICTIONS', participant: { name: 'Você' } }] });
+      const w = await world(undefined, undefined, { id: 'synthetic-loop', propose });
+      const stuck = await w.send('Vou comprar para mim');
+      expect(w.domain().participants[0].restrictions.state).toBe('UNCLEAR');
+      expect(stuck.snapshot!.pending[0]).toContain('Pode confirmar?');
+      const action = stuck.snapshot!.allowedActions.find(a => a.actionRef.startsWith('none_'))!;
+      expect(action).toBeDefined();
+      w.restart();
+      const callback: ConversationEvent | undefined = answer === 'button' ? {
+        ...msg(2, '', stuck.resultVersion!), eventId: 'no-restrictions-click',
+        source: { channel: 'TELEGRAM', botId: BOT, conversationId: ORG_A, kind: 'CALLBACK', messageId: '2', callbackQueryId: 'restriction-click' },
+        input: { kind: 'ACTION', action: action.kind, actionRef: action.actionRef },
+      } : undefined;
+      const result = await w.send(answer, ORG_A, callback);
+      expect(result.status).toBe('SUCCEEDED');
+      expect(w.domain().participants[0].restrictions.state).toBe('NONE');
+      expect(w.domain().clarifications).toEqual([]);
+      expect(result.snapshot!.pending.join(' ')).not.toMatch(/restrição alimentar|Pode confirmar/);
+      expect(result.snapshot!.allowedActions.some(a => a.actionRef.startsWith('none_'))).toBe(false);
+      expect(propose).toHaveBeenCalledTimes(1);
+    }
+  });
 
   it('grupo → sugestões → escolha → mudança de teto → saída de participante, sem escrita no MCP', async () => {
     const w = await world();
@@ -83,7 +109,7 @@ describe('GRP-01 ponta a ponta com AI-02 + DATA-01 + RUN-01', () => {
     const review = chosen.snapshot!.blocks.find((b) => b.kind === 'REVIEW')!;
     expect(review.kind === 'REVIEW' && review.blockers).toEqual(expect.arrayContaining([
       'Total do pedido desconhecido: a taxa de serviço só aparece no carrinho.',
-      'Sacola simulada: aprovação e pedido ainda não estão disponíveis nesta etapa.',
+      'Composição local: preparar no iFood exige revisão e confirmação específicas. Nenhum pedido foi enviado.',
     ]));
     expect(chosen.snapshot!.humanApproval).toBeNull();
     expect(chosen.snapshot!.blocks.some((b) => b.kind === 'OUTCOME')).toBe(false);
@@ -140,6 +166,68 @@ describe('GRP-01 ponta a ponta com AI-02 + DATA-01 + RUN-01', () => {
     expect(w.env.mcp.used.every((call) => READ_TOOLS.has(call.op))).toBe(true);
   });
 
+  it('botão escolhe a proposta exibida após reinício; replay não duplica e versão antiga não escolhe outra opção', async () => {
+    const model = new DeterministicModel();
+    const propose = vi.spyOn(model, 'propose');
+    const w = await world(undefined, undefined, model);
+    await w.send('Somos Ana. Ana não tem restrição');
+    const options = (await w.send('Sugere pizza')).snapshot!;
+    const action = options.allowedActions.find(a => a.kind === 'SELECT_PROPOSAL')!;
+    expect(action).toBeDefined();
+    const input: ConversationEvent = {
+      contractVersion: '1.0', eventId: 'human-choice-1', conversationId: ORG_A, expectedVersion: options.version,
+      source: { channel: 'TELEGRAM', botId: BOT, conversationId: ORG_A, kind: 'CALLBACK', messageId: '99', callbackQueryId: 'callback-choice-1' },
+      input: { kind: 'ACTION', action: action.kind, actionRef: action.actionRef },
+    };
+    const calls = propose.mock.calls.length, reads = w.env.mcp.used.length;
+    w.restart();
+    const selected = await w.send('', ORG_A, input);
+    expect(selected.status).toBe('SUCCEEDED');
+    expect(selected.snapshot!.allowedActions.some(a => a.kind === 'REQUEST_REVIEW')).toBe(true);
+    expect(selected.snapshot!.humanApproval).toBeNull();
+    expect(w.domain().bag.proposalId).toBe(options.blocks.find(b => b.kind === 'PROPOSAL')!.proposalRef);
+    const version = w.domain().version;
+    expect((await w.send('', ORG_A, input)).operationId).toBe(selected.operationId);
+    expect(w.domain().version).toBe(version);
+    await expect(w.send('', ORG_A, { ...input, eventId: 'human-choice-2' })).rejects.toThrow('STALE_VERSION');
+    expect(propose).toHaveBeenCalledTimes(calls);
+    expect(w.env.mcp.used).toHaveLength(reads);
+  });
+
+  it('texto curto escolhe posição visível, pergunta em ambiguidade e refaz busca sem perder alergias', async () => {
+    const model = new DeterministicModel();
+    const propose = vi.spyOn(model, 'propose');
+    const w = await world(undefined, undefined, model);
+    await w.send('Somos Ana e Caio. Ana não tem restrição. Caio é alérgico a leite. Teto de R$ 180');
+    await w.send('Sugere pizza');
+    const before = w.domain();
+    const calls = propose.mock.calls.length;
+    const people = await w.send('somos só dois');
+    expect(JSON.stringify(people.snapshot)).toContain('Quem continua no grupo?');
+    expect(w.domain().participants).toEqual(before.participants);
+    expect((await w.send('a primeira')).status).toBe('SUCCEEDED');
+    expect(w.domain().bag).toBeDefined();
+    await w.send('tem uma mais barata?');
+    expect(w.domain().priority.value).toBe('ECONOMY');
+    expect(w.domain().participants).toEqual(before.participants);
+    expect(w.domain().groupLimit).toEqual(before.groupLimit);
+    await w.send('troca por sushi');
+    expect(w.domain().searchQuery).toBe('sushi');
+    expect(propose).toHaveBeenCalledTimes(calls);
+  });
+
+  it('lembra a comida antes do grupo e continua a busca quando a coleta termina, inclusive após reinício', async () => {
+    const w = await world();
+    await w.send('Sugere pizza');
+    expect(w.domain().searchQuery).toBe('pizza');
+    w.restart();
+    const result = await w.send('Somos Ana. Ana não tem restrição. Teto de R$ 180. Preferimos o mais barato.');
+    expect(result.status).toBe('SUCCEEDED');
+    expect(w.domain().searchQuery).toBe('pizza');
+    expect(w.domain().proposals.length).toBeGreaterThan(0);
+    expect(w.env.mcp.used.every(call => READ_TOOLS.has(call.op))).toBe(true);
+  });
+
   it('falha do MCP na busca não derruba o turno nem perde dados', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const w = await world();
@@ -158,7 +246,7 @@ describe('GRP-01 ponta a ponta com AI-02 + DATA-01 + RUN-01', () => {
     await w.send('Sugere pizza');
     await w.send('Somos Zeca. Zeca não tem restrição', ORG_B);
     const op = await w.send('Quero a proposta 1', ORG_B);
-    expect(op.snapshot!.pending.join(' ')).toMatch(/Não há proposta 1/);
+    expect(JSON.stringify(op.snapshot!.blocks)).toContain('Essa opção não está disponível na lista atual');
     expect(w.domain(ORG_B).bag).toBeUndefined();
     expect(w.domain(ORG_A).proposals.length).toBeGreaterThan(0);
   });

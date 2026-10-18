@@ -108,7 +108,7 @@ describe('montagem do entrypoint AI-01 (rede sintética)', () => {
       }
       expect(op).toMatchObject({ status: 'SUCCEEDED', resultVersion: 1 });
       expect(await (await app.request(base, { headers })).json()).toMatchObject({ version: 1,
-        humanApproval: null, allowedActions: [], blocks: expect.arrayContaining([
+        humanApproval: null, allowedActions: [expect.objectContaining({ kind: 'EDIT_CONTEXT', actionRef: expect.stringMatching(/^none_/) })], blocks: expect.arrayContaining([
           { kind: 'GROUP', budgetCents: null, participants: [expect.objectContaining({ displayName: 'Ana' })] },
         ]) });
       const replay = await app.request(`${base}/events`, { method: 'POST', headers, body: JSON.stringify(message) });
@@ -181,12 +181,12 @@ describe('montagem do entrypoint AI-01 (rede sintética)', () => {
       const chosen = await send(3, 'Quero a proposta 1', 2);
       expect(chosen).toMatchObject({ status: 'SUCCEEDED', snapshot: { phase: 'EDITING_CART', humanApproval: null } });
       const review = chosen.snapshot.blocks.find((b: { kind: string }) => b.kind === 'REVIEW');
-      expect(review.blockers).toContain('Sacola simulada: aprovação e pedido ainda não estão disponíveis nesta etapa.');
+      expect(review.blockers).toContain('Composição local: preparar no iFood exige revisão e confirmação específicas. Nenhum pedido foi enviado.');
       expect(review.price).toEqual({ kind: 'UNKNOWN', currency: 'BRL' });
       const used = env.mcp.used.map((u: { op: string }) => u.op);
       expect(used.every((op: string) => ['listAddresses', 'searchOffers', 'getItem', 'getUser'].includes(op))).toBe(true);
       expect(used).toContain('getItem');
-      expect(transport).toHaveBeenCalledTimes(3);
+      expect(transport).toHaveBeenCalledTimes(2); // escolha explícita usa o contexto validado, sem outra inferência
     } finally { runtime.stop(); dir.clean(); }
   });
 

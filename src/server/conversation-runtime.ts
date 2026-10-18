@@ -13,7 +13,7 @@ import { DeliveryAddresses } from './services/delivery-addresses.js';
 /** Folga do turno além do prazo do modelo, para a consulta local do vínculo não consumir o tempo do modelo. */
 const LINK_LOOKUP_MARGIN_MS = 2_000;
 
-export function createConversationRuntime(cfg: AppConfig, links: Pick<IfoodLinkService, 'status' | 'withOperational'>, transport?: typeof fetch,
+export function createConversationRuntime(cfg: AppConfig, links: Pick<IfoodLinkService, 'status' | 'withOperational'> & Partial<Pick<IfoodLinkService, 'withConversationAccount'>>, transport?: typeof fetch,
   budget?: SpendBudget) {
   if (!cfg.conversationRuntime) return undefined;
   const store = new TurnStore(cfg.conversationRuntime.dbFile);
@@ -34,5 +34,6 @@ export function createConversationRuntime(cfg: AppConfig, links: Pick<IfoodLinkS
     // OPS-02: reserva antes do Gemini e ajuste pelos tokens reportados (reportUsage); LIMIT_EXCEEDED antes da chamada.
     ...(budget ? { budget } : {}),
   }) : undefined;
-  return new TurnRuntime(store, { processor });
+  if (cfg.accountGroups && !links.withConversationAccount) { store.close(); throw new Error('Grupos por conta exigem identidade autenticada.'); }
+  return new TurnRuntime(store, { processor, ...(cfg.accountGroups ? { accountScope: links.withConversationAccount!.bind(links) } : {}) });
 }

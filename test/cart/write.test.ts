@@ -304,7 +304,7 @@ describe('CART-01: confirmação humana, persistência e reconciliação (MCP mo
     else expect(status.allowedOperations).not.toEqual(expect.arrayContaining(['CART_WRITE']));
     expect(status.allowedOperations).not.toContain('CART_PAYMENT');
   });
-  it('migração v2 preserva compra e replay e instala schema v3 antes de aceitar confirmações', async () => {
+  it('migração v2 preserva compra e replay e instala schema atual antes de aceitar confirmações', async () => {
     const f = setup();
     const accepted = f.turns.accept(principal, turnEvent(88, f.state().version));
     const before = f.state();
@@ -313,7 +313,7 @@ describe('CART-01: confirmação humana, persistência e reconciliação (MCP mo
     old.exec('DROP TABLE cart_write_reviews; DROP TABLE cart_write_intents; DROP TABLE cart_write_heads; PRAGMA user_version=2;');
     old.close();
     const migrated = new TurnStore(f.path, {}, f.now); stores.push(migrated);
-    expect(migrated.db.prepare('PRAGMA user_version').get()!['user_version']).toBe(3);
+    expect(migrated.db.prepare('PRAGMA user_version').get()!['user_version']).toBe(5);
     expect(new CartWriteStore(migrated).purchase(principal)).toEqual(before);
     expect(migrated.accept(principal, turnEvent(88, before.version)).operation.operationId).toBe(accepted.operation.operationId);
     const service = new ConfirmedCartService(new CartWriteStore(migrated), f.links, f.gate);

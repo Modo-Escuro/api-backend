@@ -2,7 +2,10 @@
 // DATA-01 (schema v2): estado da compra no mesmo banco, gravado na MESMA transação do snapshot/operação;
 // patches com proveniência em purchase_changes; exclusão D7 ao encerrar ou após inatividade.
 // CART-01 (schema v3): confirmações/intenção duráveis; binários v2 recusam o banco para preservar bloqueios.
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
+import { AccountGroupSchema, groupOf } from '../domain/account-group.js';
+import { renderSnapshot } from '../agent/render.js';
+import { missingQuestions } from '../agent/policy.js';
 import { chmodSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -10,9 +13,10 @@ import { hasUnresolvedCartWrite, installCartWriteSchema, recoverCartWriteIntents
 import { CancelResultSchema, OperationSchema, SnapshotSchema, type ConversationEvent, type ErrorCode, type Operation, type Snapshot } from '../contracts/conversation.js';
 import { contractErrorResponse } from '../contracts/errors.js';
 import { log } from '../ops/log.js';
+import { conversationActions } from '../agent/conversation-actions.js';
 import { assertOperation, assertReplay, assertScope, assertSnapshot, assertVersion, contentHash, ContractError, eventKey, type AdapterPrincipal } from '../contracts/guards.js';
 import {
-  CONTRACT_MAX_PARTICIPANTS, DEFAULT_MAX_PARTICIPANTS, DomainError, nextPurchase, parsePurchaseState,
+  CONTRACT_MAX_PARTICIPANTS, DEFAULT_MAX_PARTICIPANTS, DomainError, nextPurchase, parsePurchaseState, emptyPurchase, applyPatch,
   type ChangePath, type DomainChange, type PurchaseState,
 } from '../domain/purchase.js';
 
@@ -37,19 +41,24 @@ export const DEFAULT_LIMITS: TurnLimits = {
   maxRecords: 10_000, maxAttempts: 3, maxResultBytes: 65_536,
   maxParticipants: DEFAULT_MAX_PARTICIPANTS, inactivityMs: 24 * 60 * 60_000,
 };
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 5;
+export const sessionRef = (linkId: string) => createHash('sha256').update(linkId).digest('hex');
+export interface AccountContext { key: string; linkId: string }
 export interface CancelCommand {
   contractVersion: '1.0'; eventId: string; conversationId: string; expectedVersion: number;
   source: ConversationEvent['source']; operationId: string;
 }
 type CancelResult = ReturnType<typeof CancelResultSchema.parse>;
 export interface Job {
+  accountSession?: string;
   operation: Operation; event: ConversationEvent; principal: AdapterPrincipal;
   snapshot: Snapshot; token: string;
   /** DATA-01: compra ativa da conversa no momento do claim (null se não houver). */
   purchase: PurchaseState | null;
 }
 export interface FinishInput {
+  /** Opt-in interno: referências emitidas pelo store, nunca pelo modelo/processador. */
+  conversationActions?: boolean;
   snapshot: Snapshot; completeness: 'PARTIAL' | 'COMPLETE'; paths: Operation['changes'][number]['paths'];
   cause?: 'USER' | 'DERIVED';
   /** DATA-01: operações tipadas; o estado é recalculado aqui a partir do estado persistido. */
@@ -64,6 +73,72 @@ type SqlRow = Record<string, string | number | bigint | Uint8Array | null>;
 const row = (r: SqlRow | undefined) => r as unknown as Row | undefined;
 
 export class TurnStore {
+  accountGroupsEnabled = false;
+  private saveGroup(scope: string, state: PurchaseState) {
+    if (!this.accountGroupsEnabled) return;
+    const account = this.db.prepare('SELECT account_key FROM conversation_accounts WHERE scope=?').get(scope);
+    if (!account) return;
+    const data = JSON.stringify(groupOf(state));
+    const previous = this.db.prepare('SELECT data FROM account_groups WHERE scope=? AND account_key=?').get(scope, String(account['account_key']));
+    if (previous?.['data'] === data) return;
+    this.db.prepare('INSERT INTO account_groups VALUES(?,?,?,1) ON CONFLICT(scope,account_key) DO UPDATE SET data=excluded.data,version=account_groups.version+1')
+      .run(scope, String(account['account_key']), data);
+  }
+
+  /** Chamado sob o lock do vínculo. Uma nova sessão nunca reutiliza compra, propostas ou callbacks antigos. */
+  activateAccount(p: AdapterPrincipal, account: AccountContext) {
+    this.accountGroupsEnabled = true;
+    this.transaction(() => {
+      const scope = scopeKey(p), session = sessionRef(account.linkId);
+      const previous = this.db.prepare('SELECT * FROM conversation_accounts WHERE scope=?').get(scope);
+      if (previous?.['session_ref'] === session && previous['account_key'] === account.key && this.purchaseOf(scope)) return;
+      if (hasUnresolvedCartWrite(this.db, scope) || this.db.prepare("SELECT id FROM operations WHERE scope=? AND (status='RESULT_UNKNOWN' OR (effect=1 AND status IN ('RUNNING','CANCEL_REQUESTED')))").get(scope)) throw new ContractError('RESULT_UNKNOWN');
+      const base = this.current(scope) ?? this.initial(p);
+      this.db.prepare('INSERT OR IGNORE INTO conversations(scope,snapshot) VALUES(?,?)').run(scope, JSON.stringify(base));
+      for (const r of this.db.prepare("SELECT * FROM operations WHERE scope=? AND status IN ('ACCEPTED','RUNNING','CANCEL_REQUESTED')").all(scope)) this.failure(row(r)!, 'LINK_CHANGED');
+      // O grupo legado não é atribuído automaticamente a nenhuma conta.
+      this.purgeScope(scope, null);
+      const saved = this.db.prepare('SELECT data FROM account_groups WHERE scope=? AND account_key=?').get(scope, account.key);
+      const state = { ...emptyPurchase({ seed: scope, eventId: session }),
+        ...(saved ? AccountGroupSchema.parse(JSON.parse(String(saved['data']))) : {}), linkId: account.linkId };
+      const snapshot = renderSnapshot(base, state, [saved ? 'Grupo desta conta recuperado. O que vocês querem comer?' : 'Vamos organizar o grupo desta conta. Quem participa?'], missingQuestions(state));
+      state.version = snapshot.version;
+      this.db.prepare('UPDATE conversations SET snapshot=?,domain=?,last_activity_at=? WHERE scope=?')
+        .run(JSON.stringify(snapshot), JSON.stringify(parsePurchaseState(state)), this.now(), scope);
+      this.db.prepare('INSERT INTO conversation_accounts VALUES(?,?,?) ON CONFLICT(scope) DO UPDATE SET account_key=excluded.account_key,session_ref=excluded.session_ref')
+        .run(scope, account.key, session);
+    });
+  }
+
+  group(p: AdapterPrincipal) {
+    const r = this.db.prepare('SELECT g.data,g.version FROM conversation_accounts a JOIN account_groups g ON a.scope=g.scope AND a.account_key=g.account_key WHERE a.scope=?').get(scopeKey(p));
+    return r ? { version: Number(r['version']), group: AccountGroupSchema.parse(JSON.parse(String(r['data']))) } : { version: 0, group: null };
+  }
+
+  /** CRUD separado da sacola; alterações invalidam a compra atual, nunca escrevem no iFood. */
+  editGroup(p: AdapterPrincipal, version: number, ops: unknown[] | null) {
+    return this.transaction(() => {
+      const scope = scopeKey(p), previous = this.group(p);
+      if (previous.version !== version) throw new ContractError('STALE_VERSION');
+      const allowed = new Set(['ADD_PARTICIPANT', 'RENAME_PARTICIPANT', 'REMOVE_PARTICIPANT', 'SET_RESTRICTIONS', 'ADD_RESTRICTION', 'REMOVE_RESTRICTION', 'SET_LIMIT', 'SET_PRIORITY', 'MARK_UNCLEAR', 'RESOLVE_CLARIFICATION']);
+      if (ops?.some(o => !o || typeof o !== 'object' || !('op' in o) || !allowed.has(String(o.op)))) throw new ContractError('INVALID_REQUEST');
+      const current = this.purchaseOf(scope);
+      if (!current) throw new ContractError('LINK_CHANGED');
+      let next: PurchaseState;
+      try { next = ops ? applyPatch(current, ops, { seed: scope, eventId: ref(), maxParticipants: this.limits.maxParticipants }).state
+        : { ...emptyPurchase({ seed: scope, eventId: ref() }), linkId: current.linkId }; }
+      catch { throw new ContractError('INVALID_REQUEST'); }
+      this.purgeScope(scope, null);
+      delete next.bag; delete next.proposals; delete next.searchQuery;
+      next.evidence = []; next.merchant = { state: 'NOT_ASKED' }; next.address = { state: 'NOT_ASKED' };
+      const snapshot = renderSnapshot(this.current(scope)!, next, ['Grupo atualizado.'], missingQuestions(next));
+      next.version = snapshot.version;
+      this.db.prepare('UPDATE conversations SET domain=?,snapshot=?,last_activity_at=? WHERE scope=?').run(JSON.stringify(next), JSON.stringify(snapshot), this.now(), scope);
+      this.saveGroup(scope, next);
+      return this.group(p);
+    });
+  }
+
   readonly db: DatabaseSync;
   readonly limits: TurnLimits;
   private closed = false;
@@ -131,6 +206,14 @@ export class TurnStore {
           installCartWriteSchema(this.db);
           this.db.exec('PRAGMA user_version=3;');
         }
+        // v4: intenção de busca no domínio e navegação contextual; v3 não conhece esses campos.
+        if (current < 4) this.db.exec('PRAGMA user_version=4;');
+        if (current < 5) this.db.exec(`
+          CREATE TABLE IF NOT EXISTS account_groups(scope TEXT NOT NULL, account_key TEXT NOT NULL, data TEXT NOT NULL, version INTEGER NOT NULL, PRIMARY KEY(scope,account_key));
+          CREATE TABLE IF NOT EXISTS conversation_accounts(scope TEXT PRIMARY KEY, account_key TEXT NOT NULL, session_ref TEXT NOT NULL);
+          CREATE TABLE IF NOT EXISTS operation_accounts(operation_id TEXT PRIMARY KEY REFERENCES operations(id) ON DELETE CASCADE, session_ref TEXT NOT NULL);
+          PRAGMA user_version=5;
+        `);
         // Conversas vindas do v1 não têm atividade registrada. O instante da migração abre uma janela única de
         // `inactivityMs` (D7): não presume atividade antiga como recente, nem apaga de surpresa uma conversa em uso.
         if (current === 1) this.db.prepare('UPDATE conversations SET last_activity_at=? WHERE last_activity_at IS NULL').run(this.now());
@@ -208,7 +291,12 @@ export class TurnStore {
       }
       if (!processingAvailable) throw new ContractError('UNAVAILABLE');
       assertVersion(event.expectedVersion, snapshot.version);
-      if (event.input.kind !== 'TEXT' || event.source.kind !== 'MESSAGE') throw new ContractError('ACTION_UNAVAILABLE');
+      if (event.input.kind === 'ACTION' && event.source.kind === 'CALLBACK') {
+        const input = event.input;
+        const action = snapshot.allowedActions.find(a => a.actionRef === input.actionRef && a.kind === input.action);
+        if (!action) throw new ContractError('ACTION_UNAVAILABLE');
+        if (Date.parse(action.expiresAt) <= this.now()) throw new ContractError('REFERENCE_EXPIRED');
+      } else if (event.input.kind !== 'TEXT' || event.source.kind !== 'MESSAGE') throw new ContractError('ACTION_UNAVAILABLE');
       this.budget(scope);
       const operation: Operation = {
         contractVersion: '1.0', operationId: ref(), eventId: event.eventId, conversationId: p.conversationId,
@@ -221,6 +309,8 @@ export class TurnStore {
       this.db.prepare('UPDATE conversations SET last_activity_at=? WHERE scope=?').run(this.now(), scope);
       this.db.prepare('INSERT INTO operations(id,scope,event_id,body,operation,status) VALUES (?,?,?,?,?,?)')
         .run(operation.operationId, scope, event.eventId, JSON.stringify(event), JSON.stringify(operation), operation.status);
+      const account = this.db.prepare('SELECT session_ref FROM conversation_accounts WHERE scope=?').get(scope);
+      if (this.accountGroupsEnabled && account) this.db.prepare('INSERT INTO operation_accounts VALUES(?,?)').run(operation.operationId, String(account['session_ref']));
       this.db.prepare('INSERT INTO events(key,scope,kind,hash,source,operation_id) VALUES (?,?,?,?,?,?)')
         .run(key, scope, 'EVENT', hash, JSON.stringify(event.source), operation.operationId);
       return { status: 202, operation };
@@ -332,6 +422,7 @@ export class TurnStore {
       this.db.prepare('UPDATE operations SET owner=?,token=?,lease_until=?,attempts=attempts+1 WHERE id=?')
         .run(owner, token, Math.min(this.now() + this.limits.leaseMs, Date.parse(op.deadlineAt)), op.operationId);
       return { operation: running, event: JSON.parse(saved.body!) as ConversationEvent,
+        accountSession: this.db.prepare('SELECT session_ref FROM operation_accounts WHERE operation_id=?').get(op.operationId)?.['session_ref'] as string | undefined,
         principal: { botId: botId!, organizerId: organizerId!, conversationId: conversationId! }, snapshot, token, purchase };
     });
   }
@@ -408,6 +499,10 @@ export class TurnStore {
       const stored = endedStatus ? closingSnapshot(snapshot, endedStatus) : snapshot;
       // O bloco GROUP mostrado precisa refletir exatamente a compra gravada (participantes, nomes e teto).
       if (!endedStatus) assertGroupMatches(stored, domain ? domain.state : this.purchaseOf(saved.scope));
+      if (!endedStatus && result.conversationActions) {
+        stored.allowedActions = conversationActions(stored, domain ? domain.state : this.purchaseOf(saved.scope), this.now());
+        assertSnapshot(stored, this.now());
+      }
       const paths = [...new Set<ChangePath>([...result.paths, ...(domain?.paths ?? [])])];
       // Operações de domínio vêm de uma mensagem humana aceita: por padrão a origem é USER, não DERIVED.
       const cause = result.cause ?? (domain?.ops.length ? 'USER' : 'DERIVED');
@@ -432,6 +527,7 @@ export class TurnStore {
         return true;
       }
       const state: PurchaseState = { ...domain.state, version: snapshot.version };
+      this.saveGroup(saved.scope, state);
       this.db.prepare('UPDATE conversations SET snapshot=?, domain=?, last_activity_at=? WHERE scope=?')
         .run(JSON.stringify(snapshot), JSON.stringify(parsePurchaseState(state)), this.now(), saved.scope);
       const insert = this.db.prepare(`INSERT INTO purchase_changes(change_id,scope,purchase_id,event_id,source,base_version,

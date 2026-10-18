@@ -1,5 +1,7 @@
 # Documentação da API
 
+[Conversa guiada e próximos passos](conversa-guiada.md): incremento local de navegação contextual, busca preservada durante a coleta e apresentação comparável. Inclui a dependência ainda aberta de identidade para grupos por conta; sem deploy.
+
 [Conclusão offline da integração CART-01](cart-01-conclusao-offline.md): ordem de integração, contrato humano completo, ensaio HTTP do bot, avanço da OPS-02 e gates externos remanescentes.
 
 [Continuidade e endereço iFood](continuidade-enderecos.md): correção da entrega automática no bot, confirmação humana de endereço e sequência coordenada de deploy, ainda sem ativação operacional.

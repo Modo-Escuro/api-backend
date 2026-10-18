@@ -5,9 +5,10 @@ import type { ConversationEvent, Operation, Snapshot } from '../contracts/conver
 import { nextPurchase, type DomainChange, type PurchaseState } from '../domain/purchase.js';
 import { log } from '../ops/log.js';
 import { metrics } from '../ops/metrics.js';
-import { scopeKey, TurnStore, type CancelCommand, type Job } from './store.js';
+import { scopeKey, sessionRef, TurnStore, type AccountContext, type CancelCommand, type Job } from './store.js';
 
 export interface TurnResult {
+  conversationActions?: boolean;
   snapshot: Snapshot;
   completeness: 'PARTIAL' | 'COMPLETE';
   paths: Operation['changes'][number]['paths'];
@@ -33,12 +34,23 @@ export interface TurnContext {
 }
 export type TurnProcessor = (context: TurnContext) => Promise<TurnResult>;
 export interface RuntimeOptions {
+  accountScope?: <T>(organizerId: string, fn: (account: AccountContext) => Promise<T>) => Promise<T>;
   processor?: TurnProcessor;
   concurrency?: number;
   intervalMs?: number;
 }
 
 export class TurnRuntime {
+  get accountGroupsEnabled() { return Boolean(this.options.accountScope); }
+  async withAccount<T>(p: AdapterPrincipal, expectedSession: string | undefined, fn: (session?: string) => T | Promise<T>, initial = false): Promise<T> {
+    if (!this.options.accountScope) return fn();
+    return this.options.accountScope(p.organizerId, async account => {
+      const session = sessionRef(account.linkId);
+      if (!initial && expectedSession !== session) throw new ContractError('LINK_CHANGED');
+      this.store.activateAccount(p, account);
+      return fn(session);
+    });
+  }
   private readonly owner = randomBytes(24).toString('base64url');
   private readonly active = new Map<string, { job: Job; controller: AbortController; abortedAt?: number }>();
   private timer?: ReturnType<typeof setInterval>;
@@ -51,6 +63,7 @@ export class TurnRuntime {
   static readonly PURGE_INTERVAL_MS = 60_000;
 
   constructor(readonly store: TurnStore, private readonly options: RuntimeOptions = {}) {
+    store.accountGroupsEnabled = Boolean(options.accountScope);
     this.concurrency = options.concurrency ?? 2;
     this.intervalMs = options.intervalMs ?? 500;
     if (!Number.isSafeInteger(this.concurrency) || this.concurrency < 1 || this.concurrency > 4 ||
@@ -117,6 +130,8 @@ export class TurnRuntime {
     metrics.observe('turn_queue_wait_ms', {}, started - Date.parse(job.operation.createdAt));
     let outcome = 'SUCCEEDED';
     try {
+      if (job.accountSession && !this.accountGroupsEnabled) throw new ContractError('LINK_CHANGED');
+      await this.withAccount(job.principal, job.accountSession, async () => {
       const result = await this.options.processor!({
         event: structuredClone(job.event), snapshot: structuredClone(job.snapshot), signal: controller.signal,
         principal: { ...job.principal },
@@ -134,6 +149,7 @@ export class TurnRuntime {
         },
       });
       if (!this.stopped && !this.store.finish(job, result)) outcome = 'NOT_COMMITTED';
+      });
     } catch (error) {
       outcome = error instanceof ContractError ? error.code : 'INTERNAL';
       if (!this.stopped) {

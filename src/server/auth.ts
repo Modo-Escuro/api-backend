@@ -24,6 +24,8 @@ export interface StoredTokens {
 
 interface AsMetadata {
   issuer: string;
+  userinfo_endpoint?: string;
+  subject_types_supported?: string[];
   authorization_endpoint: string;
   token_endpoint: string;
   pushed_authorization_request_endpoint?: string;
@@ -170,6 +172,40 @@ export class IfoodAuth {
   }
 
   // ---------- metadata ----------
+  /** Identificador interno via UserInfo autenticado. Nunca usar nome/email nem decodificar JWT sem validação. */
+  async accountKey(): Promise<string> {
+    try {
+      const md = await this.getMetadata();
+      const origin = new URL(this.cfg.authServer).origin;
+      const issuer = new URL(md.issuer);
+      const endpoint = new URL(md.userinfo_endpoint ?? '');
+      if (issuer.origin !== origin || endpoint.origin !== origin || endpoint.protocol !== 'https:' ||
+          endpoint.username || endpoint.password || endpoint.hash || endpoint.search ||
+          !md.subject_types_supported?.includes('public') || !this.cfg.clientId) throw new Error();
+      const token = await this.getAccessToken();
+      const response = await this.fetchFn(endpoint, { redirect: 'error', signal: AbortSignal.timeout(10_000),
+        headers: { authorization: `Bearer ${token}`, accept: 'application/json' } });
+      if (!response.ok || response.headers.get('content-type')?.split(';')[0] !== 'application/json') throw new Error();
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error();
+      let bytes = 0;
+      const parts: Uint8Array[] = [];
+      try {
+        for (;;) {
+          const chunk = await reader.read();
+          if (chunk.done) break;
+          bytes += chunk.value.length;
+          if (bytes > 16_384) throw new Error();
+          parts.push(chunk.value);
+        }
+      } finally { await reader.cancel().catch(() => undefined); }
+      const value = JSON.parse(Buffer.concat(parts).toString('utf8')) as { sub?: unknown; iss?: unknown };
+      if (typeof value.sub !== 'string' || !/^[\x21-\x7e]{1,255}$/.test(value.sub) ||
+          (value.iss !== undefined && value.iss !== md.issuer)) throw new Error();
+      return createHash('sha256').update(JSON.stringify(['ifood-account-v1', md.issuer, this.cfg.clientId, value.sub])).digest('hex');
+    } catch { throw new AuthError('Identidade estável indisponível.', 'ACCOUNT_IDENTITY_UNAVAILABLE'); }
+  }
+
   async getMetadata(): Promise<AsMetadata> {
     if (this.metadata) return this.metadata;
     let res: Response;

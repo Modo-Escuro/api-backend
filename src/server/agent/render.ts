@@ -45,7 +45,7 @@ const BLOCKER_TEXT: Record<ApprovalBlocker, string> = {
   RESTRICTIONS_UNVERIFIED: 'Há restrições alimentares sem confirmação.',
   BAG_NEEDS_REVALIDATION: 'A compra mudou depois da escolha; peça novas sugestões.',
 };
-const SIMULATED = 'Sacola simulada: aprovação e pedido ainda não estão disponíveis nesta etapa.';
+const SIMULATED = 'Composição local: preparar no iFood exige revisão e confirmação específicas. Nenhum pedido foi enviado.';
 
 function planText(title: string, plan: PlanEvaluation, state: PurchaseState, compact = false): string {
   const who = (id: string) => state.participants.find((p) => p.participantId === id)?.displayName ?? '?';
@@ -56,11 +56,11 @@ function planText(title: string, plan: PlanEvaluation, state: PurchaseState, com
     const n = plan.coverage.filter((c) => c.status === 'COVERED').length;
     return clip(`${title}: ${plan.proposal.lines.length} item(ns); ${delivery}.${floor} Atendidos: ${n} de ${plan.coverage.length}.`, 300);
   }
-  const lines = plan.proposal.lines.map((l) => `${l.name} (${l.consumerIds.map(who).join(', ')}): ${formatCents(l.unitMinCents)}${l.unitMaxCents === l.unitMinCents ? '' : l.unitMaxCents === null ? '+' : `–${formatCents(l.unitMaxCents)}`}`);
+  const lines = plan.proposal.lines.map((l) => `• ${l.quantity} × ${l.name} — ${formatCents(l.unitMinCents)}${l.unitMaxCents === l.unitMinCents ? '' : l.unitMaxCents === null ? '+' : `–${formatCents(l.unitMaxCents)}`} por unidade\n  Para: ${l.consumerIds.map(who).join(', ')}`);
   const delivery = plan.proposal.deliveryFeeCents === null ? 'entrega não informada' : `entrega ${formatCents(plan.proposal.deliveryFeeCents)}`;
   const floor = plan.lowerBoundCents === null ? '' : ` Soma dos preços observados: ${formatCents(plan.lowerBoundCents)} — não é o total (sem taxa de serviço; descontos não visíveis podem mudar o valor).`;
   const out = plan.coverage.filter((c) => c.status !== 'COVERED').map((c) => who(c.participantId));
-  return clip(`${title}: ${lines.join('; ')}; ${delivery}.${floor}${out.length ? ` Sem atendimento: ${out.join(', ')}.` : ''}`, 1500);
+  return clip(`${title}\n${lines.join('\n')}\n${delivery}.${floor}${out.length ? `\nSem atendimento verificado: ${out.join(', ')}.` : '\nAtende às condições registradas de todos os participantes.'}`, 1500);
 }
 
 export interface PlanViews { proposals: PlanEvaluation[]; bag: PlanEvaluation | null }

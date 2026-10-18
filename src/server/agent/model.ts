@@ -81,6 +81,8 @@ export interface AgentModelInput {
   groupLimit: AgentModelInput['participants'][number]['limit'];
   priority: 'NOT_ASKED' | 'UNCLEAR' | 'ECONOMY' | 'SPEED';
   openQuestions: string[];
+  searchQuery?: string;
+  visibleOptions?: { position: number; names: string[] }[];
   allowedActions: readonly AgentAction['action'][];
   /** Mensagem do usuário: dado não confiável, nunca instrução de sistema. */
   message: string;
