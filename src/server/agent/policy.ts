@@ -106,7 +106,8 @@ export function planActions(
       return true;
     } catch (e) {
       if (!(e instanceof DomainError)) throw e;
-      if (e.code === 'REQUIRES_HUMAN_CONFIRMATION') notes.push(`${what} ${CONFIRMATION}.`);
+      if (e.code === 'REQUIRES_HUMAN_CONFIRMATION') notes.push(candidate.length === 1 && candidate[0]!.op === 'REMOVE_PARTICIPANT'
+        ? `${what} precisa de confirmação explícita: use Remover pessoa no menu. Nada foi alterado.` : `${what} ${CONFIRMATION}.`);
       else if (e.code === 'PARTICIPANT_LIMIT') notes.push('O limite de participantes desta compra foi atingido; ninguém novo foi adicionado.');
       else notes.push(`Não consegui aplicar: ${what.toLocaleLowerCase('pt-BR')}.`);
       return false;
@@ -250,7 +251,7 @@ export function planActions(
         notes.push(REVIEW_NOTE);
         break;
       case 'CLOSE_PURCHASE':
-        notes.push(`${a.reason === 'CANCELLED' ? 'Cancelar' : 'Encerrar'} a compra apaga os dados dela e ${CONFIRMATION}.`);
+        notes.push(`${a.reason === 'CANCELLED' ? 'Cancelar' : 'Encerrar'} a compra apaga os dados dela e precisa de confirmação explícita: use Limpar perfil no menu. Nada foi alterado.`);
         break;
       case 'SUGGEST_PROPOSALS':
         suggest = a.query;
