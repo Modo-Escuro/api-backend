@@ -18,6 +18,8 @@ export interface TurnResult {
 }
 export interface TurnContext {
   event: ConversationEvent;
+  /** Identidade autenticada pelo adaptador (cópia). Única fonte para consultar o vínculo do organizador. */
+  principal: AdapterPrincipal;
   snapshot: Snapshot;
   /** DATA-01: compra ativa no momento do claim (cópia; alterações só via `domain` no resultado). */
   purchase: PurchaseState | null;
@@ -104,6 +106,7 @@ export class TurnRuntime {
     try {
       const result = await this.options.processor!({
         event: structuredClone(job.event), snapshot: structuredClone(job.snapshot), signal: controller.signal,
+        principal: { ...job.principal },
         purchase: structuredClone(job.purchase),
         previewDomain: (change) => {
           const next = nextPurchase(job.purchase, change, {

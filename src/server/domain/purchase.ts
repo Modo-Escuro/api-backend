@@ -38,8 +38,10 @@ const eventId = z.string().regex(/^[A-Za-z0-9_-]{1,128}$/);
 /** IDs vindos de respostas MCP (UUIDs ou equivalentes); sem espaços nem separadores de caminho. */
 const providerId = z.string().regex(/^[A-Za-z0-9._:-]{1,128}$/);
 /** Texto curto sem caracteres de controle; tamanho em code points (mesma fronteira do contrato). */
+// Sem controle (Cc) nem formatação invisível (Cf: zero-width, bidi override) e sem surrogate isolado:
+// nomes visualmente iguais não viram pessoas diferentes e nada invisível chega ao Telegram.
 const shortText = (max: number) =>
-  z.string().trim().min(1).regex(new RegExp(`^[^\\p{Cc}]{1,${max}}$`, 'u'));
+  z.string().trim().min(1).regex(new RegExp(`^[^\\p{Cc}\\p{Cf}\\p{Cs}]{1,${max}}$`, 'u'));
 
 export const OriginSchema = z.object({ eventId }).strict();
 export type Origin = z.infer<typeof OriginSchema>;
@@ -249,8 +251,11 @@ export function applyPatch(current: PurchaseState | null, rawOps: unknown, ctx: 
         break;
       case 'REMOVE_PARTICIPANT': {
         const p = participant(op.participantId);
-        // Sem isto, remover e recriar o participante apagaria uma alergia sem confirmação (bypass de D5.6).
-        if (currentRestrictions(p).some((r) => isMandatory(r.key)) && !op.humanConfirmed) {
+        // Sem isto, remover e recriar o participante apagaria uma alergia, uma pergunta de alergia pendente ou um teto
+        // rígido sem confirmação (bypass de D5.6).
+        const guarded = currentRestrictions(p).some((r) => isMandatory(r.key)) || p.restrictions.state === 'UNCLEAR' ||
+          (p.limit.state === 'DECLARED' && p.limit.value.kind === 'MANDATORY');
+        if (guarded && !op.humanConfirmed) {
           throw new DomainError('REQUIRES_HUMAN_CONFIRMATION', i);
         }
         s.participants = s.participants.filter((p) => p.participantId !== op.participantId);

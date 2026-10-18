@@ -7,8 +7,8 @@
 // Política de dado ausente (explícita):
 //  - critério sem informação suficiente ⇒ `status: 'NO_DATA'` e `score: null` — NUNCA um valor inventado;
 //  - o total é a média ponderada SOMENTE dos critérios avaliados (o peso do critério NO_DATA é
-//    redistribuído entre os demais) e a limitação é registrada em `dataLimitations`;
-//  - sem nenhum critério avaliado ⇒ `score: null` (últimos na ordem, ordem da busca).
+//    redistribuído entre os demais) APENAS para diagnóstico, com cobertura explícita;
+//  - score não ordena: DEC-01 D9 exige chaves estritas, desconhecidos depois dos conhecidos.
 // Evidência de preferência (issue #9): só a configuração EFETIVAMENTE avaliada pontua.
 //  - fontes: nome/descrição do item-base + opções de `evaluation.selection` (as mesmas que compõem
 //    o preço avaliado); nome do estabelecimento e adicionais disponíveis NÃO selecionados nunca
@@ -21,8 +21,7 @@
 //  - preço/entrega/avaliação: min–max entre os candidatos ELEGIBLE desta consulta (0–1);
 //  - preferências e contexto: valores absolutos 0–1 já derivados dos dados (não dependem do conjunto);
 //  - empate de min–max (valores iguais) ⇒ 0.5 neutro.
-// Determinismo: funções puras — sem fetch, sem relógio, sem aleatoriedade. Empates: score desc →
-// ordem da busca (índice do candidato) → itemId.
+// Determinismo: funções puras — sem fetch, relógio ou aleatoriedade. Empates: merchantId → itemId.
 
 import type { EligibilityResult, Issue, UserConstraints } from './eligibility.js';
 import { checkCap } from './eligibility.js';
@@ -60,7 +59,16 @@ const INSUFFICIENT_DATA_CODES = new Set<string>([
   'ITEM_BUDGET_UNVERIFIED',
   'ORDER_BUDGET_UNVERIFIED',
   'PRICE_UNAVAILABLE',
+  'PRICE_UNVERIFIED',
+  'CONFIG_UNVERIFIED',
+  'AVAILABILITY_UNKNOWN',
 ]);
+
+// DOM-01: apenas métricas conhecidas são classificadas como limites locais.
+for (const metric of ['MAXDELIVERYTIMEMINUTES', 'MAXDELIVERYFEE', 'MAXDISTANCEKM', 'MINRATING', 'ONLYWITHPROMOTION']) {
+  INCOMPATIBILITY_CODES.add(`LIMIT_${metric}_EXCEEDED`);
+  INSUFFICIENT_DATA_CODES.add(`LIMIT_${metric}_UNVERIFIED`);
+}
 
 /**
  * Particiona um candidato em ELIGIBLE | BLOCKED | NEEDS_VERIFICATION a partir dos blockers já
@@ -70,9 +78,10 @@ const INSUFFICIENT_DATA_CODES = new Set<string>([
  */
 export function classifyBlockers(blockers: readonly Pick<Issue, 'code'>[]): EligibilityCategory {
   if (blockers.length === 0) return 'ELIGIBLE';
-  if (blockers.some((b) => INCOMPATIBILITY_CODES.has(b.code))) return 'BLOCKED';
-  if (blockers.some((b) => INSUFFICIENT_DATA_CODES.has(b.code))) return 'NEEDS_VERIFICATION';
-  return 'BLOCKED';
+  // Confirmado OU código não reconhecido prevalece sobre pendências conhecidas.
+  // BLOCKED por código desconhecido é um fallback conservador, não prova de incompatibilidade.
+  if (blockers.some((b) => INCOMPATIBILITY_CODES.has(b.code) || !INSUFFICIENT_DATA_CODES.has(b.code))) return 'BLOCKED';
+  return 'NEEDS_VERIFICATION';
 }
 
 // ---------------- pesos ----------------
@@ -86,7 +95,7 @@ export const DEFAULT_WEIGHTS: Weights = { PREFERENCES: 0.35, CONTEXT: 0.25, PRIC
 export const PRIORITIES = ['ECONOMY', 'SPEED', 'PREFERENCES'] as const;
 export type Priority = (typeof PRIORITIES)[number];
 
-/** Prioridade do usuário dobra o peso de UM critério (depois os pesos são re-normalizados por candidato). */
+/** Pesos diagnósticos legados: dobrar peso NÃO substitui as chaves estritas de DEC-01 D9. */
 export const PRIORITY_CRITERION: Record<Priority, Criterion> = { ECONOMY: 'PRICE', SPEED: 'DELIVERY', PREFERENCES: 'PREFERENCES' };
 export const PRIORITY_BOOST_FACTOR = 2;
 
@@ -171,6 +180,8 @@ export interface RankedRecommendation {
   /** Posição no ranking, começando em 1. */
   rank: number;
   score: number | null;
+  coverage: DataCoverage;
+  orderingKeys: OrderingKeys;
   criteria: CriterionScore[];
   reasons: string[];
   dataLimitations: string[];
@@ -179,6 +190,12 @@ export interface RankedRecommendation {
 }
 
 export interface RankingResult {
+  contractVersion: typeof RANKING_CONTRACT_VERSION;
+  status: 'RANKED' | 'PRIORITY_REQUIRED';
+  orderingPolicy: 'DEC_01_D9';
+  scoreInterpretation: 'RELATIVE_DIAGNOSTIC_NOT_PROBABILITY';
+  missingDataPolicy: 'UNKNOWN_LAST_SCORE_DIAGNOSTIC_ONLY';
+  clarification: string | null;
   weights: Weights;
   priority: Priority | null;
   maxRecommendations: number;
@@ -189,6 +206,28 @@ export interface RankingResult {
   recommendations: RankedRecommendation[];
   notes: string[];
 }
+
+export interface DataCoverage {
+  scoredCriteria: Criterion[];
+  noDataCriteria: Criterion[];
+  scoredCount: number;
+  totalCount: number;
+  configuredWeight: number;
+  scoredWeight: number;
+  /** Fração do peso configurado sustentada por critérios com algum sinal avaliável, não confiança. */
+  weightedFraction: number;
+}
+
+export interface OrderingKeys {
+  /** Total completo estimado em centavos; nunca subtotal parcial nem extremo de faixa. */
+  estimatedTotalCents: number | null;
+  /** Máximo observado do intervalo de entrega, em minutos; sem máximo ⇒ desconhecido. */
+  estimatedMinutes: number | null;
+  /** Contagem de preferências explicitamente atendidas, não média só das evidências restantes. */
+  preferencesSatisfied: number | null;
+}
+
+export const RANKING_CONTRACT_VERSION = '2.0' as const;
 
 export const MAX_RECOMMENDATIONS = 4;
 
@@ -276,7 +315,7 @@ function evidenceFor(ev: ConfigEvidence, term: string): TextEvidence {
   return 'NONE';
 }
 
-/** Preço por unidade: valor único ou ponto médio da faixa (com limitação explícita). */
+/** Só total completo de valor único é uma chave conhecida. Faixa não vira ponto médio/mínimo. */
 function pricePoint(c: RankCandidate): {
   value: number | null;
   limitation: string | null;
@@ -288,21 +327,14 @@ function pricePoint(c: RankCandidate): {
   const p = selected ?? c.evaluation.pricing.minimumConfigurable;
   if (!p) return { value: null, limitation: 'preço não calculado para este item', discountPercent: 0, source: null };
   const source = selected ? 'SELECTED' : 'MINIMUM_CONFIGURABLE';
-  const { min, max } = p.unitTotalRange;
+  const { min, max } = p.estimatedTotalRange;
   const discountPercent = p.unit.discountPercent;
-  if (min !== null && max !== null && max > min) {
-    return {
-      value: min + Math.floor((max - min) / 2),
-      limitation: `preço em faixa ${brl(min)}–${brl(max)}; usado o ponto médio da faixa (só o carrinho confirma)`,
-      discountPercent,
-      source,
-    };
+  const validCents = (v: number | null) => v !== null && Number.isSafeInteger(v) && v >= 0;
+  if (validCents(min) && min === max && p.service.status === 'KNOWN' && p.delivery.fee !== null && p.status === 'ESTIMATED') {
+    return { value: min, limitation: null, discountPercent, source };
   }
-  // Preço único (min === max): valor fechado, sem limitação.
-  if (min !== null && max !== null) return { value: min, limitation: null, discountPercent, source };
-  if (min !== null) return { value: min, limitation: 'limite superior do preço desconhecido (opção sem preço informado)', discountPercent, source };
-  if (max !== null) return { value: max, limitation: 'limite inferior do preço desconhecido', discountPercent, source };
-  return { value: null, limitation: 'preço indisponível para pontuar', discountPercent, source };
+  return { value: null, limitation: `total completo desconhecido ou em faixa (${min === null ? '?' : brl(min)}–${max === null ? '?' : brl(max)}); ` +
+    'subtotal parcial e extremos da faixa não são usados como total; taxas ausentes não valem zero', discountPercent, source };
 }
 
 const ratingOf = (c: RankCandidate): number | null => val(c.listing.merchant.rating.value) ?? null;
@@ -316,11 +348,13 @@ function etaRange(c: RankCandidate): { min: number | null; max: number | null } 
   return { min: val(d.etaMinutes.min) ?? null, max: val(d.etaMinutes.max) ?? null };
 }
 
-/** Ponto médio do ETA (critério de entrega). */
-function etaMid(c: RankCandidate): number | null {
+/** Mesmo máximo observado usado pela validação de prazo DOM-01, sem inventar extremos. */
+function estimatedMinutes(c: RankCandidate): number | null {
   const { min, max } = etaRange(c);
-  if (min !== null && max !== null) return (min + max) / 2;
-  return max ?? min ?? null;
+  const delivery = val(c.listing.merchant.delivery);
+  if (!delivery || [delivery.etaMinutes.min, delivery.etaMinutes.max].some((f) => f.state === 'INVALID')) return null;
+  if (max === null || !Number.isFinite(max) || max < 0 || (min !== null && (!Number.isFinite(min) || min < 0 || min > max))) return null;
+  return max;
 }
 
 const deliveryFeeOf = (c: RankCandidate): number | null => val(c.listing.merchant.delivery)?.effectiveFee ?? null;
@@ -330,6 +364,7 @@ const deliveryFeeOf = (c: RankCandidate): number | null => val(c.listing.merchan
 interface PreferenceSignal extends Signal {
   /** Configuração alternativa revalidada proposta para atender a uma preferência (ou null). */
   alternative: AlternativeConfiguration | null;
+  satisfied: number | null;
 }
 
 /**
@@ -510,7 +545,7 @@ function preferencesSignal(c: RankCandidate, prefs: UserPreferences | null | und
   if (!scores.length) {
     const informed = totalSignals > 0;
     dataLimitations.push(informed ? 'preferências informadas, mas nenhuma pôde ser avaliada com os dados disponíveis' : 'nenhuma preferência informada');
-    return { ...noData('Nenhum sinal de preferência disponível.', dataLimitations), alternative };
+    return { ...noData('Nenhum sinal de preferência disponível.', dataLimitations), alternative, satisfied: null };
   }
   return {
     score: round4(avg(scores)),
@@ -518,6 +553,7 @@ function preferencesSignal(c: RankCandidate, prefs: UserPreferences | null | und
     reasons,
     dataLimitations,
     alternative,
+    satisfied: scores.filter((s) => s === 1).length,
   };
 }
 
@@ -538,7 +574,7 @@ function contextSignal(c: RankCandidate, limits?: ContextLimits | null): Signal 
   }
   if (limits?.maxDeliveryTimeMinutes !== undefined) {
     stated.push('tempo de entrega');
-    const eta = etaRange(c).max;
+    const eta = estimatedMinutes(c);
     if (eta === null) dataLimitations.push('tempo de entrega não informado pelo iFood');
     else {
       scores.push(headroom(eta, limits.maxDeliveryTimeMinutes));
@@ -580,35 +616,38 @@ function contextSignal(c: RankCandidate, limits?: ContextLimits | null): Signal 
 function priceSignal(c: RankCandidate, score: number | null, eligibleCount: number): Signal {
   const { value, limitation, discountPercent, source } = pricePoint(c);
   const dataLimitations = limitation ? [limitation] : [];
-  if (value === null) return noData('Preço indisponível para pontuar.', dataLimitations);
   // O preço é o da MESMA configuração que sustenta os sinais de preferência (seleção do usuário
   // ou configuração mínima) — nunca se mistura a pontuação de uma configuração com o preço de outra.
   const config = source === 'SELECTED' ? 'configuração selecionada' : 'configuração mínima (sem adicionais opcionais não escolhidos)';
-  const reasons = [`preço estimado ${brl(value)} por unidade da ${config}${discountPercent > 0 ? ` (promoção de ${discountPercent}%)` : ''}`];
-  if (score === 1 && eligibleCount > 1) reasons.push('menor preço entre as opções elegíveis');
+  const p = c.evaluation.pricing.selected ?? c.evaluation.pricing.minimumConfigurable;
+  const reasons = p ? [`${config}: ${p.quantity} unidade(s); preço por unidade em faixa ` +
+    `${p.unitTotalRange.min === null ? '?' : brl(p.unitTotalRange.min)}–${p.unitTotalRange.max === null ? '?' : brl(p.unitTotalRange.max)}; ` +
+    `entrega ${p.delivery.fee === null ? 'desconhecida' : brl(p.delivery.fee)}${discountPercent > 0 ? `; promoção de ${discountPercent}% já aplicada` : ''}`] : [];
+  if (value === null) return { ...noData('Custo total completo indisponível para comparar economia.', dataLimitations), reasons };
+  reasons.push(`custo total estimado ${brl(value)} da ${config} (itens × quantidade + entrega + serviço); não é cotação confirmada`);
+  if (score === 1 && eligibleCount > 1) reasons.push('menor custo total estimado entre as opções elegíveis com total conhecido');
   return {
     score,
-    basis: `Preço por unidade da ${config} normalizado (min–max) entre ${eligibleCount} opção(ões) elegível(eis).`,
+    basis: `Custo total estimado completo da ${config}, em centavos, normalizado (min–max) entre elegíveis com total conhecido; ${eligibleCount} elegíveis na consulta.`,
     reasons,
     dataLimitations,
   };
 }
 
-function deliverySignal(c: RankCandidate, etaScore: number | null, feeScore: number | null, eligibleCount: number): Signal {
-  const parts = [etaScore, feeScore].filter((x): x is number => x !== null);
+function deliverySignal(c: RankCandidate, etaScore: number | null, eligibleCount: number): Signal {
   const dataLimitations: string[] = [];
   const reasons: string[] = [];
   const { min, max } = etaRange(c);
   if (min !== null && max !== null) reasons.push(`entrega estimada ${min}–${max} min`);
   else if (max !== null || min !== null) reasons.push(`entrega estimada ~${max ?? min} min`);
   else dataLimitations.push('tempo de entrega não informado pelo iFood');
-  const fee = deliveryFeeOf(c);
-  if (fee !== null) reasons.push(`taxa de entrega ${brl(fee)}`);
-  else dataLimitations.push('taxa de entrega não informada pelo iFood');
-  if (!parts.length) return noData('Sem tempo nem taxa de entrega informados para pontuar.', dataLimitations);
+  const minutes = estimatedMinutes(c);
+  if (minutes === null) return noData('Prazo indisponível para comparar rapidez.', ['prazo máximo estimado ausente ou inválido; nenhum prazo foi inventado']);
+  if (min === null) dataLimitations.push('limite inferior do prazo não informado; usado somente o máximo observado');
+  reasons.push(`rapidez compara o máximo observado: ${minutes} min; frete não compõe esta dimensão`);
   return {
-    score: round4(avg(parts)),
-    basis: `Tempo e taxa de entrega normalizados (min–max) entre ${eligibleCount} elegível(eis); média de ${parts.length} de 2 subcritérios.`,
+    score: etaScore,
+    basis: `Máximo observado do prazo normalizado (min–max) entre ${eligibleCount} elegível(eis); frete só entra no custo.`,
     reasons,
     dataLimitations,
   };
@@ -646,8 +685,8 @@ function criterionOf(criterion: Criterion, weight: number, s: Signal): Criterion
 
 /**
  * Pontua e ordena os candidatos já ELIGIBLE (defesa em profundidade: candidatos com blockers são
- * descartados aqui, mesmo que o chamador os passe). `candidates` deve vir na ordem da busca — é o
- * desempate final. Preferências e limites de contexto nunca alteram elegibilidade, só a pontuação.
+ * descartados aqui, mesmo que o chamador os passe). DEC-01 D9 ordena por chaves observadas e IDs.
+ * Sem ECONOMY/SPEED pede esclarecimento. Score é diagnóstico, sem alterar elegibilidade/ordem.
  */
 export function rankCandidates(
   candidates: readonly RankCandidate[],
@@ -657,8 +696,17 @@ export function rankCandidates(
 ): RankingResult {
   const priority = preferences?.priority ?? null;
   const weights = weightsFor(priority);
-  const eligible = candidates.filter((c) => classifyBlockers(c.evaluation.blockers) === 'ELIGIBLE');
+  const eligible = candidates.filter((c) => c.evaluation.eligible && classifyBlockers(c.evaluation.blockers) === 'ELIGIBLE');
   const n = eligible.length;
+  const supportedPriority = priority === 'ECONOMY' || priority === 'SPEED';
+  const metadata = {
+    contractVersion: RANKING_CONTRACT_VERSION,
+    status: supportedPriority ? 'RANKED' as const : 'PRIORITY_REQUIRED' as const,
+    orderingPolicy: 'DEC_01_D9' as const,
+    scoreInterpretation: 'RELATIVE_DIAGNOSTIC_NOT_PROBABILITY' as const,
+    missingDataPolicy: 'UNKNOWN_LAST_SCORE_DIAGNOSTIC_ONLY' as const,
+    clarification: supportedPriority ? null : 'Você prefere economia (ECONOMY) ou rapidez (SPEED)?',
+  };
 
   const notes = [
     `Pesos do ranking: preferências ${Math.round(DEFAULT_WEIGHTS.PREFERENCES * 100)}%, contexto ${Math.round(DEFAULT_WEIGHTS.CONTEXT * 100)}%, ` +
@@ -666,14 +714,16 @@ export function rankCandidates(
       (priority ? `; prioridade ${priority} dobra o peso de ${PRIORITY_CRITERION[priority]}` : '') +
       '.',
     'O ranking só recebe candidatos já ELIGIBLE: restrições obrigatórias nunca são compensadas por preço, promoção, avaliação ou preferência.',
-    'Critérios sem dado recebem status NO_DATA (score null) e têm o peso redistribuído entre os critérios avaliados — nenhuma nota é inventada.',
+    'Critérios sem dado recebem status NO_DATA (score null); redistribuição de pesos é somente diagnóstica e a cobertura é explícita. Score não ordena nem representa probabilidade de satisfação, segurança ou qualidade.',
+    'DEC-01 D9: ECONOMY ordena total completo estimado → prazo → preferências atendidas; SPEED ordena prazo → total → preferências atendidas. Desconhecidos depois de conhecidos; empate por merchantId e itemId.',
     'Preferências pontuam somente a configuração avaliada (nome/descrição do item-base + opções selecionadas): nome da loja e adicionais não selecionados não contam como ingrediente; ausência do termo não prova ausência.',
   ];
   if (candidates.length !== n) notes.push(`${candidates.length - n} candidato(s) recebido(s) com bloqueio foram descartados do ranking (defesa em profundidade).`);
   if (!n) notes.push('Nenhuma opção pôde ser confirmada como compatível com as restrições obrigatórias: nenhuma recomendação emitida (as restrições nunca são relaxadas para preencher a lista).');
 
-  if (!n) {
-    return { weights, priority, maxRecommendations: MAX_RECOMMENDATIONS, eligibleConsidered: candidates.length, eligibleScored: 0, recommendations: [], notes };
+  if (!supportedPriority) notes.push(metadata.clarification!);
+  if (!n || !supportedPriority) {
+    return { ...metadata, weights, priority, maxRecommendations: MAX_RECOMMENDATIONS, eligibleConsidered: n, eligibleScored: 0, recommendations: [], notes };
   }
 
   // Critérios que dependem do conjunto (min–max entre os ELEGIBLE desta consulta).
@@ -683,11 +733,7 @@ export function rankCandidates(
     false,
   );
   const etaScores = minMax(
-    eligible.map(etaMid),
-    false,
-  );
-  const feeScores = minMax(
-    eligible.map(deliveryFeeOf),
+    eligible.map(estimatedMinutes),
     false,
   );
   const ratingScores = minMax(
@@ -701,11 +747,21 @@ export function rankCandidates(
       criterionOf('PREFERENCES', weights.PREFERENCES, prefSignal),
       criterionOf('CONTEXT', weights.CONTEXT, contextSignal(c, context)),
       criterionOf('PRICE', weights.PRICE, priceSignal(c, priceScores.get(i) ?? null, n)),
-      criterionOf('DELIVERY', weights.DELIVERY, deliverySignal(c, etaScores.get(i) ?? null, feeScores.get(i) ?? null, n)),
+      criterionOf('DELIVERY', weights.DELIVERY, deliverySignal(c, etaScores.get(i) ?? null, n)),
       criterionOf('RATING', weights.RATING, ratingSignal(c, ratingScores.get(i) ?? null)),
     ];
 
     const scoredWeight = CRITERIA.reduce((s, k) => s + (criteria.find((x) => x.criterion === k)!.score !== null ? weights[k] : 0), 0);
+    const configuredWeight = Object.values(weights).reduce((a, b) => a + b, 0);
+    const coverage: DataCoverage = {
+      scoredCriteria: criteria.filter((cr) => cr.status === 'SCORED').map((cr) => cr.criterion),
+      noDataCriteria: criteria.filter((cr) => cr.status === 'NO_DATA').map((cr) => cr.criterion),
+      scoredCount: criteria.filter((cr) => cr.status === 'SCORED').length,
+      totalCount: criteria.length,
+      configuredWeight: round4(configuredWeight),
+      scoredWeight: round4(scoredWeight),
+      weightedFraction: round4(scoredWeight / configuredWeight),
+    };
     const dataLimitations: string[] = [];
     let total: number | null = null;
     if (scoredWeight > 0) {
@@ -713,7 +769,7 @@ export function rankCandidates(
       for (const cr of criteria) {
         if (cr.score === null) {
           cr.effectiveWeight = 0;
-          dataLimitations.push(`critério ${cr.criterion} sem dado (NO_DATA): peso redistribuído entre os demais — sem nota calculada`);
+          dataLimitations.push(`critério ${cr.criterion} sem dado (NO_DATA): peso redistribuído apenas no diagnóstico — score não ordena`);
         } else {
           cr.effectiveWeight = round4(weights[cr.criterion] / scoredWeight);
           cr.contribution = round4(cr.effectiveWeight * cr.score);
@@ -724,27 +780,46 @@ export function rankCandidates(
     }
 
     const reasons = criteria.flatMap((cr) => cr.reasons);
-    if (!reasons.length && total !== null) reasons.push(`pontuação ${Math.round(total * 100)}% baseada apenas nos critérios com dado disponível`);
+    if (!reasons.length && total !== null) reasons.push(`score diagnóstico relativo à consulta: ${total}; não é probabilidade`);
     for (const cr of criteria) dataLimitations.push(...cr.dataLimitations);
+    dataLimitations.push(`Cobertura de critérios: ${coverage.scoredCount}/${coverage.totalCount}; fração ponderada ${coverage.weightedFraction}. Não mede certeza nem segurança; critérios parcialmente observados podem conter limitações adicionais.`);
+    const preferredLimits = c.evaluation.limits.filter((limit) => limit.requirement === 'PREFERENCE');
+    const knownPreferredLimits = preferredLimits.filter((limit) => limit.status !== 'UNKNOWN');
+    const orderingKeys: OrderingKeys = {
+      estimatedTotalCents: prices[i]!.value,
+      estimatedMinutes: estimatedMinutes(c),
+      preferencesSatisfied: prefSignal.satisfied === null && !knownPreferredLimits.length ? null
+        : (prefSignal.satisfied ?? 0) + preferredLimits.filter((limit) => limit.status === 'PASS').length,
+    };
+    reasons.push(`Chaves DEC-01 D9 (${priority}): total ${orderingKeys.estimatedTotalCents === null ? 'desconhecido' : brl(orderingKeys.estimatedTotalCents)}, ` +
+      `prazo ${orderingKeys.estimatedMinutes === null ? 'desconhecido' : `${orderingKeys.estimatedMinutes} min`}, preferências atendidas ${orderingKeys.preferencesSatisfied ?? 'desconhecidas'}; score apenas diagnóstico`);
 
     return {
       candidate: c,
       score: total,
       criteria,
+      coverage,
+      orderingKeys,
       reasons,
       dataLimitations: [...new Set(dataLimitations)],
       alternative: prefSignal.alternative,
     };
   });
 
-  // Ordenação determinística: score desc → ordem da busca → itemId.
+  // DEC-01 D9: desconhecido nunca é zero; score não participa dos desempates.
+  const compareKnown = (a: number | null, b: number | null, descending = false) =>
+    a === null ? (b === null ? 0 : 1) : b === null ? -1 : descending ? b - a : a - b;
+  const compareId = (a: string, b: string) => a < b ? -1 : a > b ? 1 : 0;
   const ordered = assembled
-    .map((x, index) => ({ ...x, index }))
     .sort((a, b) => {
-      if (a.score !== null && b.score !== null && a.score !== b.score) return b.score - a.score;
-      if (a.score === null !== (b.score === null)) return a.score === null ? 1 : -1;
-      if (a.index !== b.index) return a.index - b.index;
-      return a.candidate.evaluation.itemId.localeCompare(b.candidate.evaluation.itemId);
+      const keys = priority === 'ECONOMY' ? ['estimatedTotalCents', 'estimatedMinutes'] as const : ['estimatedMinutes', 'estimatedTotalCents'] as const;
+      for (const key of keys) {
+        const comparison = compareKnown(a.orderingKeys[key], b.orderingKeys[key]);
+        if (comparison) return comparison;
+      }
+      return compareKnown(a.orderingKeys.preferencesSatisfied, b.orderingKeys.preferencesSatisfied, true)
+        || compareId(a.candidate.evaluation.merchantId, b.candidate.evaluation.merchantId)
+        || compareId(a.candidate.evaluation.itemId, b.candidate.evaluation.itemId);
     });
 
   const recommendations: RankedRecommendation[] = ordered.slice(0, MAX_RECOMMENDATIONS).map((x, i) => ({
@@ -753,6 +828,8 @@ export function rankCandidates(
     rank: i + 1,
     score: x.score,
     criteria: x.criteria,
+    coverage: x.coverage,
+    orderingKeys: x.orderingKeys,
     reasons: x.reasons,
     dataLimitations: x.dataLimitations,
     alternativeConfiguration: x.alternative,
@@ -762,6 +839,7 @@ export function rankCandidates(
   if (withAlt) notes.push(`${withAlt} recomendação(ões) inclui(ram) configuração alternativa revalidada (sugestão explícita — a configuração avaliada não foi substituída).`);
 
   return {
+    ...metadata,
     weights,
     priority,
     maxRecommendations: MAX_RECOMMENDATIONS,

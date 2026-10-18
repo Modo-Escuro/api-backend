@@ -63,7 +63,7 @@ export interface EvaluateRequest {
   merchantType?: SearchOffersArgs['merchantType'];
   /** Repassados ao searchOffers (contexto: distância, tempo, avaliação, promoção, ordenação). */
   refinements?: Pick<SearchRefinements, 'maxDistanceKm' | 'maxDeliveryTimeMinutes' | 'minRating' | 'onlyWithPromotion' | 'maxDeliveryFee' | 'sort'>;
-  /** Preferências do usuário: só alteram a pontuação do ranking, nunca a elegibilidade. */
+  /** Prioridade declarada D9 e preferências flexíveis; nunca alteram elegibilidade. */
   preferences?: UserPreferences;
   /** Alvos flexíveis: não são filtros MCP nem bloqueiam elegibilidade. Frete em centavos. */
   softLimits?: CandidateLimits;
@@ -326,7 +326,8 @@ export async function runEvaluation(req: EvaluateRequest, deps: EvaluateDeps, ca
   const rankable = candidates
     .filter((c) => c.category === 'ELIGIBLE')
     .map((c) => ({ evaluation: c.evaluation, listing: c.listing, detail: c.detail.status === 'DETAILED' ? c.detail.detail : null }));
-  const ranking = rankCandidates(rankable, req.preferences, req.refinements, constraints);
+  // Separa alvos flexíveis de limites rígidos, já validados na elegibilidade (DOM-01).
+  const ranking = rankCandidates(rankable, req.preferences, req.softLimits, constraints);
 
   const count = (s: DetailOutcome['status']) => outcomes.filter((o) => o.status === s).length;
   return {

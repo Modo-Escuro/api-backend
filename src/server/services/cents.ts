@@ -48,7 +48,7 @@ function priceCents(p: PriceView | null) {
     estimatedTotalCents: centsValue(p.estimatedTotal),
     estimatedTotalRange: rangeCents(p.estimatedTotalRange),
     itemsAndDeliverySubtotalCents: centsValue(p.itemsAndDeliverySubtotal),
-    service: { feeCents: null, status: p.service.status },
+    service: { feeCents: centsValue(p.service.fee), status: p.service.status },
     interpretations: p.interpretations.map((i) => ({ id: i.id, description: i.description, unitTotalRange: rangeCents(i.unitTotal) })),
     delivery: { feeCents: centsValue(p.delivery.fee), promotionalFeeApplied: p.delivery.promotionalFeeApplied, source: p.delivery.source },
     minimumOrder: {
@@ -96,7 +96,7 @@ export function evaluateViewCents(v: ReturnType<typeof evaluateView>) {
   return {
     money: { currency: 'BRL' as const, unit: 'CENTS' as const },
     ...v,
-    // `ranking` (dentro de cada recomendação) não tem dinheiro — passa intacto por candidateCents.
+    // `ranking.orderingKeys.estimatedTotalCents` já é centavos; preserva sem reconversão.
     recommendations: v.recommendations.map(candidateCents),
     eligible: v.eligible.map(candidateCents),
     blocked: v.blocked.map(candidateCents),

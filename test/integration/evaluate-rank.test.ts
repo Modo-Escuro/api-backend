@@ -1,7 +1,7 @@
 // F4 — integração do ranking no pipeline /api/evaluate (fixtures reais, sem rede):
 // recomendações ranqueadas só de ELIGIBLE, buckets separados e contrato em centavos intacto.
 import { describe, expect, it } from 'vitest';
-import { runEvaluation } from '../../src/server/services/evaluate';
+import { evaluateWithEconomy as runEvaluation } from '../helpers/ranking';
 import { evaluateView } from '../../src/server/services/evaluate-view';
 import { evaluateViewCents } from '../../src/server/services/cents';
 import { fake, fx } from './fakes';
@@ -18,7 +18,6 @@ describe('ranking no pipeline /api/evaluate (fixtures reais)', () => {
 
     const eligibleIds = byId(v.eligible);
     const excludedIds = byId([...v.blocked, ...v.needsVerification]);
-    const scores: number[] = [];
     for (const [i, r] of v.recommendations.entries()) {
       expect(r.eligible).toBe(true);
       expect(r.restrictions.every((x) => !x.blocking)).toBe(true);
@@ -26,18 +25,19 @@ describe('ranking no pipeline /api/evaluate (fixtures reais)', () => {
       expect(excludedIds.has(r.itemId)).toBe(false); // bloqueados/pendentes nunca viram recomendação
       expect(r.ranking.rank).toBe(i + 1);
       expect(r.ranking.score).not.toBeNull();
-      scores.push(r.ranking.score!);
       expect(r.ranking.criteria.map((c) => c.criterion)).toEqual(['PREFERENCES', 'CONTEXT', 'PRICE', 'DELIVERY', 'RATING']);
       expect(r.ranking.reasons.length).toBeGreaterThan(0);
       expect(r.ranking.dataLimitations.length).toBeGreaterThan(0); // sempre diz o que faltou
       const sum = r.ranking.criteria.reduce((a, c) => a + (c.contribution ?? 0), 0);
       expect(sum).toBeCloseTo(r.ranking.score!, 3);
     }
-    for (let i = 1; i < scores.length; i++) expect(scores[i - 1]).toBeGreaterThanOrEqual(scores[i]!); // ordem descrescente
+    // Total do catálogo desconhecido (serviço): D9 passa à chave de prazo, não ordena por score.
+    const times = v.recommendations.map((rec) => rec.ranking.orderingKeys.estimatedMinutes ?? Infinity);
+    expect(times).toEqual([...times].sort((a, b) => a - b));
 
     expect(v.ranking).toMatchObject({
-      weights: { PREFERENCES: 0.35, CONTEXT: 0.25, PRICE: 0.2, DELIVERY: 0.1, RATING: 0.1 },
-      priority: null,
+      weights: { PREFERENCES: 0.35, CONTEXT: 0.25, PRICE: 0.4, DELIVERY: 0.1, RATING: 0.1 },
+      priority: 'ECONOMY',
       maxRecommendations: 4,
       eligibleConsidered: v.summary.eligible,
       eligibleScored: v.summary.eligible,

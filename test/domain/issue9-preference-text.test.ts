@@ -59,10 +59,10 @@ function candidate(name: string, opts: CandidateOpts = {}): RankCandidate {
 }
 
 const prefOf = (c: RankCandidate, prefs: Parameters<typeof rankCandidates>[1], constraints?: Parameters<typeof rankCandidates>[3]) =>
-  rankCandidates([c], prefs, null, constraints).recommendations[0]!.criteria.find((x) => x.criterion === 'PREFERENCES')!;
+  rankCandidates([c], { priority: 'ECONOMY', ...prefs }, null, constraints).recommendations[0]!.criteria.find((x) => x.criterion === 'PREFERENCES')!;
 
 const recOf = (c: RankCandidate, prefs: Parameters<typeof rankCandidates>[1], constraints?: Parameters<typeof rankCandidates>[3]) =>
-  rankCandidates([c], prefs, null, constraints).recommendations[0]!;
+  rankCandidates([c], { priority: 'ECONOMY', ...prefs }, null, constraints).recommendations[0]!;
 
 describe('issue #9 — Caso A: adicional não selecionado nunca é bônus de preferência', () => {
   it('bacon só no adicional disponível (não escolhido) não pontua — e vira limitação explícita', () => {
@@ -273,13 +273,13 @@ describe('issue #9 — determinismo e nota de escopo', () => {
       candidate('Vegano Brooks', { price: 40, equalize: true }),
     ];
     const prefs = { likedIngredients: ['bacon'], avoidedIngredients: ['queijo'] };
-    const r1 = rankCandidates(cs, prefs, null, { restrictions: [], budget: {} });
-    const r2 = rankCandidates(cs, prefs, null, { restrictions: [], budget: {} });
+    const r1 = rankCandidates(cs, { priority: 'ECONOMY', ...prefs }, null, { restrictions: [], budget: {} });
+    const r2 = rankCandidates(cs, { priority: 'ECONOMY', ...prefs }, null, { restrictions: [], budget: {} });
     expect(r1.recommendations).toEqual(r2.recommendations);
   });
 
   it('notes documentam o escopo da evidência (loja/adicionais fora; ausência não prova ausência)', () => {
-    const r = rankCandidates([candidate('Maria salada Veg')], { likedIngredients: ['bacon'] });
+    const r = rankCandidates([candidate('Maria salada Veg')], { priority: 'ECONOMY', likedIngredients: ['bacon'] });
     expect(r.notes.join(' ')).toMatch(/somente a configuração avaliada/);
     expect(r.notes.join(' ')).toMatch(/nome da loja e adicionais não selecionados não contam/);
     expect(r.notes.join(' ')).toMatch(/ausência do termo não prova ausência/);
