@@ -93,7 +93,7 @@ function build(base: Snapshot, state: PurchaseState | null, applied: string[], p
   blocks.push({ kind: 'TEXT', source: 'SERVER', text: clip(summary, 1000) }); // folga para maxResultBytes
   if (state && state.status === 'ACTIVE' && state.groupLimit.state === 'DECLARED') {
     const g = state.groupLimit.value;
-    blocks.push({ kind: 'TEXT', source: 'SERVER', text: `Orçamento do grupo: ${formatCents(g.amountCents)} (${g.kind === 'MANDATORY' ? 'máximo' : 'referência'}).` });
+    blocks.push({ kind: 'TEXT', source: 'SERVER', text: `${state.participants.length === 1 ? 'Orçamento' : 'Orçamento do grupo'}: ${formatCents(g.amountCents)} (${g.kind === 'MANDATORY' ? 'máximo' : 'referência'}).` });
   }
   if (state && state.status === 'ACTIVE') {
     const coverage = (p: PlanEvaluation) => p.coverage.map((c) => ({ participantRef: c.participantId, status: c.status }));

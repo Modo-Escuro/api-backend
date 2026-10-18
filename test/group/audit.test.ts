@@ -82,12 +82,14 @@ describe('bug 2 — teto de uma pessoa não derruba o grupo', () => {
 
 describe('bug 3 — corte em 4', () => {
   it('quem perde a única cobertura no corte aparece na explicação como corte, não como teto', () => {
-    const codes = ['VEGETARIAN', 'GLUTEN_FREE', 'SUGAR_FREE', 'ORGANIC', 'LACTOSE_FREE'] as const;
-    const filters = ['VEGETARIAN', 'GLUTEN_FREE', 'SUGAR_FREE', 'ORGANIC', 'LAC_FREE'] as const;
+    // Cada item contém (informado no nome) os alérgenos de todos menos um: conflito informado exclui,
+    // sem dado só avisa. Assim cada loja atende exatamente uma pessoa.
+    const codes = ['GLUTEN', 'MILK', 'EGG', 'PEANUT', 'SOY'] as const;
+    const terms = ['trigo', 'leite', 'ovo', 'amendoim', 'soja'];
     const merchants = codes.map((_, i) => `${i + 3}${i + 3}${i + 3}${i + 3}${i + 3}${i + 3}${i + 3}${i + 3}-0000-4000-8000-000000000000`);
     let s = apply(null, codes.map((_, i) => ({ op: 'ADD_PARTICIPANT' as const, displayName: `P${i}` })));
-    s = apply(s, codes.map((code, i) => ({ op: 'ADD_RESTRICTION' as const, participantId: s.participants[i]!.participantId, key: { kind: 'DIETARY' as const, code } })));
-    const items = codes.map((_, i) => candidate({ name: `Prato ${i}`, price: 20 + i, merchantId: merchants[i], filters: [filters[i]!] }));
+    s = apply(s, codes.map((code, i) => ({ op: 'ADD_RESTRICTION' as const, participantId: s.participants[i]!.participantId, key: { kind: 'ALLERGY' as const, code } })));
+    const items = codes.map((_, i) => candidate({ name: `Prato ${i} com ${terms.filter((_, j) => j !== i).join(', ')}`, price: 20 + i, merchantId: merchants[i] }));
     const r = composeProposals(s, items, { seed: 'x' });
     expect(r.search.validPlans).toBe(5);
     expect(r.proposals).toHaveLength(4);
@@ -149,7 +151,8 @@ describe('bug 7 — aviso de busca limitada nunca é cortado', () => {
   it('35 pessoas sem atendimento: aviso primeiro e pessoas agrupadas', () => {
     let s = people(...Array.from({ length: 35 }, (_, i) => `Pessoa ${i}`));
     s = apply(s, s.participants.slice(1).map((p) => ({ op: 'ADD_RESTRICTION' as const, participantId: p.participantId, key: { kind: 'ALLERGY' as const, code: 'MILK' } })));
-    const r = composeProposals(s, [candidate({ name: 'Pizza', price: 30 })], { seed: 'x' });
+    // Leite informado no nome: conflito real exclui as 34 pessoas alérgicas (sem dado, só avisaria).
+    const r = composeProposals(s, [candidate({ name: 'Pizza com leite', price: 30 })], { seed: 'x' });
     expect(r.explanation[0]).toMatch(/não prova que não existe combinação válida/);
     expect(r.explanation.length).toBeLessThan(10);
     expect(r.explanation.join(' ')).toMatch(/e mais 24/);
@@ -239,7 +242,7 @@ describe('auditoria final — bug A: cascata do reparo de tetos', () => {
       { op: 'SET_LIMIT', target: c!, value: { amountCents: 2000, kind: 'MANDATORY' } },
       { op: 'SET_LIMIT', target: 'GROUP', value: { amountCents: 7500, kind: 'MANDATORY' } },
     ]);
-    const items = [candidate({ name: 'Carne grelhada', price: 40, fee: 30, filters: ['GLUTEN_FREE'] }), candidate({ name: 'Salada', price: 10, fee: 30, filters: ['VEGETARIAN'] })];
+    const items = [candidate({ name: 'Carne grelhada', price: 40, fee: 30, filters: ['GLUTEN_FREE'] }), candidate({ name: 'Salada com croutons de pão', price: 10, fee: 30, filters: ['VEGETARIAN'] })];
     const r = composeProposals(s, items, { seed: 'x' });
     expect(r.proposals).toHaveLength(1);
     const p = r.proposals[0]!;

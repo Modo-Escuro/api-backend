@@ -110,7 +110,8 @@ export function planActions(
       return true;
     } catch (e) {
       if (!(e instanceof DomainError)) throw e;
-      if (e.code === 'REQUIRES_HUMAN_CONFIRMATION') notes.push(`${what} ${CONFIRMATION}.`);
+      if (e.code === 'REQUIRES_HUMAN_CONFIRMATION') notes.push(candidate.length === 1 && candidate[0]!.op === 'REMOVE_PARTICIPANT'
+        ? `${what} precisa de confirmação explícita: use Remover pessoa no menu. Nada foi alterado.` : `${what} ${CONFIRMATION}.`);
       else if (e.code === 'PARTICIPANT_LIMIT') notes.push('O limite de participantes desta compra foi atingido; ninguém novo foi adicionado.');
       else notes.push(`Não consegui aplicar: ${what.toLocaleLowerCase('pt-BR')}.`);
       return false;
@@ -131,7 +132,7 @@ export function planActions(
     return null;
   };
   const target = (t: 'GROUP' | ParticipantSelector): { id: string | 'GROUP'; label: string } | null => {
-    if (t === 'GROUP') return { id: 'GROUP', label: 'o grupo' };
+    if (t === 'GROUP') return { id: 'GROUP', label: state?.participants.length === 1 ? 'você' : 'o grupo' }; // uso individual não fala em grupo
     const p = resolve(t);
     return p ? { id: p.participantId, label: p.displayName } : null;
   };
@@ -254,7 +255,7 @@ export function planActions(
         notes.push(REVIEW_NOTE);
         break;
       case 'CLOSE_PURCHASE':
-        notes.push(`${a.reason === 'CANCELLED' ? 'Cancelar' : 'Encerrar'} a compra apaga os dados dela e ${CONFIRMATION}.`);
+        notes.push(`${a.reason === 'CANCELLED' ? 'Cancelar' : 'Encerrar'} a compra apaga os dados dela e precisa de confirmação explícita: use Limpar perfil no menu. Nada foi alterado.`);
         break;
       case 'SUGGEST_PROPOSALS':
         suggest = a.query;
@@ -281,14 +282,18 @@ export function planActions(
   return { ops, state, applied, notes: [...new Set(notes)], suggest };
 }
 
+/** Uso pode ser individual ou em grupo: perguntar antes, sem assumir grupo. */
+export const NO_PARTICIPANTS_QUESTION = 'O pedido é só para você ou para um grupo? Se for em grupo, diga o nome de quem participa.';
+
 /** Pergunta só o que falta para a compra (issue #16: "pergunta apenas o que falta"). */
 export function missingQuestions(state: PurchaseState | null): string[] {
-  if (!state || !state.participants.length) return ['Quem vai participar da compra?'];
+  if (!state || !state.participants.length) return [NO_PARTICIPANTS_QUESTION];
   const q: string[] = [];
+  const single = state.participants.length === 1;
   for (const p of state.participants) {
     if (p.restrictions.state === 'NOT_ASKED') q.push(`${p.displayName} tem alguma alergia ou restrição alimentar?`);
   }
-  if (state.groupLimit.state === 'NOT_ASKED') q.push('Qual é o orçamento do grupo?');
-  if (state.priority.state === 'NOT_ASKED') q.push('Vocês preferem economia ou rapidez?');
+  if (state.groupLimit.state === 'NOT_ASKED') q.push(single ? 'Qual é o seu orçamento?' : 'Qual é o orçamento do grupo?');
+  if (state.priority.state === 'NOT_ASKED') q.push(single ? 'Você prefere economia ou rapidez?' : 'Vocês preferem economia ou rapidez?');
   return [...state.clarifications.map((c) => c.question), ...q];
 }

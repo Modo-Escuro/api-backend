@@ -8,6 +8,7 @@ import { metrics } from '../ops/metrics.js';
 import { scopeKey, sessionRef, TurnStore, type AccountContext, type CancelCommand, type Job } from './store.js';
 
 export interface TurnResult {
+  clearGroup?: boolean;
   conversationActions?: boolean;
   snapshot: Snapshot;
   completeness: 'PARTIAL' | 'COMPLETE';

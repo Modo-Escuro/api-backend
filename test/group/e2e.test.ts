@@ -99,7 +99,7 @@ describe('GRP-01 ponta a ponta com AI-02 + DATA-01 + RUN-01', () => {
     for (const p of proposals) {
       expect(p).toMatchObject({ price: { kind: 'UNKNOWN' } });
       expect(p.kind === 'PROPOSAL' && Object.fromEntries(p.coverage.map((c) => [c.participantRef, c.status])))
-        .toEqual({ [ana]: 'COVERED', [bia]: 'NEEDS_VERIFICATION', [caio]: 'BLOCKED' });
+        .toEqual({ [ana]: 'COVERED', [bia]: 'COVERED', [caio]: 'BLOCKED' }); // Bia: dieta sem dado ⇒ aviso; Caio: leite informado ⇒ conflito
     }
     expect(sug.snapshot!.pending.join(' ')).toMatch(/Busca limitada/);
     expect(w.domain().proposals).toHaveLength(proposals.length);
@@ -113,7 +113,8 @@ describe('GRP-01 ponta a ponta com AI-02 + DATA-01 + RUN-01', () => {
     ]));
     expect(chosen.snapshot!.humanApproval).toBeNull();
     expect(chosen.snapshot!.blocks.some((b) => b.kind === 'OUTCOME')).toBe(false);
-    expect(w.domain()).toMatchObject({ bag: { status: 'CURRENT', lines: [{ consumerIds: [ana] }] }, merchant: { state: 'DECLARED' } });
+    expect(w.domain()).toMatchObject({ bag: { status: 'CURRENT' }, merchant: { state: 'DECLARED' } });
+    expect(w.domain().bag.lines.map((l: { consumerIds: string[] }) => l.consumerIds[0]).sort()).toEqual([ana, bia].sort()); // Caio fica fora: conflito informado
 
     const capped = await w.send('Teto de R$ 50');
     expect(w.domain().bag.status).toBe('NEEDS_REVALIDATION');
@@ -122,7 +123,8 @@ describe('GRP-01 ponta a ponta com AI-02 + DATA-01 + RUN-01', () => {
     expect(review2.kind === 'REVIEW' && review2.blockers).toContain('A compra mudou depois da escolha; peça novas sugestões.');
 
     await w.send('remove a Ana da compra');
-    expect(w.domain().bag).toBeUndefined(); // único consumidor saiu: sem consumo órfão
+    // Sem consumo órfão: nenhuma linha restante aponta para quem saiu.
+    expect((w.domain().bag?.lines ?? []).every((l: { consumerIds: string[] }) => !l.consumerIds.includes(ana))).toBe(true);
     expect(JSON.stringify(w.domain())).not.toContain(ana);
 
     const used = w.env.mcp.used.map((u) => u.op);
@@ -311,7 +313,7 @@ describe('GRP-01 ponta a ponta com AI-02 + DATA-01 + RUN-01', () => {
     expect(seen.every((sg) => sg === controller.signal)).toBe(true);
   });
 
-  it('cenário da imagem: motivo e ação útil sobrevivem a consulta/replay/reinício sem outro modelo ou MCP', async () => {
+  it('cenário da imagem: aviso alimentar e propostas sobrevivem a consulta/replay/reinício sem outro modelo ou MCP', async () => {
     const propose = vi.fn().mockResolvedValueOnce({ actions: [
       { action: 'ADD_PARTICIPANT', name: 'Eu' }, { action: 'ADD_PARTICIPANT', name: 'Namorada' },
       { action: 'ADD_RESTRICTION', participant: { name: 'Eu' }, restriction: { kind: 'DIETARY', code: 'LACTOSE_FREE' } },
@@ -323,10 +325,14 @@ describe('GRP-01 ponta a ponta com AI-02 + DATA-01 + RUN-01', () => {
     await w.send('Eu sem lactose, Namorada com alergia a frutos do mar. Orçamento R$100.');
     const op = await w.send('Sugere comida');
     expect(op.status).toBe('SUCCEEDED');
-    expect(op.snapshot!.blocks.filter((b) => b.kind === 'PROPOSAL')).toEqual([]);
-    expect(op.snapshot!.pending.join(' ')).toMatch(/evidência alimentar/);
+    // Sem dado alimentar do iFood: propostas aparecem com aviso explícito (decisão de produto), sem declarar segurança.
+    expect(op.snapshot!.blocks.filter((b) => b.kind === 'PROPOSAL').length).toBeGreaterThan(0);
+    // Namorada (alergia sem dado) é atendida com aviso; Eu tem conflito informado (laticínio) nos itens da fixture.
+    expect(op.snapshot!.pending.join(' ')).toMatch(/Atenção: o iFood não informa ingredientes nem alérgenos\. As restrições de Namorada .*confirme com o restaurante/);
+    expect(op.snapshot!.pending.join(' ')).toMatch(/Sem atendimento \(nenhum dos itens avaliados é compatível com as restrições declaradas\): Eu\./);
     expect(op.snapshot!.pending.join(' ')).toMatch(/Sugere arroz/);
-    expect(op.snapshot!.pending.join(' ')).toMatch(/Só informação, não é recomendação/);
+    expect(op.snapshot!.pending.join(' ')).not.toMatch(/Só informação, não é recomendação/);
+    expect(op.snapshot!.humanApproval).toBeNull();
     expect(w.domain().groupLimit.value.amountCents).toBe(10_000);
     const reads = w.env.mcp.used.length;
     for (let i = 0; i < 3; i++) {

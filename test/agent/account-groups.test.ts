@@ -19,7 +19,7 @@ describe('grupos por conta e geração da sessão', () => {
     const dir = temporary(); let current = a;
     const runtime = new TurnRuntime(new TurnStore(dir.file), { accountScope: async (_org, fn) => fn(current) });
     cleanup.push(() => { runtime.stop(); dir.clean(); });
-    const cfg = testConfig({ conversationRuntime: { botId: p.botId, dbFile: dir.file, accountGroups: true } });
+    const cfg = testConfig({ conversationRuntime: { botId: p.botId, dbFile: dir.file }, accountGroups: true });
     const app = createApp(new IfoodAuth(cfg, undefined, { tokenFile: null }), { config: cfg, conversations: runtime });
     const base = `/api/bot/v1/conversations/${p.conversationId}`;
     const headers = { authorization: `Bearer ${BOT_TOKEN}`, 'x-telegram-user-id': p.organizerId, 'x-telegram-chat-id': p.conversationId, 'content-type': 'application/json' };

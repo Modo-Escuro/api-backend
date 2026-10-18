@@ -73,34 +73,36 @@ describe('classifyBlockers — segurança alimentar antes de qualquer pontuaçã
     expect(rankCandidates([c]).recommendations).toEqual([]); // defesa em profundidade
   });
 
-  it('2. alérgeno não verificável é NEEDS_VERIFICATION e fica fora das recomendações', () => {
+  it('2. alérgeno sem dado vira aviso; o código como blocker explícito continua NEEDS_VERIFICATION', () => {
     const unknown = candidate('Veggie Burger', { restrictions: [{ kind: 'ALLERGY', code: 'PEANUT' }] });
-    expect(unknown.evaluation.blockers.map((b) => b.code)).toContain('ALLERGY_UNVERIFIED');
-    expect(category(unknown)).toBe('NEEDS_VERIFICATION');
+    expect(unknown.evaluation.blockers.map((b) => b.code)).not.toContain('ALLERGY_UNVERIFIED');
+    expect(unknown.evaluation.warnings.map((w) => w.code)).toContain('ALLERGY_UNVERIFIED');
+    expect(classifyBlockers([{ code: 'ALLERGY_UNVERIFIED' }])).toBe('NEEDS_VERIFICATION');
+    const failed = candidate('Açaí + Morango e Leite Condensado', { restrictions: [{ kind: 'ALLERGY', code: 'MILK' }] });
 
     const ok = candidate('Vegano Brooks', { price: 40, equalize: true });
     expect(category(ok)).toBe('ELIGIBLE');
-    const r = rankCandidates([unknown, ok]);
+    const r = rankCandidates([failed, ok]);
     expect(ids(r)).toEqual([ok.evaluation.itemId]);
     expect(r.eligibleConsidered).toBe(1);
   });
 
-  it('3. filtro no servidor não basta para alergia: nunca vira PASS nem "seguro"', () => {
+  it('3. filtro no servidor não basta para alergia: nunca vira PASS nem "seguro" (fica UNKNOWN com aviso)', () => {
     const c = candidate('Veggie Burger', {
       restrictions: [{ kind: 'ALLERGY', code: 'GLUTEN' }],
       serverFilters: ['GLUTEN_FREE'],
     });
     expect(c.evaluation.restrictions[0]).toMatchObject({ status: 'UNKNOWN', source: 'SERVER_FILTER_INSUFFICIENT' });
-    expect(c.evaluation.eligible).toBe(false);
-    expect(category(c)).toBe('NEEDS_VERIFICATION');
-    expect(rankCandidates([c]).recommendations).toEqual([]);
+    expect(c.evaluation.restrictions[0]!.status).not.toBe('PASS');
+    expect(c.evaluation.blockers.map((b) => b.code)).not.toContain('ALLERGY_UNVERIFIED');
+    expect(c.evaluation.warnings.map((w) => w.code)).toContain('ALLERGY_UNVERIFIED');
   });
 
-  it('4. restrição obrigatória sem informação suficiente é NEEDS_VERIFICATION, não ELIGIBLE', () => {
+  it('4. restrição obrigatória sem informação suficiente vira aviso RESTRICTION_UNVERIFIED, não bloqueio', () => {
     const c = candidate('Açai Artesanal', { restrictions: [{ kind: 'DIETARY', code: 'VEGAN' }] });
-    expect(c.evaluation.blockers.map((b) => b.code)).toContain('RESTRICTION_UNVERIFIED');
-    expect(category(c)).toBe('NEEDS_VERIFICATION');
-    expect(rankCandidates([c]).recommendations).toEqual([]);
+    expect(c.evaluation.blockers.map((b) => b.code)).not.toContain('RESTRICTION_UNVERIFIED');
+    expect(c.evaluation.warnings.map((w) => w.code)).toContain('RESTRICTION_UNVERIFIED');
+    expect(classifyBlockers([{ code: 'RESTRICTION_UNVERIFIED' }])).toBe('NEEDS_VERIFICATION');
   });
 
   it('5. acima do orçamento obrigatório é BLOCKED', () => {
@@ -236,7 +238,7 @@ describe('rankCandidates — pontuação explicável', () => {
   });
 
   it('sem candidato elegível: sem recomendação e com explicação registrada', () => {
-    const r = rankCandidates([candidate('Açai Artesanal', { restrictions: [{ kind: 'DIETARY', code: 'VEGAN' }] })]);
+    const r = rankCandidates([candidate('Açaí + Morango e Leite Condensado', { restrictions: [{ kind: 'DIETARY', code: 'VEGAN' }] })]);
     expect(r.recommendations).toEqual([]);
     expect(r.eligibleScored).toBe(0);
     expect(r.notes.join(' ')).toMatch(/Nenhuma opção pôde ser confirmada como compatível/);

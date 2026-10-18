@@ -317,7 +317,7 @@ describe('cancelar tentativa × desconectar vínculo (rotas separadas)', () => {
 });
 
 describe('regressão de alergia em /api/evaluate (issue #3)', () => {
-  it('ALLERGY:GLUTEN: filtro GLUTEN_FREE enviado ao iFood, mas nenhum candidato elegível', async () => {
+  it('ALLERGY:GLUTEN: filtro GLUTEN_FREE enviado ao iFood; candidato elegível com aviso, nunca PASS', async () => {
     const { call, env } = mk();
     await connectAndConfirm(env, ORG_A);
     env.mcp.searchPages = [{ ...fx('searchOffers-lanche-glutenfree.json'), hasMore: false }];
@@ -326,15 +326,16 @@ describe('regressão de alergia em /api/evaluate (issue #3)', () => {
     const body = await r.json();
     expect(env.mcp.searchArgs.at(-1)!.refinements).toMatchObject({ itemRestrictions: ['GLUTEN_FREE'] });
     expect(body.serverFilters).toEqual(['GLUTEN_FREE']);
-    expect(body.summary).toMatchObject({ candidates: 1, eligible: 0, blocked: 0, needsVerification: 1 });
-    const c = body.needsVerification[0];
+    expect(body.summary).toMatchObject({ candidates: 1, eligible: 1, blocked: 0, needsVerification: 0 });
+    const c = body.eligible[0];
     expect(c.item.name).toBe('Veggie Burger');
     expect(c.detail.status).toBe('DETAILED');
-    expect(c.eligible).toBe(false);
-    expect(c.restrictions[0]).toMatchObject({ status: 'UNKNOWN', source: 'SERVER_FILTER_INSUFFICIENT', blocking: true });
-    expect(c.blockers.map((b: { code: string }) => b.code)).toEqual(['ALLERGY_UNVERIFIED']);
-    expect(body.summary.blockerCounts).toEqual({ ALLERGY_UNVERIFIED: 1 });
-    // Preço continua sendo informado em centavos para transparência, mesmo bloqueado
+    expect(c.eligible).toBe(true);
+    // Alergia nunca é aprovada pelo catálogo: continua UNKNOWN; decisão 18/10/2026 só troca bloqueio por aviso.
+    expect(c.restrictions[0]).toMatchObject({ status: 'UNKNOWN', source: 'SERVER_FILTER_INSUFFICIENT' });
+    expect(c.blockers).toEqual([]);
+    expect(c.warnings.map((w: { code: string }) => w.code)).toContain('ALLERGY_UNVERIFIED');
+    expect(body.summary.blockerCounts.ALLERGY_UNVERIFIED).toBeUndefined();
     expect(c.pricing.minimumConfigurable.unitTotalCents).toBe(5980);
   });
 

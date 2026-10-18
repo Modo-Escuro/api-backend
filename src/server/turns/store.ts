@@ -519,6 +519,8 @@ export class TurnStore {
         return true;
       }
       if (endedStatus) {
+        // Limpar perfil é exclusão explícita; a expiração normal da compra mantém o cadastro independente.
+        if (result.clearGroup) this.saveGroup(saved.scope, emptyPurchase({ seed: saved.scope, eventId: op.eventId }));
         // D7: encerrar exclui a compra na mesma transação. O snapshot neutro de encerramento e a operação atual
         // também expiram: a atividade é renovada para o expurgo por inatividade apagá-los depois.
         this.db.prepare('UPDATE conversations SET snapshot=? WHERE scope=?').run(JSON.stringify(stored), saved.scope);

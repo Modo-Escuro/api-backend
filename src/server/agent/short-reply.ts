@@ -1,6 +1,6 @@
 // Respostas fechadas a perguntas do servidor; nunca inferir ausência de restrições sem contexto.
 import type { Snapshot } from '../contracts/conversation.js';
-import type { PurchaseState } from '../domain/purchase.js';
+import type { DomainOp, PurchaseState } from '../domain/purchase.js';
 import type { AgentProposal } from './model.js';
 import { missingQuestions } from './policy.js';
 
@@ -27,8 +27,33 @@ export function restrictionQuestionTarget(state: PurchaseState | null, snapshot:
   return person;
 }
 
+const fold = (v: string) => v.normalize('NFD').replace(/\p{M}/gu, '').trim().toLowerCase();
+
+/**
+ * Confirmações humanas explícitas (botões do bot após pergunta de confirmação). Texto literal do usuário, nunca do
+ * modelo: o modelo não tem ação equivalente. Apagar usa END (D7 exclui a compra na mesma transação).
+ */
+export function humanCommand(state: PurchaseState | null, message: string): { ops: DomainOp[]; note: string } | null {
+  const text = fold(message);
+  if (/^confirmo: apagar todos os dados deste pedido[.!]?$/.test(text)) {
+    if (!state || state.status !== 'ACTIVE') return { ops: [], note: 'Não há dados de pedido salvos para apagar.' };
+    return { ops: [{ op: 'END', reason: 'CANCELLED' }], note: 'Pedido apagado: pessoas, restrições, orçamento e propostas foram excluídos.' };
+  }
+  const m = /^confirmo: remover (.+) do pedido[.!]?$/.exec(text);
+  if (m) {
+    const found = state && state.status === 'ACTIVE' ? state.participants.filter(p => fold(p.displayName) === m[1]!.trim()) : [];
+    if (found.length !== 1) return { ops: [], note: 'Não encontrei essa pessoa neste pedido; nada foi alterado.' };
+    const p = found[0]!;
+    return { ops: [{ op: 'REMOVE_PARTICIPANT', participantId: p.participantId, humanConfirmed: true }],
+      note: `${p.displayName} foi removida do pedido, junto com as restrições e o teto dela.` };
+  }
+  return null;
+}
+
 export function shortReply(state: PurchaseState | null, snapshot: Snapshot, message: string):
-  { proposal: AgentProposal; policyMessage: string; note?: string } | null {
+  { proposal: AgentProposal; policyMessage: string; note?: string; human?: { ops: DomainOp[]; note: string } } | null {
+  const human = humanCommand(state, message);
+  if (human) return { proposal: { actions: [] }, policyMessage: message, human };
   const text = message.normalize('NFD').replace(/\p{M}/gu, '').trim().toLowerCase();
   const reply = (note: string) => ({ proposal: { actions: [] }, policyMessage: message, note });
   const newQuery = /^(?:troca|troque|muda|mude) (?:por|para) (.{1,80}?)[.!]?$/iu.exec(message.trim());
@@ -65,6 +90,14 @@ export function shortReply(state: PurchaseState | null, snapshot: Snapshot, mess
     if (!snapshot.blocks.some(b => b.kind === 'PROPOSAL')) return reply('Vamos buscar opções para comparar. Que tipo de comida você quer?');
     return reply('Compare a soma dos preços observados e a entrega de cada opção abaixo. O total final ainda depende das taxas do carrinho; não posso garantir qual será a mais barata no fechamento.');
   }
+  // Escolha do início da conversa (botões do bot). Individual cria uma única pessoa "Você", sem modelo.
+  if (/^e um pedido individual, so para mim[.!]?$/.test(text)) {
+    if (state && state.status === 'ACTIVE' && state.participants.length) return null; // já há pessoas: o modelo decide
+    return { proposal: { actions: [{ action: 'ADD_PARTICIPANT', name: 'Você' }] }, policyMessage: message };
+  }
+  // Grupo: nenhuma ação; o servidor pergunta quem participa.
+  if (/^e um pedido em grupo[.!]?$/.test(text) && !(state && state.status === 'ACTIVE' && state.participants.length))
+    return { proposal: { actions: [] }, policyMessage: message };
   // Comando humano exato: limpa só a composição local, nunca o carrinho remoto.
   if (/^(?:esvaziar|esvazia|limpar|limpa) (?:a )?sacola(?: simulada)?[.!]?$/.test(text)) {
     return { proposal: { actions: [{ action: 'CLEAR_BAG' }] }, policyMessage: message };
