@@ -269,12 +269,12 @@ export function planActions(
           notes.push(`A proposta ${a.position} não foi exibida (grupo grande); peça sugestões mais específicas antes de escolher.`);
           break;
         }
-        tryApply([{ op: 'SELECT_PROPOSAL', proposalId: chosen.proposalId }], `Proposta ${a.position} colocada na sacola simulada (nenhum pedido foi feito).`, `Escolher a proposta ${a.position}`);
+        tryApply([{ op: 'SELECT_PROPOSAL', proposalId: chosen.proposalId }], `Proposta ${a.position} colocada no carrinho simulado (nenhum pedido foi feito).`, `Escolher a proposta ${a.position}`);
         break;
       }
       case 'CLEAR_BAG':
-        if (state?.bag) tryApply([{ op: 'CLEAR_BAG' }], 'Sacola simulada esvaziada.', 'Esvaziar a sacola');
-        else notes.push('A sacola simulada já está vazia.');
+        if (state?.bag) tryApply([{ op: 'CLEAR_BAG' }], 'Carrinho simulado esvaziado.', 'Esvaziar o carrinho');
+        else notes.push('O carrinho simulado já está vazio.');
         break;
     }
   }

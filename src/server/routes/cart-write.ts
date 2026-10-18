@@ -39,7 +39,7 @@ export function registerCartWriteRoutes(app: Hono, service: ConfirmedCartService
   };
   app.post(`${prefix}/reviews`, safe(async c => {
     const p = principal(c);
-    if (!z.object({}).strict().safeParse(await json(c)).success) throw new CartError('VALIDATION', 'A sacola vem da DATA-01, não do chamador.', 400);
+    if (!z.object({}).strict().safeParse(await json(c)).success) throw new CartError('VALIDATION', 'O carrinho simulado vem da DATA-01, não do chamador.', 400);
     return c.json(await service!.prepare(p));
   }));
   app.post(`${prefix}/confirm`, safe(async c => {

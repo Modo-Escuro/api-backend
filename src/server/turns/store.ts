@@ -57,6 +57,7 @@ export interface Job {
   purchase: PurchaseState | null;
 }
 export interface FinishInput {
+  clearGroup?: boolean;
   /** Opt-in interno: referências emitidas pelo store, nunca pelo modelo/processador. */
   conversationActions?: boolean;
   snapshot: Snapshot; completeness: 'PARTIAL' | 'COMPLETE'; paths: Operation['changes'][number]['paths'];

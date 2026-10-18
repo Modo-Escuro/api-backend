@@ -1,6 +1,6 @@
 # Conexão concluída no navegador
 
-Decisão do usuário em 18/10/2026: a autorização iFood no navegador deve concluir o vínculo sem exigir outro clique no Telegram. Substitui a etapa obrigatória de confirmação Telegram do contrato anterior, apenas para login. A autorização de compra permanece independente; DEC-01 continua com sacola simulada e MCP somente leitura.
+Decisão do usuário em 18/10/2026: a autorização iFood no navegador deve concluir o vínculo sem exigir outro clique no Telegram. Substitui a etapa obrigatória de confirmação Telegram do contrato anterior, apenas para login. A autorização de compra permanece independente; DEC-01 continua com carrinho simulado e MCP somente leitura.
 
 O callback HTTP usa `completeBrowserAuthorization`: valida state, PKCE, prazo e cookie do navegador, troca o código uma vez e instala o vínculo pelo mesmo caminho transacional da confirmação anterior. Organizador e confirmationId são derivados da tentativa no servidor, nunca de parâmetros do navegador. Consulta de status continua somente leitura. Cancelamento, substituição, replay e falha de persistência não autorizam um novo vínculo indevidamente. A verificação operacional continua separada da presença de tokens.
 

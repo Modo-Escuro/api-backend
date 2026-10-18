@@ -25,8 +25,8 @@ function choose(s: PurchaseState, items = [candidate({ name: 'Pizza de queijo', 
 }
 const BASE: Snapshot = { contractVersion: '1.0', conversationId: '1', version: 3, phase: 'COLLECTING', blocks: [], pending: [], allowedActions: [], humanApproval: null };
 
-describe('bug 1 — cobertura da sacola revalidada contra restrições atuais', () => {
-  it('alergia adicionada depois da escolha: deixa de ser COVERED e a sacola fica inválida', () => {
+describe('bug 1 — cobertura do carrinho revalidada contra restrições atuais', () => {
+  it('alergia adicionada depois da escolha: deixa de ser COVERED e o carrinho fica inválida', () => {
     let s = choose(people('Caio'));
     const caio = idOf(s, 'Caio');
     expect(evaluatePlan(s, s.bag!, planCoverage(s, s.bag!)).valid).toBe(true);
@@ -101,7 +101,7 @@ describe('bug 3 — corte em 4', () => {
 });
 
 describe('bug 4 — loja fixada pela escolha', () => {
-  it('esvaziar a sacola desfaz a loja fixada só pela escolha; nova busca considera outras lojas', () => {
+  it('esvaziar o carrinho desfaz a loja fixada só pela escolha; nova busca considera outras lojas', () => {
     let s = choose(people('Ana'), [candidate({ name: 'A', price: 20, merchantId: M1 })]);
     expect(s.merchant.state).toBe('DECLARED');
     s = apply(s, [{ op: 'CLEAR_BAG' }]);
@@ -162,7 +162,7 @@ describe('bug 7 — aviso de busca limitada nunca é cortado', () => {
 });
 
 describe('bug 8 — 100 participantes cabem no limite do runtime', () => {
-  it('snapshot com 4 propostas + sacola respeita o orçamento; GROUP, bloqueios e cobertura preservados', () => {
+  it('snapshot com 4 propostas + carrinho respeita o orçamento; GROUP, bloqueios e cobertura preservados', () => {
     const names = Array.from({ length: 100 }, (_, i) => `Ção Ñúñez Ação Ímpar ${'é'.repeat(50)} ${i}`.slice(0, 80));
     let s = people(...names);
     const items = Array.from({ length: 6 }, (_, i) => candidate({ name: `Prato com nome comprido número ${i} ${'á'.repeat(150)}`, price: 20 + i }));
@@ -269,7 +269,7 @@ describe('auditoria final — bug A: cascata do reparo de tetos', () => {
 });
 
 describe('auditoria final — bug B: trocar de proposta entre lojas', () => {
-  it('loja fixada só pela escolha: escolher a proposta de outra loja troca loja e sacola', () => {
+  it('loja fixada só pela escolha: escolher a proposta de outra loja troca loja e carrinho', () => {
     let s = people('Ana');
     const r = composeProposals(s, [candidate({ name: 'X', price: 20, merchantId: M1 }), candidate({ name: 'Y', price: 21, merchantId: M2 })], { seed: 'x' });
     s = apply(s, [{ op: 'SET_PROPOSALS', proposals: r.proposals.map((p) => p.proposal) }]);
@@ -327,7 +327,7 @@ describe('auditoria final — bug C: nada de escolha às cegas nem revisão invi
     const shown: Snapshot = { ...BASE, blocks: s.proposals!.map((p) => ({ kind: 'PROPOSAL' as const, proposalRef: p.proposalId, coverage: [], price: { kind: 'UNKNOWN' as const, currency: 'BRL' as const } })) };
     const r = await turn(s, shown, 'quero a proposta 1');
     expect(r.domain?.ops.some((o) => o.op === 'SELECT_PROPOSAL') ?? false).toBe(false);
-    expect(r.snapshot.pending.slice(0, 2).join(' ')).toMatch(/grande demais para mostrar a revisão da sacola/);
+    expect(r.snapshot.pending.slice(0, 2).join(' ')).toMatch(/grande demais para mostrar a revisão do carrinho/);
     expect(Buffer.byteLength(JSON.stringify(r.snapshot))).toBeLessThan(63_000); // cabe nos 64 KiB do runtime (GROUP da AI-02 não é cortado)
     expect(r.snapshot.blocks.some((b) => b.kind === 'REVIEW')).toBe(false);
   });

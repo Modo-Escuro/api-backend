@@ -156,7 +156,7 @@ export class ConfirmedCartService {
       else if (next.quantity !== item.quantity) steps.push({ tool: 'updateCartItem', args: { ...next, cartItemId: item.cartItemId } });
     }
     for (const [key, item] of desired) if (!found.has(key)) steps.push({ tool: 'addItemToCart', args: { ...item } });
-    if (!steps.length) throw new CartError('CART_ALREADY_MATCHES', 'O carrinho já corresponde à sacola; nenhuma escrita necessária.');
+    if (!steps.length) throw new CartError('CART_ALREADY_MATCHES', 'O carrinho do iFood já corresponde ao carrinho simulado; nenhuma escrita necessária.');
     const order = { removeItemFromCart:0,updateCartItem:1,addItemToCart:2,createCart:3 };
     return steps.sort((a,b) => order[a.tool]-order[b.tool]);
   }

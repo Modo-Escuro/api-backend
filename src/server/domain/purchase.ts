@@ -98,7 +98,7 @@ export type Evidence = z.infer<typeof EvidenceSchema>;
 
 export const PurchaseStatusSchema = z.enum(['ACTIVE', 'CLOSED', 'CANCELLED']);
 
-// ---------------- GRP-01: propostas e sacola simulada ----------------
+// ---------------- GRP-01: propostas e carrinho simulado ----------------
 // Gerados por código do servidor a partir de respostas MCP de leitura (searchOffers/getItem); o modelo nunca fornece
 // IDs, preços ou consumidores. Preço por unidade guarda a faixa observada: min = max quando exato; max null = sem teto
 // conhecido. Nada aqui é carrinho real (DEC-01 D8).
@@ -139,7 +139,7 @@ export const BagSchema = ProposalSchema.extend({
   /** NEEDS_REVALIDATION: participantes, restrições, tetos ou endereço mudaram depois da escolha. */
   status: z.enum(['CURRENT', 'NEEDS_REVALIDATION']),
   origin: z.object({ eventId: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/) }).strict(),
-  /** A loja foi fixada pela própria escolha (não declarada antes): esvaziar a sacola a desfaz. */
+  /** A loja foi fixada pela própria escolha (não declarada antes): esvaziar o carrinho a desfaz. */
   merchantSetBySelection: z.boolean().optional(),
 }).strict();
 export type Bag = z.infer<typeof BagSchema>;
@@ -159,7 +159,7 @@ export const PurchaseStateSchema = z.object({
   clarifications: z.array(ClarificationSchema).max(MAX_CLARIFICATIONS),
   /** Propostas da última busca; qualquer outra alteração as invalida (apaga). */
   proposals: z.array(ProposalSchema).max(MAX_PROPOSALS).optional(),
-  /** Sacola simulada escolhida (consumo por participante). */
+  /** Carrinho simulado escolhido (consumo por participante). */
   bag: BagSchema.optional(),
   /** Intenção de busca, preservada durante a coleta; não é informação de catálogo. */
   searchQuery: shortText(80).optional(),
@@ -296,7 +296,7 @@ export function applyPatch(current: PurchaseState | null, rawOps: unknown, ctx: 
   const origin: Origin = { eventId: ctx.eventId };
   const paths = new Set<ChangePath>();
 
-  /** Operações que mudam quem é atendido, o que pode comer ou quanto pode gastar: a sacola precisa ser revalidada. */
+  /** Operações que mudam quem é atendido, o que pode comer ou quanto pode gastar: o carrinho precisa ser revalidado. */
   const REVALIDATE = new Set(['ADD_PARTICIPANT', 'REMOVE_PARTICIPANT', 'SET_RESTRICTIONS', 'ADD_RESTRICTION', 'REMOVE_RESTRICTION',
     'SET_LIMIT', 'MARK_UNCLEAR', 'RESOLVE_CLARIFICATION', 'SET_ADDRESS']);
   ops.forEach((op, i) => {
@@ -340,7 +340,7 @@ export function applyPatch(current: PurchaseState | null, rawOps: unknown, ctx: 
         }
         s.participants = s.participants.filter((p) => p.participantId !== op.participantId);
         s.clarifications = s.clarifications.filter((c) => c.target !== op.participantId);
-        // Consumo órfão não sobrevive: a pessoa sai das linhas da sacola e linhas sem consumidor somem.
+        // Consumo órfão não sobrevive: a pessoa sai das linhas do carrinho e linhas sem consumidor somem.
         if (s.bag) {
           s.bag.lines = s.bag.lines
             .map((l) => ({ ...l, consumerIds: l.consumerIds.filter((c) => c !== op.participantId) }))
@@ -567,7 +567,7 @@ export function applyLinkChange(
   s.merchant = { state: 'NOT_ASKED' };
   s.address = { state: 'NOT_ASKED' };
   s.evidence = [];
-  // Preços, itens e loja dependem da conta: sacola e propostas não sobrevivem à troca.
+  // Preços, itens e loja dependem da conta: carrinho e propostas não sobrevivem à troca.
   const hadBag = s.bag !== undefined;
   delete s.bag;
   delete s.proposals;

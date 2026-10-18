@@ -14,7 +14,7 @@ O [plano atual](../plano-conversacional.md) transforma os achados em issues. Ap�
 
 ## Parecer
 
-Aproveitar a branch como componente de avaliação e ranking de itens, após corrigir os problemas abaixo. Ela ainda não implementa compra coletiva, memória de conversa, agente LLM, sacola, aprovação de compra ou envio. Não recomendar integração sem ressalvas apenas porque os testes existentes passam em outro ambiente.
+Aproveitar a branch como componente de avaliação e ranking de itens, após corrigir os problemas abaixo. Ela ainda não implementa compra coletiva, memória de conversa, agente LLM, carrinho, aprovação de compra ou envio. Não recomendar integração sem ressalvas apenas porque os testes existentes passam em outro ambiente.
 
 Ganhos concretos:
 
@@ -106,9 +106,9 @@ Correção: versionar/documentar o contrato e adaptar consumidores juntos; testa
 | 3 | Estado de compra e avaliação por pessoa | Reutilizar avaliação de itens como componente | Participante tem identidade estável, condições e origem; restrições desconhecidas não são apagadas |
 | 4 | Conversa útil e persistente | IA usa resultados estruturados, sem recalcular elegibilidade | Mudança de orçamento preserva restrições; reinício recupera turno; resultado atrasado não sobrescreve versão atual |
 | 5 | Propostas coletivas | Reutilizar sinais do ranking, sem aplicar top-4 cedo demais | Cobertura por pessoa e custo agregado validados; propostas completas ranqueadas antes de exibir até quatro |
-| 6 | Sacola, revisão, aprovação e envio | Nenhuma dessas capacidades está nesta branch | Aprovação vinculada a responsável/conta/versão/total/validade; mudança invalida; timeout desconhecido exige reconciliação |
+| 6 | Carrinho, revisão, aprovação e envio | Nenhuma dessas capacidades está nesta branch | Aprovação vinculada a responsável/conta/versão/total/validade; mudança invalida; timeout desconhecido exige reconciliação |
 
-A investigação dos contratos externos de sacola, envio e consulta deve começar durante as primeiras etapas, sem aguardar o fim da conversa. A implementação de checkout permanece bloqueada até suas proteções e contratos existirem.
+A investigação dos contratos externos de carrinho, envio e consulta deve começar durante as primeiras etapas, sem aguardar o fim da conversa. A implementação de checkout permanece bloqueada até suas proteções e contratos existirem.
 
 Para o grupo, não juntar todas as restrições em uma única lista aplicada a todos os itens. Construir matriz participante × configuração, atribuir quantidades/pessoas e avaliar a composição completa. Itens compartilhados precisam atender a todas as pessoas que os consumirão. Busca por perfis deve preservar a origem dos filtros que sustentam cada evidência; não reutilizar como prova para outra consulta.
 

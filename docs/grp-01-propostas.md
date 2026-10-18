@@ -23,7 +23,7 @@ MCP (`searchOffers`/`getItem`). A proposta escolhida vira uma **composição loc
 | --- | --- |
 | Matriz | Cada pessoa avaliada com as **próprias** restrições (`evaluateCandidate`); nunca a união do grupo |
 | Dado insuficiente | Restrição não informada, ambígua ou pergunta pendente ⇒ `NEEDS_VERIFICATION`; alergia sem evidência nunca é compatível |
-| Restrição mudou | A cobertura guarda a assinatura das restrições usadas; mudou (ou ficou desconhecida) ⇒ quem consome vira `NEEDS_VERIFICATION` (`RESTRICTIONS_CHANGED`) e o plano/sacola fica inválido |
+| Restrição mudou | A cobertura guarda a assinatura das restrições usadas; mudou (ou ficou desconhecida) ⇒ quem consome vira `NEEDS_VERIFICATION` (`RESTRICTIONS_CHANGED`) e o plano/carrinho fica inválido |
 | Planos | Uma loja por plano (D2); uma linha por pessoa atendida, quantidade 1 (porções não são inventadas) |
 | Cobertura | Toda pessoa aparece como `COVERED`, `BLOCKED` ou `NEEDS_VERIFICATION`, com motivo; ninguém é excluído em silêncio |
 | Custos | `allocateCosts` da DOM-01: frete uma vez, rateio exato em centavos |
@@ -51,11 +51,11 @@ MCP (`searchOffers`/`getItem`). A proposta escolhida vira uma **composição loc
 - **Revalidação no commit:** `SET_PROPOSALS` recusa proposta sem cobertura de todos, com consumidor cuja assinatura
   não bate com as restrições atuais (ou desconhecidas), ou com endereço diferente do declarado — não confia só no processador.
 - Qualquer outra alteração apaga as propostas (valem só para o estado em que foram geradas).
-- Mudar participantes, restrições, tetos, perguntas ou endereço ⇒ sacola `NEEDS_REVALIDATION` (bloqueia aprovação).
-- Remover alguém tira o consumo dele; linha sem consumidor some; sacola vazia é apagada.
-- Trocar de loja ou de conta apaga sacola e propostas.
+- Mudar participantes, restrições, tetos, perguntas ou endereço ⇒ carrinho `NEEDS_REVALIDATION` (bloqueia aprovação).
+- Remover alguém tira o consumo dele; linha sem consumidor some; carrinho vazio é apagado.
+- Trocar de loja ou de conta apaga carrinho e propostas.
 - `CLEAR_BAG` desfaz a loja quando ela foi fixada **só pela escolha** (`merchantSetBySelection`); loja declarada pelo usuário é preservada.
-- Loja fixada só pela escolha: escolher proposta de outra loja troca loja e sacola. `SET_MERCHANT` torna a loja explícita (desliga a marca).
+- Loja fixada só pela escolha: escolher proposta de outra loja troca loja e carrinho. `SET_MERCHANT` torna a loja explícita (desliga a marca).
 - O processador descarta propostas se o vínculo usado na busca não for o do turno, e não aplica "escolhe a N" na mesma
   mensagem em que pede novas sugestões (a posição se referiria à lista antiga).
 
@@ -70,12 +70,12 @@ que aprovação e pedido não existem nesta etapa. `humanApproval` é sempre `nu
 `renderSnapshot` respeita `SNAPSHOT_BUDGET_BYTES` (56 000 B, folga para o envelope dentro dos 64 KiB da RUN-01). Para grupos
 grandes degrada: textos de plano compactos, depois menos propostas exibidas, com aviso no topo das pendências (a escolha
 pela posição continua valendo). Nunca corta GROUP, bloqueios da revisão, cobertura por pessoa ou pendências. Testado com
-100 participantes, nomes acentuados, 4 propostas e sacola, sem muitas condições por pessoa.
+100 participantes, nomes acentuados, 4 propostas e carrinho, sem muitas condições por pessoa.
 
 **Limitação conhecida (acima do padrão de 20 participantes):** com `maxParticipants` perto de 100 e muitas condições
-por pessoa, o bloco GROUP sozinho (AI-02) pode passar do limite; com sacola escolhida, o REVIEW também não é cortado e
+por pessoa, o bloco GROUP sozinho (AI-02) pode passar do limite; com carrinho escolhido, o REVIEW também não é cortado e
 o turno pode falhar com `LIMIT_EXCEEDED`. Nesses grupos a degradação pode mostrar "0 de 4 propostas" e a escolha pela
-posição fica às cegas. Proteções: só dá para escolher proposta exibida no último snapshot, e se a revisão da sacola não couber no limite a
+posição fica às cegas. Proteções: só dá para escolher proposta exibida no último snapshot, e se a revisão do carrinho não couber no limite a
 escolha não é gravada (o usuário recebe o motivo). O limite efetivo da demo é 20 participantes (`DEFAULT_MAX_PARTICIPANTS`,
 sem configuração por ambiente). Pendente: compactar o GROUP (AI-02) para grupos muito grandes.
 
@@ -95,9 +95,9 @@ O contrato é distinto de `/purchase-approvals` e da futura SUBMIT_ORDER. A impl
 
 | Arquivo | Papel |
 | --- | --- |
-| `src/server/domain/group.ts` | Matriz, composição, custos, validação, `PlanRanker`, corte, explicação, avaliação de sacola |
+| `src/server/domain/group.ts` | Matriz, composição, custos, validação, `PlanRanker`, corte, explicação, avaliação de carrinho |
 | `src/server/services/group.ts` | `generateProposals` (leitura MCP) e `linkedProposalProvider` (pelo vínculo) |
-| `src/server/domain/purchase.ts` | Propostas, sacola, operações e invalidações |
+| `src/server/domain/purchase.ts` | Propostas, carrinho, operações e invalidações |
 | `src/server/agent/*` | Ações `SUGGEST_PROPOSALS`, `SELECT_PROPOSAL` (posição), `CLEAR_BAG`; blocos `PROPOSAL`/`REVIEW` |
 
 ## Limitações

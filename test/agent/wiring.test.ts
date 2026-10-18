@@ -140,7 +140,7 @@ describe('montagem do entrypoint AI-01 (rede sintética)', () => {
     } finally { runtime.stop(); dir.clean(); }
   });
 
-  it('Telegram → AI-02 → Gemini → GRP-01 → sacola simulada, MCP só leitura e sem aprovação', async () => {
+  it('Telegram → AI-02 → Gemini → GRP-01 → carrinho simulado, MCP só leitura e sem aprovação', async () => {
     const dir = temporary();
     const modelConfig = loadConfig(environment).conversationModel!;
     const env = setup({ conversationRuntime: { dbFile: dir.file, botId: principal.botId }, conversationModel: { ...modelConfig, maxRequests: 10 } });

@@ -45,7 +45,7 @@ export class CartWriteStore {
   account(p: AdapterPrincipal, linkId: string) { return contentHash([p.botId, p.organizerId, linkId]); }
   organizer(p: AdapterPrincipal) { return contentHash([p.botId, p.organizerId]); }
   assertUnchanged(p: AdapterPrincipal, hash: string) {
-    if (contentHash(this.purchase(p)) !== hash) throw new CartError('CART_REVIEW_CHANGED', 'O grupo ou a sacola mudou; revise novamente.');
+    if (contentHash(this.purchase(p)) !== hash) throw new CartError('CART_REVIEW_CHANGED', 'O grupo ou o carrinho simulado mudou; revise novamente.');
   }
   assertNotBlocked(p: AdapterPrincipal) {
     // Não libera por reinício, reconexão, mudança de requestId ou leitura que apenas se parece com o esperado.

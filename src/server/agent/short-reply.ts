@@ -99,7 +99,7 @@ export function shortReply(state: PurchaseState | null, snapshot: Snapshot, mess
   if (/^e um pedido em grupo[.!]?$/.test(text) && !(state && state.status === 'ACTIVE' && state.participants.length))
     return { proposal: { actions: [] }, policyMessage: message };
   // Comando humano exato: limpa só a composição local, nunca o carrinho remoto.
-  if (/^(?:esvaziar|esvazia|limpar|limpa) (?:a )?sacola(?: simulada)?[.!]?$/.test(text)) {
+  if (/^(?:esvaziar|esvazia|limpar|limpa) (?:(?:o )?carrinho(?: simulado)?|(?:a )?sacola(?: simulada)?)[.!]?$/.test(text)) {
     return { proposal: { actions: [{ action: 'CLEAR_BAG' }] }, policyMessage: message };
   }
   if (!/^(?:nao|nenhuma|nao tenho(?: (?:nenhuma )?(?:restricao|restricoes|alergia|alergias))?|sem restricoes)[.!]?$/.test(text)) return null;

@@ -8,7 +8,7 @@
 
 Atualização documental de 18/10/2026: PR #38 mergeado na main conferida `f3b8b55`; issue #21 continua aberta pelo alcance parcial e ensaios abaixo. A [DEC-01 vigente](decisoes-conversacionais.md) já permite PREPARE_CART confirmado. O código CART-01 auditado permanece local e separado desta revisão; a preparação real exige integração e INT-02 #40. Envio e pagamento continuam proibidos.
 
-Entrega parcial, integrada à GRP-01 e à AI-01 (Gemini, #36). O que não depende de CART-01 foi implementado e testado offline: logs estruturados, métricas agregadas, orçamento de execução/gasto do modelo, status operacional separado, liberação gradual por organizador, verificação de permissões de storage e regressões de rollback. A CART-01 (dependência da issue) não está concluída. Por isso, a instrumentação de sacola/envio se limita a reportar `DISABLED`. Nada neste código OPS-02 habilita escrita no MCP. A decisão aprovada de carrinho confirmado não instala o executor nem substitui seus gates.
+Entrega parcial, integrada à GRP-01 e à AI-01 (Gemini, #36). O que não depende de CART-01 foi implementado e testado offline: logs estruturados, métricas agregadas, orçamento de execução/gasto do modelo, status operacional separado, liberação gradual por organizador, verificação de permissões de storage e regressões de rollback. A CART-01 (dependência da issue) não está concluída. Por isso, a instrumentação de carrinho/envio se limita a reportar `DISABLED`. Nada neste código OPS-02 habilita escrita no MCP. A decisão aprovada de carrinho confirmado não instala o executor nem substitui seus gates.
 
 ## Logs (`src/server/ops/log.ts`)
 
@@ -74,13 +74,13 @@ Há dois conjuntos de limites, ambos em memória por processo e zerados ao reini
 | --- | --- | --- |
 | `CONVERSATION_RUNTIME_ENABLED` | Conversa v1 (RUN-01) | `false` |
 | `CONVERSATION_ORGANIZER_IDS` | Restringe a conversa a um subconjunto de `ALLOWED_ORGANIZER_IDS`; quem está fora recebe `UNAVAILABLE`. Nunca amplia a autorização. Qualquer entrada inválida impede a API de iniciar (falha fechada, para não virar "todos") | ausente/vazio = todos os autorizados |
-| `IFOOD_CART_ENABLED` | F7 legada (preparação de sacola). Manter `false` (DEC-01) | `false` |
+| `IFOOD_CART_ENABLED` | F7 legada (preparação de carrinho). Manter `false` (DEC-01) | `false` |
 | `IFOOD_CONFIRMED_CART_WRITES_ENABLED` | CART-01: exige banco, manifesto de evidência e revisão/clique específico; não libera pagamento/envio | `false` |
 | `IFOOD_SUBMIT_ENABLED` | **Não existe como habilitação.** Se definido, é ignorado e reportado | — |
 
 Rollout sugerido: (1) ligar a conversa com `CONVERSATION_ORGANIZER_IDS=<1 organizador de teste>`; (2) acompanhar `/api/ops/status` (fila, `resultUnknown`, `budget_exceeded`, erros MCP/modelo); (3) ampliar a lista; (4) esvaziar a lista só depois de QA-01.
 
-**Rollback** = desligar a flag ou tirar o organizador da lista. Nenhuma migração é revertida e nada é apagado. O schema SQLite é aditivo (v1 → v2 → v3 com CART-01 → v4 com a [conversa guiada](conversa-guiada.md)), e um binário antigo recusa versão mais nova sem substituí-la. Vínculos (`.ifood-links`), compras e `RESULT_UNKNOWN` continuam no disco e voltam a aparecer ao reativar (teste `rollback ... não apaga`). Usar binário compatível com o schema persistido; nunca rebaixar `user_version` ou aplicar backup antigo sobre operação desconhecida.
+**Rollback** = desligar a flag ou tirar o organizador da lista. Nenhuma migração é revertida e nada é apagado. O schema SQLite é aditivo (v1 → v2 → v3 com CART-01 → v5 com a [conversa guiada](conversa-guiada.md)), e um binário antigo recusa versão mais nova sem substituí-la. Vínculos (`.ifood-links`), compras e `RESULT_UNKNOWN` continuam no disco e voltam a aparecer ao reativar (teste `rollback ... não apaga`). Usar binário compatível com o schema persistido; nunca rebaixar `user_version` ou aplicar backup antigo sobre operação desconhecida.
 
 ## Retenção (D7)
 
@@ -108,7 +108,7 @@ Estes ensaios exigem plataforma ou conta real e não foram feitos neste incremen
 
 ## Lacunas
 
-- CART-01 nova ainda não está integrada nesta main (há implementação local auditada); BUY-01/02 continuam pendentes: não há métrica de sacola, intenção ou envio, e `purchase.capable` é constante.
+- CART-01 nova ainda não está integrada nesta main (há implementação local auditada); BUY-01/02 continuam pendentes: não há métrica de carrinho, intenção ou envio, e `purchase.capable` é constante.
 - Orçamento e métricas são em memória e por processo; reiniciar zera a janela. Aceitável enquanto houver uma única instância (RUN-01). Para várias instâncias, persistir no SQLite.
 - Não há exportador Prometheus/OTel; o JSON de `/api/ops/status` é a interface.
 - A retenção de 7 dias dos logs depende da configuração da plataforma.

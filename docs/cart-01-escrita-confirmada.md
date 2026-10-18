@@ -1,4 +1,4 @@
-# CART-01 — Escrita de carrinho confirmada pelo organizador
+# CART-01 — Escrita de carrinho confirmado pelo organizador
 
 **Continuação:** [apresentação completa e auditoria](cart-01-conclusao-offline.md) acrescentam conta mascarada, loja/endereço e nomes de opções/remoções, vinculados por hash, além da composição/custos observados na consulta final. A publicação em draft não fornece evidência real do iFood nem ativa escrita.
 
@@ -8,13 +8,13 @@ Revisão de escopo autorizada pelo usuário em 18/10/2026. Substitui a proibiç�
 
 ## Fluxo implementado
 
-DATA-01/GRP-01 continuam sendo a fonte única de participantes, restrições, limites, propostas e sacola escolhida. CART-01 não mantém outra sacola nem outro rateio. Guarda somente plano técnico, confirmação, intenção e projeção sanitizada do carrinho remoto, no mesmo SQLite da RUN-01/DATA-01. DOM-01 calcula dinheiro e rateio.
+DATA-01/GRP-01 continuam sendo a fonte única de participantes, restrições, limites, propostas e carrinho escolhido. CART-01 não mantém outra carrinho nem outro rateio. Guarda somente plano técnico, confirmação, intenção e projeção sanitizada do carrinho remoto, no mesmo SQLite da RUN-01/DATA-01. DOM-01 calcula dinheiro e rateio.
 
 Migração aditiva **v2 → v3**, em transação. O número da versão impede que um binário anterior ignore bloqueios CART-01. Rollback funcional desliga o opt-in; não rebaixa o banco nem apaga PENDING/RESULT_UNKNOWN. O ciclo da RUN-01 recupera intenções vencidas mesmo sem montar o serviço de carrinho: sem possível efeito vira FAILED; com efeito possível vira RESULT_UNKNOWN e continua bloqueado.
 
 1. Organizador escolhe proposta atual na GRP-01. A integração do callback no Telegram pertence à BOT-03.
 2. Adaptador autenticado solicita revisão, sem enviar preço, produto, restrição, participante ou consentimento no corpo.
-3. Servidor valida compra ativa, sacola CURRENT, cobertura completa, limites declarados, vínculo operacional e permissões de descoberta/leitura/escrita. Resolve endereço em `listAddresses`, relê disponibilidade e `getItem`, confere loja, produtos, opções, quantidade e elegibilidade por consumidor. Alergia sem evidência permanece bloqueada.
+3. Servidor valida compra ativa, carrinho CURRENT, cobertura completa, limites declarados, vínculo operacional e permissões de descoberta/leitura/escrita. Resolve endereço em `listAddresses`, relê disponibilidade e `getItem`, confere loja, produtos, opções, quantidade e elegibilidade por consumidor. Alergia sem evidência permanece bloqueada.
 4. Se já houver cartId, relê `getCart` e calcula as mutações necessárias para a composição desejada. Não deduz `cartItemId` de `itemId`. Alterações de pagamento, entrega ou cupom não fazem parte deste incremento.
 5. Revisa o contrato: schemas anunciados devem coincidir com o manifesto de evidência; respostas autenticadas observadas devem passar nos parsers instalados. `tools/list`, escopos e um arquivo com nomes não comprovam saída nem efeito.
 6. Emite referência opaca de uso único, finalidade PREPARE_CART, hash, versão e expiração em cinco minutos. Exibe composição e soma dos preços observados. Custos desconhecidos não viram zero nem total confirmado.
@@ -28,7 +28,7 @@ Prefixo `B = /api/bot/v1/conversations/:conversationId/cart-writes`.
 
 | Método/rota | Contrato |
 | --- | --- |
-| `POST B/reviews` | JSON `{}`; compra/sacola vêm da DATA-01. Resposta contém `confirmationRef`, finalidade, versão, hash, expiração, composição, operações e incerteza do total |
+| `POST B/reviews` | JSON `{}`; compra/carrinho vêm da DATA-01. Resposta contém `confirmationRef`, finalidade, versão, hash, expiração, composição, operações e incerteza do total |
 | `POST B/confirm` | `{purpose:"PREPARE_CART",source:"TELEGRAM_CALLBACK",confirmationRef,requestId,callbackId}`; schema estrito; referência/ID preservados no replay |
 | `GET B/current` | Consulta o carrinho conhecido, custos e bloqueios. Não limpa resultado desconhecido |
 | `GET B/operations/:operationId` | Recupera estado da mesma intenção, sem escrever novamente |
