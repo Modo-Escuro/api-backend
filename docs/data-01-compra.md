@@ -25,6 +25,7 @@ dados a partir de `PurchaseState` (`participants[].limit`, `groupLimit`) e não 
   (`TELEGRAM/bot/organizador/conversa`) isola cada organizador; leituras e escritas filtram por ele.
 - **Participantes simulados** (D1): sem conta; nome e dados declarados pelo organizador. Máximo configurável
   (`TurnLimits.maxParticipants`, padrão 20; o contrato API-01 aceita até 100).
+- **Textos** (nomes, perguntas) recusam caracteres de controle, formatação invisível (zero-width, bidi) e surrogate isolado.
 - **Estados distintos** para cada campo declarável: `NOT_ASKED`, `UNCLEAR` (pergunta pendente), `NONE`
   ("nenhuma"/"sem teto" explícito) e `DECLARED`.
 - **Restrições** reutilizam `RestrictionKey` (`domain/constraints.ts`). Alergia é sempre `MANDATORY`.
@@ -45,7 +46,7 @@ operação, nada gravado).
 | --- | --- |
 | `ADD_PARTICIPANT { displayName }` | ID gerado pelo servidor; respeita o máximo |
 | `RENAME_PARTICIPANT { participantId, displayName }` | ID precisa existir na compra deste escopo |
-| `REMOVE_PARTICIPANT { participantId, humanConfirmed? }` | Exige `humanConfirmed: true` se o participante tiver restrição obrigatória (remover e recriar não apaga alergia); remove também os esclarecimentos sobre ele |
+| `REMOVE_PARTICIPANT { participantId, humanConfirmed? }` | Exige `humanConfirmed: true` se o participante tiver restrição obrigatória, pergunta de restrição pendente ou teto MANDATORY (remover e recriar não apaga nada disso); remove também os esclarecimentos sobre ele |
 | `SET_RESTRICTIONS { participantId, value: RestrictionKey[] \| 'NONE', humanConfirmed? }` | Mantém o ID das restrições que continuam; tirar ou rebaixar rígida exige `humanConfirmed: true` |
 | `ADD_RESTRICTION { participantId, key }` | Preferência pode virar rígida; rígida não vira preferência |
 | `REMOVE_RESTRICTION { participantId, restrictionId, humanConfirmed: true }` | Confirmação humana sempre |
