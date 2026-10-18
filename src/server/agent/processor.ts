@@ -8,6 +8,7 @@
 //    versão ficam intactos e o bot pode reenviar (próximo passo recuperável). Nada de sucesso fictício.
 //  - Nenhuma ferramenta MCP, carrinho, aprovação ou escrita externa é exposta ao modelo (D8).
 //  - Logs: só códigos; nunca mensagem, nomes, restrições ou saída do modelo.
+import { createHash } from 'node:crypto';
 import { ContractError } from '../contracts/guards.js';
 import { evaluatePlan, planCoverage, type GroupResult } from '../domain/group.js';
 import { DomainError, type PurchaseState } from '../domain/purchase.js';
@@ -47,9 +48,13 @@ function fail(code: string): never {
  */
 class StaleLinkError extends Error {}
 
+/** Chave local de limite por conversa: hash opaco (nunca IDs Telegram em claro, mesmo que um adaptador a serialize). */
+const scopeHash = (p: TurnContext['principal']) =>
+  createHash('sha256').update(JSON.stringify(['AI-01-scope', p.botId, p.organizerId, p.conversationId])).digest('base64url').slice(0, 24);
+
 /** Mensagem específica por causa (sem dados pessoais); nada de "deu erro" genérico quando a causa é conhecida. */
 function proposalFailureText(e: unknown): string {
-  if (e instanceof StaleLinkError) return 'A conta iFood mudou durante a busca; peça as sugestões de novo.';
+  if (e instanceof StaleLinkError) return 'A conexão com a conta iFood mudou durante a busca; peça as sugestões de novo.';
   if (e instanceof DomainError) return 'A compra mudou enquanto eu buscava; peça as sugestões de novo.';
   const code = typeof e === 'object' && e !== null && 'code' in e ? String((e as { code: unknown }).code) : '';
   if (code === 'ADDRESS_AMBIGUOUS') return 'Há mais de um endereço salvo no iFood e nenhum foi escolhido para esta compra; não busquei para não usar o endereço errado.';
@@ -92,7 +97,8 @@ export function createAgentProcessor(opts: AgentOptions): TurnProcessor {
     const input = buildModelInput(ctx.purchase, ctx.snapshot.phase, ctx.event.input.text);
     let raw: unknown;
     try {
-      raw = await withDeadline(signal, ctx.signal, (s) => opts.model.propose({ input, signal: s, maxOutputTokens }));
+      raw = await withDeadline(signal, ctx.signal, (s) => opts.model.propose({ input, signal: s, maxOutputTokens,
+        budgetScope: scopeHash(ctx.principal) }));
     } catch (e) {
       fail(reason(e, 'MODEL'));
     }

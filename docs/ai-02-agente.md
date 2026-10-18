@@ -74,10 +74,11 @@ Logs do agente: só códigos (`MODEL_TIMEOUT`, `MODEL_OUTPUT_INVALID`, ...), nun
 
 ## Integração e dependências
 
-- **Produção hoje:** `index.ts` cria o runtime sem processador; com `CONVERSATION_RUNTIME_ENABLED=true`, eventos novos recebem 503 `UNAVAILABLE` e nada é gravado (teste em `test/agent/processor.test.ts`). O modelo determinístico não é importado fora de testes.
-- **AI-01 (#15):** escolhe e implementa o provedor real de `ConversationModel` e as metas da D10. Até lá, o runtime
-  de produção continua sem processador (eventos novos → 503), e o modelo determinístico só roda em testes.
-  Instalação: `new TurnRuntime(store, { processor: createAgentProcessor({ model, linkOf: async (org) => (await links.status(org)).linkId }) })`.
+- **Montagem implementada (AI-01, consolidação #35 + #36):** `index.ts` compartilha o serviço de vínculos com
+  `createConversationRuntime`. Sem `CONVERSATION_MODEL_ENABLED=true`, permanece sem processador (eventos novos → 503).
+  Com opt-in e configuração válida, instala o Gemini 3.8 Flash, este agente e as sugestões da GRP-01. A chave sozinha
+  não ativa IA. Ver [montagem](ai-01-montagem-ensaio.md) e [resultado da seleção](ai-01-result.md). Deploy e D10 não
+  comprovados. Modelo determinístico só em testes e avaliação offline.
 - **BUY-01 (#19):** confirmação humana por botão (para remoções/encerramento) e revisão/aprovação fictícia.
 - **GRP-01 (#17):** propostas, consumo por participante e rateio (DOM-01) — fora deste agente.
 - **DOM-01:** ao integrar rateio, teto `UNCLEAR` deve bloquear (ver auditoria DATA-01 × DOM-01).

@@ -1,4 +1,19 @@
 // Configuração lida exclusivamente do ambiente. Nunca logar segredos.
+import { GEMINI_BOUNDS, GEMINI_MODEL } from './agent/gemini-model.js';
+
+/** Configuração do modelo conversacional (AI-01). A chave só existe aqui; nunca é logada nem enviada ao modelo. */
+export interface ConversationModelConfig {
+  provider: 'google';
+  model: typeof GEMINI_MODEL;
+  apiKey: string;
+  timeoutMs: number;
+  maxOutputTokens: number;
+  /** Chamadas por processo (obrigatório ao habilitar). */
+  maxRequests: number;
+  maxRequestsPerConversation: number;
+  /** Reserva local de gasto em micro-USD (não substitui o limite de cobrança do provedor). */
+  budgetMicroUsd: number;
+}
 
 export interface AppConfig {
   mcpUrl: string;
@@ -27,8 +42,10 @@ export interface AppConfig {
   devGlobalSession: boolean;
   /** F7 legada: manter false na demo DEC-01; saída validada não autoriza mudar o escopo. Nunca habilita checkout. */
   cartEnabled: boolean;
-  /** Opt-in da infraestrutura RUN-01; não instala processador de IA/domínio. */
+  /** Opt-in da infraestrutura RUN-01; o modelo tem opt-in separado. */
   conversationRuntime?: { dbFile: string; botId: string };
+  /** AI-01: opt-in separado (CONVERSATION_MODEL_ENABLED), provedor Gemini, limites explícitos. */
+  conversationModel?: ConversationModelConfig;
 }
 
 /**
@@ -102,6 +119,40 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     if (storage.durability === 'EPHEMERAL') throw new Error('RUN-01 exige banco em armazenamento persistente.');
     conversationRuntime = { dbFile, botId };
   }
+  let conversationModel: ConversationModelConfig | undefined;
+  if (env.CONVERSATION_MODEL_ENABLED && !['true', 'false'].includes(env.CONVERSATION_MODEL_ENABLED)) {
+    throw new Error('CONVERSATION_MODEL_ENABLED deve ser true ou false.');
+  }
+  // Formato antigo do #35 (CONVERSATION_MODEL=gemini-... sem ENABLED): falhar com motivo claro em vez de subir
+  // silenciosamente sem processador. ENABLED=false explícito continua desligando sem erro.
+  if (env.CONVERSATION_MODEL_ENABLED === undefined && env.CONVERSATION_MODEL && env.CONVERSATION_MODEL !== 'off') {
+    throw new Error('AI-01: CONVERSATION_MODEL definido sem CONVERSATION_MODEL_ENABLED. Use CONVERSATION_MODEL_ENABLED=true (ver docs/ai-01-montagem-ensaio.md) ou remova CONVERSATION_MODEL.');
+  }
+  if (env.CONVERSATION_MODEL_ENABLED === 'true') {
+    const apiKey = env.GEMINI_API_KEY ?? '';
+    const organizers = (env.ALLOWED_ORGANIZER_IDS ?? '').split(',').map((s) => s.trim());
+    if (!conversationRuntime || !env.BOT_API_TOKEN || env.BOT_API_TOKEN.length < 32 || !organizers.length || organizers.some((s) => !/^[1-9][0-9]{0,19}$/.test(s))) {
+      throw new Error('AI-01 exige runtime e adaptador autenticado configurados.');
+    }
+    if (env.CONVERSATION_MODEL_PROVIDER !== 'google' || env.CONVERSATION_MODEL !== GEMINI_MODEL || !apiKey.trim() || /\s/.test(apiKey)) {
+      throw new Error(`AI-01 exige CONVERSATION_MODEL_PROVIDER=google, CONVERSATION_MODEL=${GEMINI_MODEL} e GEMINI_API_KEY válida.`);
+    }
+    if (env.IFOOD_CART_ENABLED === 'true' || env.DEV_GLOBAL_SESSION === 'true') throw new Error('AI-01 exige DEC-01: F7 e sessão global desligadas.');
+    const integer = (key: string, fallback: string, b: { min: number; max: number }) => {
+      const raw = env[key] ?? fallback;
+      const value = Number(raw);
+      if (!/^[0-9]+$/.test(raw) || !Number.isSafeInteger(value) || value < b.min || value > b.max) throw new Error(`AI-01: ${key} inválido.`);
+      return value;
+    };
+    const B = GEMINI_BOUNDS;
+    conversationModel = { provider: 'google', model: GEMINI_MODEL, apiKey,
+      timeoutMs: integer('CONVERSATION_MODEL_TIMEOUT_MS', String(B.timeoutMs.default), B.timeoutMs),
+      maxOutputTokens: integer('CONVERSATION_MODEL_MAX_OUTPUT_TOKENS', String(B.maxOutputTokens.default), B.maxOutputTokens),
+      maxRequests: integer('CONVERSATION_MODEL_MAX_REQUESTS', '', B.maxRequests),
+      maxRequestsPerConversation: integer('CONVERSATION_MODEL_MAX_REQUESTS_PER_CONVERSATION', String(B.maxRequestsPerConversation.default), B.maxRequestsPerConversation),
+      budgetMicroUsd: integer('CONVERSATION_MODEL_BUDGET_MICRO_USD', String(B.budgetMicroUsd.default), B.budgetMicroUsd),
+    };
+  }
   const links = resolveLinksStorage(env);
   return {
     mcpUrl: env.IFOOD_MCP_URL || 'https://consumer-mcp.ifood.com.br/marketplace',
@@ -126,6 +177,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     devGlobalSession: env.DEV_GLOBAL_SESSION === 'true',
     cartEnabled: env.IFOOD_CART_ENABLED === 'true',
     conversationRuntime,
+    conversationModel,
   };
 }
 

@@ -1,0 +1,64 @@
+{
+  "protocol": "CLAUDE_DEMO_1",
+  "mode": "LIVE",
+  "model": "claude-sonnet-5-5",
+  "startedAt": "2026-10-18T07:53:48.191Z",
+  "limits": {
+    "timeoutMs": 8000,
+    "maxOutputTokens": 800,
+    "maxRequestBytes": 24000,
+    "maxCalls": 20,
+    "maxCallsPerScope": 12,
+    "budgetMicroUsd": 500000,
+    "inputMicroUsdPerToken": 2,
+    "outputMicroUsdPerToken": 10
+  },
+  "planned": 16,
+  "corpusSha256": "553f4036f1cf8986acc3e6baaa4ae72ceeae95851ef583cc7aaa6a9f35e07c2e",
+  "promptSha256": "f7a4ccd4d8f3706d76b451b9a2e2fc771c63e3429f526d50aa0a2bbfb3e04acf",
+  "wireSchemaSha256": "5788d360876e7429f81296a652f6cc7375058630c380e04b15092ce7c750224c",
+  "packageLockSha256": "cfac9b083f8e74ac3e1002966c267efaacd36d381272d166269c6eecdab2cd7f",
+  "sdkVersion": "4.0.82",
+  "syntheticOnly": true,
+  "businessToolsCalled": false,
+  "runtimeEnabled": false,
+  "extraBillingAuthorized": false,
+  "billingObserved": false,
+  "gate": {
+    "criticalPassRate": 1,
+    "taskPassRate": 0.9,
+    "schemaRate": 1,
+    "p95ModelMs": 8000,
+    "textReviewRequired": true
+  },
+  "scope": "AI02_ACTION_CONTRACT_MODEL_ONLY_NOT_TELEGRAM_MCP_E2E",
+  "finishedAt": "2026-10-18T07:53:48.589Z",
+  "complete": false,
+  "stopReason": "CONFIGURATION",
+  "metrics": {
+    "completed": 1,
+    "criticalCompleted": 0,
+    "taskPassed": 0,
+    "criticalPassed": 0,
+    "schemaValid": 0,
+    "p95Ms": 368.1025000000001,
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "chargedMicroUsd": null
+  },
+  "quantitativeGate": false,
+  "selected": null,
+  "selectionReason": "TEXT_REVIEW_REQUIRED_OR_GATE_FAILED",
+  "rows": [
+    {
+      "id": "collect-group",
+      "critical": false,
+      "taskPassed": false,
+      "schemaValid": false,
+      "latencyMs": 368.1025000000001,
+      "proposal": null,
+      "error": "CONFIGURATION",
+      "usage": null
+    }
+  ]
+}
