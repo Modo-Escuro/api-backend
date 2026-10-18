@@ -98,7 +98,7 @@ export function registerBrowserRoutes(app: Hono, links: IfoodLinkService, opts: 
 }
 
 function identityHtml(i: AccountIdentity): string {
-  if (i.status !== 'VERIFIED') return '<p class="acc">Não foi possível exibir a identidade da conta; confira no Telegram antes de confirmar.</p>';
+  if (i.status !== 'VERIFIED') return '<p class="acc">A identidade da conta não está disponível para exibição.</p>';
   const parts = [i.displayName, i.emailMasked].filter(Boolean).map((x) => esc(x!));
   return `<p class="acc">Conta iFood autorizada: <strong>${parts.join(' · ')}</strong></p>`;
 }
@@ -116,14 +116,14 @@ export async function handleLinkCallback(
   const attemptId = links.attemptIdForState(state);
   const browserSecret = attemptId ? (getCookie(c, cookieName(attemptId)) ?? null) : null;
   try {
-    const r = await links.handleCallback({ state, code, error, browserSecret });
+    const r = await links.completeBrowserAuthorization({ state, code, error, browserSecret });
     return browserPage(
       c,
       200,
-      'Autorização recebida',
+      'Conta conectada',
       identityHtml(r.identity) +
-        `<p>Volte à conversa com o bot no Telegram e toque em <strong>Confirmar conexão</strong> se esta for a conta certa ` +
-        `(até ${esc(new Date(r.expiresAt).toLocaleTimeString('pt-BR'))}). Se você não iniciou esta conexão, apenas feche esta página.</p>` +
+        `<p>Pode voltar ao Telegram! O bot acompanha sua conexão; não é necessário confirmar novamente.</p>` +
+        (r.status.operational ? '' : '<p>A conexão foi salva, mas o acesso ao iFood ainda precisa ser verificado. Use o botão Verificar conexão no Telegram.</p>') +
         `<p>Este login não aprova nenhuma compra.</p>`,
     );
   } catch (e) {
