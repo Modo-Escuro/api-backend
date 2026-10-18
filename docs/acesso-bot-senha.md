@@ -2,7 +2,7 @@
 
 Em 18/10/2026 o usuário solicitou acesso compartilhado à demo com senha, ampliando o recorte anterior de um
 organizador. A senha fica no ambiente secreto do bot, não nesta API. Cada pessoa tem seu próprio organizador,
-vínculo, conversa, restrições e orçamento. DEC-01 permanece: sacola simulada, MCP somente leitura, sem envio real.
+vínculo, conversa, restrições e orçamento. A DEC-01 permite preparar carrinho real após confirmação humana específica; acesso por senha não é confirmação. Envio e pagamento continuam proibidos. CART-01 nova ainda não está integrada e depende da INT-02 para ativação.
 
 O consumo do iFood continua exigindo uma conta de teste autorizada do evento, OAuth e confirmação humana do
 vínculo por `/conectar`. A senha compartilhada da demo não substitui nenhuma dessas credenciais. O acesso ao

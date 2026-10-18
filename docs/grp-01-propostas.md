@@ -1,10 +1,9 @@
-# GRP-01 — Propostas coletivas e sacola simulada
+# GRP-01 — Propostas coletivas e composição para carrinho real
 
 Issue: [#17 GRP-01](https://github.com/Modo-Escuro/api-backend/issues/17) · Base: [DATA-01](data-01-compra.md), [DOM-01](dom-01-centavos-limites.md), [ranking](ranking.md), [AI-02](ai-02-agente.md), [DEC-01](decisoes-conversacionais.md)
 
 Gera até 4 propostas de compra para o grupo, com cobertura **por pessoa** e custo agregado, a partir de leituras
-MCP (`searchOffers`/`getItem`). A proposta escolhida vira uma **sacola simulada** gravada na compra. Nada é
-carrinho real: sem `createCart`, `addItemToCart`, `submitOrder` ou pagamento (D8).
+MCP (`searchOffers`/`getItem`). A proposta escolhida vira uma **composição local versionada** gravada na compra, fonte única para preparar o carrinho real pela CART-01. A GRP-01 ainda não sincroniza essa composição com o iFood: não chama `createCart`/`addItemToCart`. Essa é uma lacuna de integração, não o escopo final. A escrita exige confirmação PREPARE_CART e INT-02; envio e pagamento seguem proibidos.
 
 ## Fluxo
 
@@ -13,7 +12,7 @@ carrinho real: sem `createCart`, `addItemToCart`, `submitOrder` ou pagamento (D8
   → runEvaluation (busca SEM filtro pela união das restrições; getItem dos candidatos)
   → composeProposals: matriz pessoa × item → planos por loja → custos (DOM-01) → validação → ranking → corte em 4
   → SET_PROPOSALS (DATA-01) → blocos PROPOSAL + texto
-"Quero a proposta 2" → SELECT_PROPOSAL (posição, nunca ID) → sacola simulada → bloco REVIEW com bloqueios
+"Quero a proposta 2" → SELECT_PROPOSAL (posição, nunca ID) → composição local versionada → bloco REVIEW com bloqueios
 ```
 
 ## Regras
@@ -41,7 +40,7 @@ carrinho real: sem `createCart`, `addItemToCart`, `submitOrder` ou pagamento (D8
 | Corte | Até 4 **depois** de compor; quem só é atendido por um plano mais abaixo é resgatado; se impossível, aparece em `lostByCut` e na explicação ("há opção válida fora das 4") |
 | Explicação | Aviso de busca limitada **sempre primeiro**; pessoas sem atendimento agrupadas por motivo (até 10 nomes por linha); cita filtro de loja quando houver; nunca afirma impossibilidade global |
 
-## Sacola simulada (DATA-01)
+## Composição local versionada (DATA-01)
 
 - Campos opcionais em `PurchaseState`: `proposals` (até 4) e `bag` (proposta escolhida + `status` + origem).
   Cada proposta guarda a cobertura por pessoa com motivo.
@@ -78,24 +77,17 @@ posição fica às cegas. Proteções: só dá para escolher proposta exibida no
 escolha não é gravada (o usuário recebe o motivo). O limite efetivo da demo é 20 participantes (`DEFAULT_MAX_PARTICIPANTS`,
 sem configuração por ambiente). Pendente: compactar o GROUP (AI-02) para grupos muito grandes.
 
-## Contrato proposto para aprovação simulada (BUY-01 / API-01) — não implementado
+## Contrato de preparação real (CART-01 / BOT-03)
 
-Hoje toda sacola tem `TOTAL_UNKNOWN` (a taxa de serviço só aparece no carrinho), então a aprovação é impossível. Proposta
-segura, sem transformar desconhecido em aprovado e sem presumir taxa zero:
+A GRP-01 fornece a composição local; a CART-01 deve sincronizá-la com o carrinho real somente após confirmação humana PREPARE_CART. Não há aprovação alternativa ou sucesso de preparação baseado apenas na composição local.
 
-1. **Aprovação da composição (D8).** Hash cobre itens, opções, consumidores, assinaturas de restrições, loja e endereço; o
-   dinheiro entra como `{ kind: UNKNOWN, observedSumCents, componentes conhecidos, serviceFee: UNKNOWN }`. Texto
-   obrigatório: "total não verificado; taxa de serviço só no carrinho; PEDIDO NÃO ENVIADO". `TOTAL_UNKNOWN` vira aviso
-   desta aprovação e continua bloqueando qualquer envio real. Os demais bloqueios (`RESTRICTIONS_UNVERIFIED`,
-   `BAG_NEEDS_REVALIDATION`, `LIMIT_UNVERIFIABLE`…) continuam bloqueando.
-2. **Teto de autorização explícito.** O organizador aprova "até R$ X" no total, com soma observada ≤ X ≤ teto do
-   grupo (se houver), e a parcela de cada pessoa limitada ao teto dela. X entra no hash. O orçamento continua
-   `UNVERIFIED`; um carrinho real futuro acima de X, alguma parcela acima do teto individual, ou sem taxa de serviço
-   explícita, invalida a aprovação.
-3. **Hash completo.** Além da composição, inclui tetos e tetos a confirmar, `linkId`, `addressId` e incertezas
-   (`uncertainties`) — qualquer mudança invalida a aprovação.
+1. A revisão explicita itens, opções, quantidades, consumidores, restrições, tetos, valores conhecidos e custos ainda desconhecidos. Taxa UNKNOWN nunca vale zero, não valida orçamento completo e continua impedindo aprovação de pedido.
+2. A confirmação de uso único e com expiração vincula organizador/conversa, conta/link, compra, versão/hash, loja/endereço, composição e incertezas. Não entra no modelo nem é inferida de login ou texto livre.
+3. Antes da escrita, revalidar endereço, produtos/getItem, opções, quantidades, elegibilidade por consumidor e limites verificáveis. Dado alimentar obrigatório insuficiente bloqueia o item para a pessoa; custo já conhecido acima de teto rígido não é ignorado.
+4. Consumir confirmação e persistir intenção atomicamente antes da rede. Timeout ou resultado desconhecido bloqueia repetição até reconciliação confiável; mudança relevante exige nova revisão/confirmação.
+5. Consultar e reconciliar o carrinho real antes de apresentar “CARRINHO PREPARADO — PEDIDO NÃO ENVIADO”. INT-02 #40 precisa validar outputs reais por operação antes da ativação.
 
-Exige ação de revisão simulada separada de `/purchase-approvals` no contrato API-01 (risco R5 da DEC-01).
+O contrato é distinto de `/purchase-approvals` e da futura SUBMIT_ORDER. A implementação CART-01 auditada permanece local, sem integração nesta main. Envio, pagamento e produção continuam proibidos.
 
 ## Arquivos
 
@@ -108,11 +100,11 @@ Exige ação de revisão simulada separada de `/purchase-approvals` no contrato 
 
 ## Limitações
 
-- Taxa de serviço desconhecida ⇒ nenhum teto pode ser comprovado como atendido; aprovação sempre bloqueada nesta etapa.
+- Taxa de serviço desconhecida ⇒ nenhum teto pode ser comprovado como atendido; validação do orçamento e aprovação de pedido bloqueadas. A confirmação PREPARE_CART segue as regras específicas da DEC-01, sem declarar total conhecido.
 - Busca k-best limitada (8 opções por pessoa, 60 combinações por loja, 240 no total); planos válidos fora dela não são vistos (dito na explicação).
 - Teto coletivo: guloso com busca limitada por menos retiradas; não garante o subconjunto ótimo.
 - Propostas não têm prazo de validade: preço e loja aberta podem mudar até a escolha (qualquer alteração da compra já as apaga).
 - Itens compartilhados só existem se escolhidos explicitamente (o gerador não supõe que uma unidade serve várias pessoas).
 - Alergias quase sempre ficam em verificação: o MCP não traz alérgenos (D6).
 - Ranking de planos provisório até a RANK-03 expor um ranqueador de planos.
-- Aprovação fictícia por botão depende de BUY-01 e de eventos `CALLBACK` na RUN-01.
+- Confirmação PREPARE_CART por botão depende de BOT-03 e contrato CART-01 integrado; aprovação futura de pedido pertence à BUY-01 e nunca reutiliza essa confirmação.

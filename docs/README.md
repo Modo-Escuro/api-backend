@@ -17,7 +17,7 @@ com vínculos isolados e sem ampliar a fronteira de compra da DEC-01.
 8. [DOM-01 — Centavos, limites e rateio](dom-01-centavos-limites.md): fronteira BRL do MCP, cálculo inteiro, limites locais e distinção entre subtotal e total desconhecido.
 9. [Compra e participantes (DATA-01)](data-01-compra.md): modelo, operações, proveniência, exclusão D7 e guia para o processador.
 10. [Agente conversacional (AI-02)](ai-02-agente.md): vocabulário fechado de ações, política do servidor, falhas e integração com AI-01.
-11. [Propostas coletivas e sacola simulada (GRP-01)](grp-01-propostas.md): matriz por pessoa, custos DOM-01, tetos, corte em 4 e sacola simulada.
+11. [Propostas e composição para carrinho real (GRP-01)](grp-01-propostas.md): matriz por pessoa, custos DOM-01, tetos, corte em 4 e composição local a sincronizar pela CART-01.
 12. [Montagem AI-01 e ensaio BOT-02](ai-01-montagem-ensaio.md): Gemini 3.8 Flash (seleção do #35), configuração explícita, limites, avaliações e pendências operacionais.
 
 13. [Operação (OPS-02)](ops-02-operacao.md): logs sanitizados, métricas, orçamento do modelo, status operacional, rollout/rollback e ensaios pendentes.

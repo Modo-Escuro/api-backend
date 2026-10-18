@@ -81,23 +81,19 @@ A correção valida a confirmação antes de DONE no serviço e no gateway, exig
 | Mutação com confirmação reconhecida, getCart seguinte falha | F7 guarda DONE antes da leitura e replay só consulta | Preservar a intenção e recuperar leitura; não repetir escrita; aceitação do formato depende de validação real |
 | Mutação sem confirmação | Nem snapshot posterior nem retryable provam que não haverá efeito tardio | Manter RESULT_UNKNOWN, bloquear novas escritas e reconciliar por mecanismo verificado |
 | Submissão sem orderId/resposta | getOrder/trackOrder precisam de ID já conhecido; captura não expõe busca por requestId/intenção | BUY-02 permanece bloqueada sem correlação/idempotência/consulta confiáveis ou procedimento humano rastreável definido com provedor |
-| Submissão com orderId e status verificáveis | Ainda faltam output/status reais; pedido real está fora da demo adotada | Só afirmar estágio comprovado por fonte confiável; não tratar pedido criado como pagamento |
+| Submissão com orderId e status verificáveis | Ainda faltam output/status reais; envio e pagamento estão proibidos neste incremento | Só afirmar estágio comprovado por fonte confiável; não tratar pedido criado como pagamento |
 
 O universo investigado foi a captura preexistente de 23 tools, a nova projeção autenticada de 15 ferramentas, o documento local e o código/testes F7. **Não encontrar mecanismo nesse universo não prova ausência na plataforma.** Perguntar ao provedor sobre chave de idempotência, retenção, conteúdo conflitante, status por chave de requisição, consulta de criação/submissão sem ID, garantias de consistência/efeito tardio e procedimento de reconciliação.
 
 A busca pública complementar em 18/10/2026 por createCart/idempotência no domínio MCP e por MCP marketplace/reconciliação no domínio developer não encontrou documentação pública específica que resolvesse essas lacunas. O portal MCP não pôde ser aberto pela ferramenta web. Os resultados da [documentação para restaurantes](https://developer.ifood.com.br/pt-BR/docs/categories) referem-se à Merchant API e foram excluídos como evidência do contrato consumer MCP. Essa busca limitada não demonstra inexistência do recurso no provedor.
 
-## Histórico — fechamento simulado anterior (substituído)
+## Fechamento e preparação vigentes
 
-Este trecho preserva a decisão anterior, substituída pela [DEC-01 vigente](decisoes-conversacionais.md): carrinho real confirmado está autorizado no escopo, mas ainda não integrado/validado. Não usar os critérios históricos abaixo como aceite atual da CART-01 ou do briefing.
+O carrinho real é o único escopo de preparação. A [DEC-01 vigente](decisoes-conversacionais.md) exige confirmação humana PREPARE_CART vinculada à conta, composição, versão/hash e validade; não é aprovação de pedido. A composição local da GRP-01 é fonte de dados, não prova de carrinho remoto preparado.
 
-Na decisão anterior, a DEC-01 D8/DA10 escolheu sacola **100% simulada**. O gatilho a implementar e verificar em BUY-01/RUN-01/QA-01 é o clique humano do organizador autenticado, preso ao `purchaseId`, versão e `contentHash` atuais, com restrições e limites verificados. Alteração invalida a aprovação; replay do mesmo clique devolve a mesma aprovação; custos ou restrições obrigatórias desconhecidos bloqueiam.
+A CART-01 precisa integrar intenção durável, reconciliação e consulta confiável; a INT-02 #40 precisa validar respostas reais por operação antes da ativação. Sem ambiente/evidência disponível, a pendência externa continua aberta. Envio e pagamento permanecem proibidos. `/purchase-approvals` não substitui a confirmação de preparação.
 
-A evidência de fechamento é o registro único da aprovação fictícia e a apresentação **“SACOLA SIMULADA APROVADA — PEDIDO NÃO ENVIADO”**. Nenhum cartId/orderId remoto é exigido para essa sacola. Isso é requisito adotado, não funcionalidade implementada por esta auditoria.
-
-A aprovação fictícia não pode usar `/purchase-approvals`, cujo contrato exige total remoto confirmado; a simulação exige contrato explícito próprio conforme D8.
-
-CART-01 e BUY-02 reais ficam fora dessa demo. Se retomados, exigem validação de saídas, persistência de intenções e estados desconhecidos, elegibilidade por pessoa, aprovação humana válida e mecanismo confiável de reconciliação. `submitOrder` permanece inacessível.
+Critérios antigos de conclusão foram substituídos. Seu registro está no histórico Git, sem permanecer como alternativa de entrega atual.
 
 ## Acesso e reprodução
 
@@ -111,7 +107,7 @@ Fonte do probe: `scripts/int01-console-probe.ts`. Regenerar o comando com `node 
 
 ## Reuso e dependências atuais
 
-- Na base remota `e8d6b6f`, API-01, OPS-01, RUN-01, DATA-01, GRP-01 e AI-01/AI-02 estão integradas ao código. Montagem em produção, volume e ensaio Telegram não se deduzem de merge ou teste offline.
+- Na base remota `f3b8b55`, API-01, OPS-01, RUN-01, DATA-01, GRP-01 e AI-01/AI-02 estão integradas ao código. Montagem em produção, volume e ensaio Telegram não se deduzem de merge ou teste offline.
 - Reutilizar domínio e retenção DATA-01, elegibilidade por pessoa GRP-01, rateio DOM-01 e processador AI-02; CART-01 não depende da conclusão de trabalho novo na AI-01. A implementação CART-01 auditada permanece local, fora da main e desta revisão documental.
 - BUY-01 deve distinguir confirmação PREPARE_CART de futura aprovação SUBMIT_ORDER. O modelo nunca recebe credencial de confirmação. Envio e pagamento estão proibidos neste incremento.
 - Reutilizar catálogo/getItem, validação de configuração, referências opacas e regras de custo. ItemRef comprova origem, não segurança alimentar. O servidor MCP fictício do projeto Python não substitui o cliente externo.
@@ -154,9 +150,9 @@ Esses checks executaram somente fakes/fixtures. O único ensaio MCP novo foi `to
 - [x] Matriz distingue documento, input capturado, simulação, metadado autenticado e saída não observada.
 - [x] Saídas desconhecidas mantêm bloqueio; flags e checkout não são habilitados.
 - [x] Falta de recuperação sem IDs e de garantia externa de idempotência está registrada.
-- [x] Gatilho de fechamento e dependências foram alinhados à DEC-01 anterior na ocasião; o escopo vigente está nas seções atuais acima.
+- [x] Gatilho de fechamento e dependências foram alinhados à decisão anterior na ocasião; os critérios atuais estão nas seções acima.
 - [x] Nova consulta autenticada sanitizada e comparação de metadados registradas.
 - [ ] Saídas de negócio reais, unidades e erros por operação capturados e parsers validados com elas.
 - [ ] Mecanismo externo confiável de reconciliação sem cartId/orderId estabelecido.
 
-As duas pendências finais impedem declarar integração real de carrinho/pedido validada e seguem na INT-02 #40. O fechamento de #7 cobre auditoria/metadados, não validação integral do contrato externo. A antiga demo somente leitura não é o escopo vigente; carrinho real depende dos gates atuais e envio/pagamento continuam proibidos. CI/Linux e avaliação de LLM não foram executadas nesta auditoria histórica; esta revisão documental não repetiu a suíte.
+As duas pendências finais impedem declarar integração real de carrinho/pedido validada e seguem na INT-02 #40. O fechamento de #7 cobre auditoria/metadados, não validação integral do contrato externo. Carrinho real depende dos gates atuais e envio/pagamento continuam proibidos. CI/Linux e avaliação de LLM não foram executadas nesta auditoria histórica; esta revisão documental não repetiu a suíte.

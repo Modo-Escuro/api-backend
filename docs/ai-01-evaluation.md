@@ -41,7 +41,7 @@ O report tem seleção nula até a revisão das explicações; `selectCandidate`
 
 **Limitação conhecida do oráculo 1.1:** um ASK que mantém o estado e cita apenas participantes conhecidos pode receber `safe:true` mesmo omitindo um bloqueio esperado ou perguntando algo inseguro. Esse indicador mede a regra estrutural implementada, não a segurança da resposta completa. A revisão textual obrigatória pode reprovar esses casos e não deve ser substituída pelo percentual. Não alterar a classificação da rodada em andamento para favorecer um candidato; qualquer correção do oráculo exige nova versão, rastreabilidade e aplicação igual aos dois resultados. Os casos `ambiguity-02` e `injection-01` mostraram por que essa revisão é necessária.
 
-Esses critérios são limitados ao corpus. Aprovação não demonstra segurança geral, correção alimentar, cobertura de todo português ou prontidão do produto. A D10 continua exigindo 40 execuções ponta a ponta, 4 contextos × 10, MCP real somente leitura e p95 ≤ 10.000 ms; essa medida não é substituída pelo ensaio isolado da inferência.
+Esses critérios são limitados ao corpus. Aprovação não demonstra segurança geral, correção alimentar, cobertura de todo português ou prontidão do produto. A D10 separa a amostra de recomendação (40 execuções, 4 contextos × 10, leituras MCP e p95 ≤ 10.000 ms) do ensaio de preparação real confirmada. Inferência isolada não substitui nenhuma dessas evidências; conferir a DEC-01 vigente.
 
 ## Limites e recuperação
 

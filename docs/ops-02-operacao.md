@@ -4,7 +4,7 @@
 
 ## Estado deste incremento
 
-Atualização documental de 18/10/2026: PR #38 mergeado na main conferida `e8d6b6f`; issue #21 continua aberta pelo alcance parcial e ensaios abaixo. A [DEC-01 vigente](decisoes-conversacionais.md) já permite PREPARE_CART confirmado. O código CART-01 auditado permanece local e separado desta revisão; a preparação real exige integração e INT-02 #40. Envio e pagamento continuam proibidos.
+Atualização documental de 18/10/2026: PR #38 mergeado na main conferida `f3b8b55`; issue #21 continua aberta pelo alcance parcial e ensaios abaixo. A [DEC-01 vigente](decisoes-conversacionais.md) já permite PREPARE_CART confirmado. O código CART-01 auditado permanece local e separado desta revisão; a preparação real exige integração e INT-02 #40. Envio e pagamento continuam proibidos.
 
 Entrega parcial, integrada à GRP-01 e à AI-01 (Gemini, #36). O que não depende de CART-01 foi implementado e testado offline: logs estruturados, métricas agregadas, orçamento de execução/gasto do modelo, status operacional separado, liberação gradual por organizador, verificação de permissões de storage e regressões de rollback. A CART-01 (dependência da issue) não está concluída. Por isso, a instrumentação de sacola/envio se limita a reportar `DISABLED`. Nada neste código OPS-02 habilita escrita no MCP. A decisão aprovada de carrinho confirmado não instala o executor nem substitui seus gates.
 

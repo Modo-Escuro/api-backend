@@ -1,8 +1,8 @@
 # DEC-01 — Decisões técnicas vigentes
 
-Revisão de 18/10/2026 autorizada pelo usuário, que confirmou a aprovação da equipe para carrinho real. [Estado remoto/local](estado-remoto-local.md) · [DEC-01 #5](https://github.com/Modo-Escuro/api-backend/issues/5) · [Decisão anterior preservada](https://github.com/Modo-Escuro/api-backend/blob/e8d6b6fd544431092960a872398e920fc3bad41e/docs/decisoes-conversacionais.md).
+Revisão de 18/10/2026 autorizada pelo usuário, que confirmou a aprovação da equipe para carrinho real. [Estado remoto/local](estado-remoto-local.md) · [DEC-01 #5](https://github.com/Modo-Escuro/api-backend/issues/5) · [Decisão anterior preservada](https://github.com/Modo-Escuro/api-backend/blob/f3b8b5561acc0c0ae5e9efe12b52acc2f29bf218/docs/decisoes-conversacionais.md).
 
-Esta revisão substitui o recorte anterior de sacola 100% simulada/zero escritas. Não altera o baseline StRS nem declara validação da mentoria, integração real entregue ou autorização de pedido/pagamento. A main conferida ainda executa propostas/sacola simulada; o código CART-01 auditado permanece local e separado desta revisão documental.
+O único escopo de carrinho vigente é preparar/modificar o carrinho real após confirmação humana específica. Composição local e testes com mocks são etapas técnicas, não uma entrega alternativa. Não altera o baseline StRS nem declara validação da mentoria, integração real entregue ou autorização de pedido/pagamento. A main conferida ainda executa propostas/composição local ainda não sincronizada com o iFood; o código CART-01 auditado permanece local e separado desta revisão documental.
 
 ## Resumo vigente
 
@@ -33,7 +33,7 @@ BUY-01 futuro deve usar outra autorização para SUBMIT_ORDER, com responsável,
 
 ## D3 — Rateio (informativo, centavos inteiros)
 
-O rateio mostra quanto cabe a cada participante simulado; nada é cobrado.
+O rateio mostra quanto cabe a cada participante declarado pelo organizador; nada é cobrado.
 
 ```
 split(total, pesos[]) -> partes[]
@@ -142,7 +142,7 @@ Encerrar = o organizador conclui ou cancela, ou a compra fica 24 h sem evento ac
 4. Aceitar somente callback humano do adaptador autenticado, referência opaca de uso único fora do contexto do modelo. Login, senha, texto “sim” e userConsent fornecido pela IA não confirmam escrita.
 5. Consumir confirmação e persistir intenção antes da rede em uma transação. Persistir reconhecimento e cartId juntos. A chamada externa fica fora da transação; não prometer atomicidade com o iFood.
 6. Mesma intenção não repete efeito; chave reutilizada com conteúdo diferente conflita. Timeout/401/resultado desconhecido bloqueiam novas escritas. Só reconciliar por fonte confiável; leitura parecida não basta.
-7. Revalidar antes de cada passo e conferir composição, preço, subtotal e taxas depois dele. Mudança relevante interrompe os próximos passos e exige nova revisão/confirmacão. Sem revisão/ETag remota não se elimina a corrida com outro cliente.
+7. Revalidar antes de cada passo e conferir composição, preço, subtotal e taxas depois dele. Mudança relevante interrompe os próximos passos e exige nova revisão/confirmação. Sem revisão/ETag remota não se elimina a corrida com outro cliente.
 8. Exibir resultado como “CARRINHO PREPARADO” somente com evidência correspondente; sempre distinguir “PEDIDO NÃO ENVIADO”. Não produzir sucesso apenas do texto do modelo.
 9. Validar schemas/outputs reais por operação na INT-02 antes de ativar; metadados, fixtures sintéticas e flags não suprem evidência. Não executar escritas reais em testes automatizados.
 10. `submitOrder`, `setCartPayment` e processamento de pagamento continuam proibidos. Entrega/cupom só podem ter mutação futura com listagem prévia e confirmação específica; não estão implementados no incremento local de itens.
