@@ -8,6 +8,16 @@ const link = z.object({ linkId: ref }).strict();
 const intent = z.object({ linkId: ref, requestId: z.uuid() }).strict();
 
 export function registerCartRoutes(app: Hono, carts: CartService) {
+  // A F7 anterior não possui autorização de escrita. Nenhuma flag pode expor suas mutações.
+  const rejectLegacyWrite = async (c: import('hono').Context, next: import('hono').Next) => {
+    const path = new URL(c.req.url).pathname;
+    if (c.req.method !== 'GET' && !['/catalog','/review'].some(s => path.endsWith(s))) {
+      return c.json({ error: { kind: 'CART_CONFIRMATION_REQUIRED', message: 'Use revisão e confirmação humana CART-01; envio e pagamento continuam proibidos.', retryable: false }, purchaseAuthorized: false }, 409);
+    }
+    await next();
+  };
+  app.use('/api/bot/cart', rejectLegacyWrite);
+  app.use('/api/bot/cart/*', rejectLegacyWrite);
   // Erros do provedor ficam sanitizados; nenhuma resposta bruta de carrinho/pagamento sai daqui.
   app.use('/api/bot/cart/*', async (c, next) => {
     c.header('Cache-Control', 'no-store');

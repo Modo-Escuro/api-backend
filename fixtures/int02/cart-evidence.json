@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "endpoint": "https://consumer-mcp.ifood.com.br/marketplace",
+  "source": "OBSERVED_AUTHENTICATED",
+  "businessToolsCalled": true,
+  "parserSha256": "11ab7ff9885846aa6da658b810899c6860a68990d01074aafb3b6e279058b347",
+  "tools": [
+    {
+      "name": "getCart",
+      "inputSchemaSha256": "f2a8a0c68f0d3282ede7d276127c582387c3e8f027432f404e4d70ba542f1b1f",
+      "observedAt": "2026-10-18T12:38:04.390Z",
+      "samplePath": "cart/getCart-final.json",
+      "sampleSha256": "2443b8e0364b916766d801c2ff06f199f873a6f4478bbed3b86eacf79bd8eab8"
+    },
+    {
+      "name": "createCart",
+      "inputSchemaSha256": "ea29e42f5c1e0b5033f1ee03a55d0f7b612fe3113984352fb74ae10f251b7bda",
+      "observedAt": "2026-10-18T12:34:20.643Z",
+      "samplePath": "cart/createCart.json",
+      "sampleSha256": "5ef6402b5123dca6806273b9fb99ac4c7e11452d590701f78338b397bb515251"
+    },
+    {
+      "name": "addItemToCart",
+      "inputSchemaSha256": "d349db15b5b4c600fec6b394a413ef9c0dc1dd4fce883db20862995456b3afa4",
+      "observedAt": "2026-10-18T12:37:41.476Z",
+      "samplePath": "cart/addItemToCart.json",
+      "sampleSha256": "38a81876da84d03e8936c13d211ecf609279d535c3079531e8d874d9026cb2e5"
+    },
+    {
+      "name": "updateCartItem",
+      "inputSchemaSha256": "79b380ce57b9985f9d90e58ea768fc95955c4f0d54a76f2411ad4ea5ff90693c",
+      "observedAt": "2026-10-18T12:37:50.466Z",
+      "samplePath": "cart/updateCartItem.json",
+      "sampleSha256": "33380a06e4da7895efe739f71ed74087f05b84a0b305c7d993a2ba1976d50053"
+    },
+    {
+      "name": "removeItemFromCart",
+      "inputSchemaSha256": "24481acc3153e2ee064de6d183547fbd79f35069355de54376799ef36ed2b801",
+      "observedAt": "2026-10-18T12:37:59.611Z",
+      "samplePath": "cart/removeItemFromCart.json",
+      "sampleSha256": "2443b8e0364b916766d801c2ff06f199f873a6f4478bbed3b86eacf79bd8eab8"
+    }
+  ]
+}

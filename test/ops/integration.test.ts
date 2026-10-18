@@ -130,13 +130,14 @@ describe('OPS-02 integrado (offline)', () => {
     expect(body.conversation).toMatchObject({ enabled: true, rollout: { mode: 'ALL_AUTHORIZED' },
       runtime: { accepting: true, processorInstalled: true, storage: 'OK', resultUnknown: 0 } });
     expect(body.purchase).toEqual({ capable: false, cartPreparation: 'LEGACY_FLAG_ON', submission: 'DISABLED',
-      submitFlagIgnored: true, reason: 'DEC01_D8_READ_ONLY' });
+      submitFlagIgnored: true, reason: 'DEC01_D8_READ_ONLY', cartIntents: { PENDING: 0, SUCCEEDED: 0, FAILED: 0, RESULT_UNKNOWN: 0 } });
     expect(['PRIVATE', 'UNVERIFIED_PLATFORM']).toContain(body.conversation.storagePermissions.state);
     // Health HTTP continua 200 mesmo com runtime parado; o status operacional mostra a diferença.
     e.runtime.stop();
     expect((await e.app.request('/api/health')).status).toBe(200);
     const after = await (await e.app.request('/api/ops/status', { headers: headers() })).json();
     expect(after.conversation.runtime).toMatchObject({ accepting: false, healthy: false, storage: 'CLOSED' });
+    expect(after.purchase.cartIntents).toBeNull();
   });
 
   it('liberação gradual por organizador: fora da lista recebe UNAVAILABLE sem revelar a lista', async () => {

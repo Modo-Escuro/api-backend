@@ -1,5 +1,7 @@
 # Plano de execução da API
 
+**Continuação local de 18/10:** [conclusão offline CART-01](cart-01-conclusao-offline.md) integra #47/#46 com a main que contém a preparação INT-02 #48, apresentação final do bot e parte da instrumentação OPS-02. O retrato abaixo é histórico; esta continuação não foi publicada/ativada e não conclui a evidência externa da #40.
+
 Continuação de código: [continuidade e endereço iFood](continuidade-enderecos.md), desenvolvida separadamente dos drafts de cart. O retrato histórico abaixo não representa a publicação/ativação dessa continuação.
 
 Continuação GRP-01: [busca progressiva e ausência de propostas](grp-01-busca-progressiva.md), em PR complementar sobre a main que já integra #47/#48, sem merge/deploy automático. Amplia somente leituras; alergia UNKNOWN continua bloqueada, total desconhecido não valida orçamento e a confirmação humana de carrinho permanece obrigatória.

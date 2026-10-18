@@ -1,5 +1,7 @@
 # INT-02 #40 — preparação offline e gate de evidências
 
+**Consumidor em continuação local:** [CART-01 integrada offline](cart-01-conclusao-offline.md) reutiliza estes regressores sobre a main com #48 e preserva o gate de evidência. O merge #48 não trouxe capturas de negócio; os NO-GO abaixo continuam válidos.
+
 Atualização offline em **18/10/2026**. A issue [#40](https://github.com/Modo-Escuro/api-backend/issues/40) permanece **aberta**: testes sintéticos não concluem a validação real. Nesta etapa não houve chamada ao MCP, login, leitura de credenciais, operação real de carrinho, envio ou pagamento. Flags, produção e deploy não foram alterados.
 
 ## Base
@@ -103,3 +105,28 @@ Em 18/10/2026, nesta cópia Linux:
 | `git diff --check` | Passou |
 
 A primeira tentativa não iniciou os testes por dependência `ai` ausente; `npm ci --ignore-scripts --no-audit --no-fund` restaurou as dependências do lockfile sem alterá-lo. A regressão de remoção falhou antes do guard e passou após a correção. Todos os testes acima usam fixtures/fakes, sem validar o contrato remoto.
+
+## Capturas autenticadas — 18/10/2026 (atualiza o GO/NO-GO acima)
+
+Sessão OAuth isolada com o client da produção e conta de teste. Tokens ficaram fora do Git e a sessão do bot não foi tocada. Cada escrita teve confirmação humana específica e intenção registrada antes da rede; não houve envio de pedido nem pagamento. Amostras em `fixtures/int02/`; manifesto v1 em `fixtures/int02/cart-evidence.json` (fixa o hash de `contracts.ts`: regenerar após qualquer edição). Flags continuam OFF.
+
+| Operação | Status | Observado |
+| --- | --- | --- |
+| `getCart` | **GO** | Carrinho completo em `content[].text` (sem `structuredContent`/`success`). `merchant.merchantId`; **sem addressId**, só `deliveryAddress` textual; item sem opções omite `options`; totais em `summary.*Amount` (BRL) + `fees[]` |
+| `createCart` | **GO** | Devolve o carrinho completo com `cartId`. Responde **antes** de aplicar promoções; o getCart seguinte pode ter outro total |
+| `addItemToCart` | **GO** | Devolve o carrinho completo. Mesmo item vira **nova linha**. `options` omitido ⇒ `isError:true` ("non-null is null") apesar do schema opcional: enviar sempre `options: []` |
+| `updateCartItem` | **GO** | Devolve o carrinho completo; `cartItemId` preservado |
+| `removeItemFromCart` | **GO** | Devolve o carrinho completo, idêntico ao getCart seguinte |
+| Itens com opções/customizações | **NO-GO** | Formato não observado; chave desconhecida é rejeitada |
+| Idempotência / recuperação sem cartId | **NO-GO** | Sem chave, ETag ou consulta por intenção. RESULT_UNKNOWN continua bloqueando, sem retry |
+| Entrega, cupom, pagamento, pedido | **NO-GO / proibido** | Não executados |
+
+Adaptações na CART-01:
+- O parser normaliza o formato observado e rejeita taxas divergentes, pagamento ou cupom presentes e chaves desconhecidas em itens.
+- A identidade do endereço é conferida comparando rua, número e bairro com o `listAddresses` relido.
+- Com benefícios que não se decompõem (promoção misturada com entrega grátis), o total fica `PROVIDER_REPORTED`, informado pelo iFood e nunca confirmado; orçamento e rateio continuam `UNVERIFIED`.
+
+Outros achados:
+- `createAddress` retornou `ADR-2001` em um endereço; erro de negócio vem com `isError:false` e `errors` como objeto.
+- O CEP muda de formato entre `createAddress` e `listAddresses`.
+- O carrinho de teste `b82b35b3-…` ficou com 1 item na conta de teste.

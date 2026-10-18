@@ -47,7 +47,7 @@ describe('DATA-01 no armazenamento da RUN-01', () => {
   afterEach(() => { for (const s of stores.splice(0)) s.close(); for (const d of dirs.splice(0)) d.clean(); now = 1_800_000_000_000; });
 
   describe('migração', () => {
-    it('banco v1 existente com dados migra para v2 preservando operações, snapshot e replay', () => {
+    it('banco v1 existente com dados migra para o esquema atual preservando operações, snapshot e replay', () => {
       const dir = temporary(); dirs.push(dir);
       // 1) produz um turno sem domínio (o que a RUN-01 já gravava)…
       const writer = new TurnStore(dir.file, {}, () => now);
@@ -56,7 +56,8 @@ describe('DATA-01 no armazenamento da RUN-01', () => {
       writer.close();
       // 2) …e rebaixa o arquivo para o formato v1 exato (sem colunas/tabela da DATA-01), com os dados dentro.
       const raw = new DatabaseSync(dir.file);
-      raw.exec(`DROP TABLE purchase_changes; DROP INDEX conversations_activity;
+      raw.exec(`DROP TABLE cart_write_reviews; DROP TABLE cart_write_intents; DROP TABLE cart_write_heads;
+        DROP TABLE purchase_changes; DROP INDEX conversations_activity;
         ALTER TABLE conversations DROP COLUMN domain; ALTER TABLE conversations DROP COLUMN last_activity_at; PRAGMA user_version=1;`);
       expect(raw.prepare('PRAGMA table_info(conversations)').all().map((c) => c['name'])).toEqual(['scope', 'snapshot']);
       raw.close();
@@ -74,12 +75,12 @@ describe('DATA-01 no armazenamento da RUN-01', () => {
     it('duas conexões abrindo o mesmo banco novo não migram em duplicidade', () => {
       const { file } = open();
       const second = new TurnStore(file, {}, () => now); stores.push(second);
-      expect(Number(second.db.prepare('PRAGMA user_version').get()!['user_version'])).toBe(2);
+      expect(Number(second.db.prepare('PRAGMA user_version').get()!['user_version'])).toBe(SCHEMA_VERSION);
     });
 
     it('versão de esquema futura é recusada (fail closed)', () => {
       const dir = temporary(); dirs.push(dir);
-      const db = new DatabaseSync(dir.file); db.exec('PRAGMA user_version=3'); db.close();
+      const db = new DatabaseSync(dir.file); db.exec(`PRAGMA user_version=${SCHEMA_VERSION + 1}`); db.close();
       expect(() => new TurnStore(dir.file, {}, () => now)).toThrow('Não foi possível abrir');
     });
 
