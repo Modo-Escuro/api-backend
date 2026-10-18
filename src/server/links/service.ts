@@ -13,6 +13,7 @@
 //  - Login não aprova compra (não há operação de compra no backend).
 //  - A sessão global antiga (.tokens.json) nunca é importada como vínculo.
 
+import type { CartGateway } from '../cart/contracts.js';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { IfoodAuth, LOGIN_ATTEMPT_TTL_MS, randomToken, type StoredTokens } from '../auth.js';
 import type { AppConfig } from '../config.js';
@@ -32,10 +33,13 @@ export type LinkState =
   | 'RECONNECT_REQUIRED'
   | 'UNAVAILABLE';
 
-export type Operation = 'ADDRESSES_READ' | 'OFFERS_EVALUATE';
+export type Operation = 'ADDRESSES_READ' | 'OFFERS_EVALUATE' | 'CART_READ' | 'CART_WRITE' | 'CART_PAYMENT';
 
 /** Escopos exigidos por operação (nomes observados no token real). */
 export const OPERATION_SCOPES: Record<Operation, string[]> = {
+  CART_READ: ['mcp.cart.read'],
+  CART_WRITE: ['mcp.cart.read', 'mcp.cart.write'],
+  CART_PAYMENT: ['mcp.cart.read', 'mcp.cart.write', 'mcp.cart.payment'],
   ADDRESSES_READ: ['mcp.user.addresses.read'],
   OFFERS_EVALUATE: ['mcp.user.addresses.read', 'mcp.discovery.search.read', 'mcp.discovery.details.read'],
 };
@@ -43,6 +47,7 @@ export const OPERATION_SCOPES: Record<Operation, string[]> = {
 /** Sessão MCP de UM vínculo (deps de leitura ligados ao cliente MCP desse vínculo). */
 export interface LinkMcpSession {
   deps: EvaluateDeps;
+  cart?: CartGateway;
   /** Perfil básico (getUser sem profileData) — usado só para a identidade mascarada da confirmação. */
   getUser?(): Promise<unknown>;
   close(): Promise<void>;
@@ -52,6 +57,7 @@ export type SessionFactory = (auth: IfoodAuth) => LinkMcpSession;
 export interface OperationalContext {
   linkId: string;
   deps: EvaluateDeps;
+  cart?: CartGateway;
   cache: ItemCache;
 }
 
@@ -575,7 +581,7 @@ export class IfoodLinkService {
     if (missing.length) throw new LinkError('IFOOD_SCOPE_MISSING', `Escopo insuficiente: ${missing.join(', ')}`, 403, 'CONNECTED', 'MISSING_SCOPES');
     const linkId = rt.record.linkId;
     try {
-      return await fn({ linkId, deps: this.session(rt).deps, cache: rt.cache });
+      return await fn({ linkId, deps: this.session(rt).deps, cart: this.session(rt).cart, cache: rt.cache });
     } catch (e) {
       // Ignora falhas de um vínculo que já foi substituído no meio da operação.
       if (this.links.get(organizerId) === rt) {
@@ -603,7 +609,7 @@ export class IfoodLinkService {
     const a = this.activeAttempt(organizerId);
     const rt = this.links.get(organizerId) ?? null;
     const limitations = [
-      'Login não aprova compra: não há operação de carrinho/pedido neste backend.',
+      'Login não aprova compra: envio de pedidos desabilitado; carrinho F7 depende de habilitação explícita.',
       'O callback OAuth é http://localhost:8000 — abra o link no navegador da mesma máquina do backend.',
     ];
     const nextActions: string[] = [];
@@ -642,7 +648,7 @@ export class IfoodLinkService {
       }
       if (linkState === 'CONNECTED') {
         scopeEvidence = info.scopes ? 'TOKEN_SCOPES' : 'NOT_PROVIDED';
-        const ops = Object.keys(OPERATION_SCOPES) as Operation[];
+        const ops = (Object.keys(OPERATION_SCOPES) as Operation[]).filter((o) => this.cfg.cartEnabled || !o.startsWith('CART_'));
         const has = (s: string) => !info.scopes || info.scopes.includes(s);
         missingScopes = [...new Set(ops.flatMap((o) => OPERATION_SCOPES[o]).filter((s) => !has(s)))];
         if (operational) allowed = ops.filter((o) => OPERATION_SCOPES[o].every(has));

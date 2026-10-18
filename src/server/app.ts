@@ -1,5 +1,8 @@
 import { Hono, type Context } from 'hono';
 import { auth as defaultAuth, AuthError, type IfoodAuth } from './auth.js';
+import { CartError } from './cart/contracts.js';
+import { CartService } from './cart/service.js';
+import { registerCartRoutes } from './routes/cart.js';
 import { botAuth, organizerOf } from './botAuth.js';
 import { config as defaultConfig, mask, type AppConfig } from './config.js';
 import { IfoodLinkService, LinkError, type SessionFactory } from './links/service.js';
@@ -15,6 +18,9 @@ import { runEvaluation } from './services/evaluate.js';
 type ErrStatus = 400 | 401 | 403 | 404 | 409 | 410 | 423 | 500 | 502 | 503;
 
 export function errorBody(err: unknown): { status: ErrStatus; body: Record<string, unknown> } {
+  if (err instanceof CartError) {
+    return { status: err.status, body: { error: { kind: err.code, message: err.message, providerCode: err.providerCode ?? null, retryable: false }, purchaseAuthorized: false } };
+  }
   if (err instanceof LinkError) {
     return { status: err.httpStatus, body: { error: { kind: err.code, message: err.message, state: err.state ?? null, reason: err.reason ?? null } } };
   }
@@ -45,12 +51,14 @@ export interface AppOptions {
   /** Serviço de vínculos (testes injetam um com sessões falsas). */
   links?: IfoodLinkService;
   sessionFactory?: SessionFactory;
+  carts?: CartService;
 }
 
 export function createApp(auth: IfoodAuth = defaultAuth, opts: AppOptions = {}) {
   const cfg = opts.config ?? defaultConfig;
   const links = opts.links ?? new IfoodLinkService({ cfg, sessionFactory: opts.sessionFactory ?? realSessionFactory });
   const app = new Hono();
+  const carts = opts.carts ?? new CartService(links, cfg.cartEnabled);
 
   // Log mínimo: método, caminho (sem query — o callback OAuth carrega `code`), status, duração. Sem identidades.
   app.use('*', async (c, next) => {
@@ -73,6 +81,7 @@ export function createApp(auth: IfoodAuth = defaultAuth, opts: AppOptions = {}) 
   app.use('/api/addresses', requireBot);
   app.use('/api/evaluate', requireBot);
   registerBotRoutes(app as unknown as Hono, links);
+  registerCartRoutes(app, carts);
 
   // ---------- Navegador: início do login e callback OAuth (redirect registrado: http://localhost:8000) ----------
   // Callback localhost ⇒ só conexões da própria máquina abrem o início/retorno do login (anti link encaminhado).

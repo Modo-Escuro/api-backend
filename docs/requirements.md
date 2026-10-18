@@ -98,3 +98,7 @@ Checkout, carrinho automático, pagamentos, vouchers, rastreio de pedidos, cadas
 5. Preço exibido = composição real; mínimo do lojista sinalizado.
 6. Ranking ordenado com score e cada item com `motivos[]`/`avisos[]`.
 7. Nenhuma escrita no iFood; nenhuma credencial em log/repositório/JSON de resposta.
+
+## 7. Extensão F7 autorizada — carrinho e preparação de checkout
+
+A regra original de somente leitura continua aplicável à recomendação. O novo fluxo F7 adiciona carrinho isolado por organizador/linkId, com flag desabilitada por padrão, sem envio de pedidos. O contrato de implementação e suas limitações está em [f7-cart-checkout.md](f7-cart-checkout.md). Login não é autorização de compra; F7.3 prepara revisão e simulações, sem habilitar aprovação ou submitOrder reais. As correções relacionadas a #2 e #3 foram incorporadas de origin/main (20e46fd e 686300d); o bloqueio fixo foi removido, mantendo elegibilidade não verificada e checkout desabilitado. Saídas reais de cart ainda precisam ser capturadas e validadas antes de habilitar a integração.

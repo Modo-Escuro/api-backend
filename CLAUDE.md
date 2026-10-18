@@ -51,7 +51,7 @@ npm test
 2. **`getItem` antes de recomendar/preço final** — `searchOffers` pode mostrar preço promo, mas só `getItem` traz `optionGroups` e limites.
 3. **Ausente ≠ `null` ≠ lista vazia** — tratar e mostrar explicitamente (ex.: alérgenos ausentes ⇒ "informação indisponível", nunca "não contém").
 4. **Restrição com dados insuficientes ⇒ marcar como "não verificado"**, não concluir.
-5. **Sem checkout**: proibido `createCart` / `addItemToCart` / `submitOrder` no MVP.
+5. **Sem checkout**: `submitOrder` real continua proibido. F7 autoriza preparar carrinho exclusivamente pelo gateway por vínculo, feature desligada por padrão; ver `docs/f7-cart-checkout.md`. A proibição de escrita continua valendo para o pipeline de recomendação.
 6. **Preço exibido = composição**: base (`promotionalUnitPrice` ?? `unitPrice`) + Σ `additionalPrice` das opções escolhidas; avisar se < `merchantMinimumOrderAmount`.
    Exceção observada: quando Σ das opções obrigatórias mais baratas = `unitPrice`, a semântica é ambígua (preço "a partir de")
    ⇒ mostrar faixa, nunca um valor único. Ver `docs/pricing-audit.md`. Todo preço é estimativa; total confirmado só no carrinho.
@@ -84,3 +84,9 @@ fixtures/             # respostas reais salvas p/ testes offline
   conversão só na borda em `services/cents.ts`). Enums `SCREAMING_SNAKE_CASE`; JSON `lowerCamelCase`.
 - IDs sempre UUID vindos do MCP; em testes, fixtures de respostas reais — nunca IDs fabricados em produção.
 - Pipeline de recomendação é função pura testável (`domain/*` não faz fetch).
+
+## F7 — Carrinho isolado (exceção autorizada ao escopo original)
+- Contrato e limites: `docs/f7-cart-checkout.md`; bot: `docs/bot-api.md` seção 10.
+- `IFOOD_CART_ENABLED=false` por padrão: não habilitar em conta real antes de validar as saídas reais do MCP. As correções #2/#3 já foram incorporadas de origin/main.
+- Não usar sessão global, não repetir escritas com resultado desconhecido e não habilitar submitOrder.
+- Entradas reais em `fixtures/tools-list.json`; saídas de cart ainda não capturadas, testes explicitamente sintéticos.

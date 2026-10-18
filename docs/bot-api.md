@@ -2,7 +2,7 @@
 
 Status: **implementado no api-backend** (2026-10-17). Decisões aceitas: confirmação por **botão** (sem código digitado),
 `BOT_API_TOKEN` + `X-Telegram-User-Id`, dinheiro em **centavos inteiros** no contrato do bot, demo com um organizador.
-Base: `telegram-bot/docs/login-ifood.md`. Login **não** aprova compra; não há operação de compra no backend.
+Base: `telegram-bot/docs/login-ifood.md`. Login **não** aprova compra; não há envio de pedidos no backend. Carrinho F7 opcional e desabilitado por padrão: seção 10.
 
 Contrato de conversa versionado: [API-01 v1.0](conversation-api-v1.md), com schemas e testes offline. Suas rotas continuam propostas; as rotas de vínculo deste documento permanecem independentes.
 
@@ -185,3 +185,9 @@ BACKEND_URL=http://localhost:8000
 BOT_API_TOKEN=<o mesmo segredo>
 TELEGRAM_ALLOWED_USER_ID=<mesmo ID de ALLOWED_ORGANIZER_IDS>   # enviado como X-Telegram-User-Id
 ```
+
+## 10. F7 — Contrato do carrinho e revisão
+
+Rotas em `/api/bot/cart` usam a mesma autenticação de adaptador deste documento, JSON estrito, centavos inteiros e vínculo operacional. O contrato completo de endpoints, corpos, respostas, estados e retries está em [f7-cart-checkout.md](f7-cart-checkout.md#endpoints-do-telegram).
+
+Fluxo: consultar `/catalog` com endereço da conta → escolher itemRef/opções → criar carrinho → consultar e selecionar entrega/pagamento/cupom → ler getCart → revisão informativa. O bot gera requestId por intenção e preserva em retries. Não inventar referências nem obter IDs da LLM. A revisão não oferece compra: approve/submit retornam CHECKOUT_DISABLED. RESULT_UNKNOWN exige reconciliação, nunca um novo requestId automático. Cartões não expõem tokens e a configuração real ainda depende da validação das saídas MCP; as correções #2/#3 já estão incorporadas. O catálogo devolve resultados parciais e erros sanitizados por candidato; tentativas de releitura com o mesmo requestId não repetem escritas confirmadas.
