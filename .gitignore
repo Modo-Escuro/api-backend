@@ -20,3 +20,6 @@ dist/
 *.swp
 *.swo
 *~
+*.html
+!src/web/index.html
+!src/web/index.html
