@@ -19,17 +19,22 @@ import {
 import { validateSelection, type ConfigValidation, type OptionSelection } from './configuration.js';
 import { computeMinimumConfigurablePrice, computePrice, type PriceBreakdown, type PriceRange } from './pricing.js';
 import type { ItemRestriction } from '../mcp/types.js';
+import { cents, formatCents } from './money.js';
+import { evaluateLimits, type CandidateLimits, type LimitCheck } from './limits.js';
 
 export interface Budget {
+  /** Todos os valores monetários do domínio estão em centavos inteiros. */
   /** Teto por unidade (preço-base + opções). */
   maxItemPrice?: number;
-  /** Teto do pedido estimado (itens + entrega). */
+  /** Teto do pedido completo; componente relevante desconhecido impede PASS. */
   maxOrderTotal?: number;
 }
 
 export interface UserConstraints {
   restrictions: RestrictionKey[];
   budget?: Budget;
+  mandatoryLimits?: CandidateLimits;
+  preferredLimits?: CandidateLimits;
 }
 
 export interface Issue {
@@ -67,14 +72,18 @@ export interface EligibilityResult {
     confirmedTotal: null;
   };
   budget: { itemPrice: TriState | null; orderTotal: TriState | null };
+  limits: LimitCheck[];
   dataLimitations: string[];
 }
 
 const label = (r: RestrictionKey) => (r.kind === 'ALLERGY' ? `alergia a ${r.code}` : r.code);
-const brl = (v: number) => `R$ ${v.toFixed(2)}`;
+const brl = formatCents;
 
 /** PASS se a faixa inteira cabe no teto; FAIL se nem o mínimo cabe; senão UNKNOWN. */
 export function checkCap(range: PriceRange, cap: number): TriState {
+  cents(cap);
+  if ([range.min, range.max].some((n) => n !== null && (!Number.isSafeInteger(n) || n < 0))) return 'UNKNOWN';
+  if (range.min !== null && range.max !== null && range.min > range.max) return 'UNKNOWN';
   if (range.max !== null && range.max <= cap) return 'PASS';
   if (range.min !== null && range.min > cap) return 'FAIL';
   return 'UNKNOWN';
@@ -88,6 +97,14 @@ export function evaluateCandidate(input: CandidateInput, constraints: UserConstr
   const blockers: Issue[] = [];
   const warnings: Issue[] = [];
   const dataLimitations: string[] = [];
+  const limits = [...evaluateLimits(listing, constraints.mandatoryLimits, 'MANDATORY', detail?.price),
+    ...evaluateLimits(listing, constraints.preferredLimits, 'PREFERENCE', detail?.price)];
+  for (const check of limits) {
+    if (check.status === 'PASS') continue;
+    const issue = { code: `${check.requirement === 'MANDATORY' ? 'LIMIT' : 'PREFERRED_LIMIT'}_${check.metric.toUpperCase()}_${check.status === 'FAIL' ? 'EXCEEDED' : 'UNVERIFIED'}`,
+      message: `${check.metric}: ${check.status === 'FAIL' ? 'condição não atendida' : 'informação insuficiente para verificar a condição'}` };
+    (check.requirement === 'MANDATORY' ? blockers : warnings).push(issue);
+  }
   const result = (extra: Partial<EligibilityResult>): EligibilityResult => ({
     itemId: listing.itemId,
     merchantId: listing.merchant.merchantId,
@@ -100,6 +117,7 @@ export function evaluateCandidate(input: CandidateInput, constraints: UserConstr
     configuration: null,
     pricing: { minimumConfigurable: null, selected: null, confirmedTotal: null },
     budget: { itemPrice: null, orderTotal: null },
+    limits,
     dataLimitations,
     ...extra,
   });
@@ -108,7 +126,7 @@ export function evaluateCandidate(input: CandidateInput, constraints: UserConstr
   const isOpen = listing.merchant.isOpen;
   const availability: TriState = isOpen.state === 'PRESENT' ? (isOpen.value ? 'PASS' : 'FAIL') : 'UNKNOWN';
   if (availability === 'FAIL') blockers.push({ code: 'MERCHANT_CLOSED', message: 'Loja fechada agora' });
-  if (availability === 'UNKNOWN') warnings.push({ code: 'AVAILABILITY_UNKNOWN', message: 'Disponibilidade da loja não informada' });
+  if (availability === 'UNKNOWN') blockers.push({ code: 'AVAILABILITY_UNKNOWN', message: 'Disponibilidade da loja não informada' });
 
   if (!detail) {
     blockers.push({ code: 'NOT_DETAILED', message: 'Item sem getItem — não recomendável (preço/opções não verificados)' });
@@ -139,7 +157,13 @@ export function evaluateCandidate(input: CandidateInput, constraints: UserConstr
 
   // ---- preço mínimo configurável (sempre calculado)
   const quantity = input.quantity ?? 1;
-  const minimum = computeMinimumConfigurablePrice(detail, listing, blocked, quantity);
+  let minimum: ReturnType<typeof computeMinimumConfigurablePrice>;
+  try { minimum = computeMinimumConfigurablePrice(detail, listing, blocked, quantity); }
+  catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    blockers.push({ code: 'PRICE_UNVERIFIED', message: 'Preço ou quantidade fora dos limites de cálculo seguro' });
+    return result({ restrictions });
+  }
   for (const p of minimum.problems) blockers.push({ code: 'NO_VALID_CONFIGURATION', message: p });
 
   // ---- configuração avaliada
@@ -151,12 +175,17 @@ export function evaluateCandidate(input: CandidateInput, constraints: UserConstr
   let selected: PriceBreakdown | null = null;
   if (selection) {
     configuration = validateSelection(detail, selection.options, blocked);
+    if (configuration.status === 'UNKNOWN') blockers.push({ code: 'CONFIG_UNVERIFIED', message: 'Configuração obrigatória não verificável' });
     const hardCodes = ['UNKNOWN_OPTION', 'INVALID_QUANTITY', 'BELOW_MIN', 'ABOVE_MAX', 'BLOCKED_OPTION'];
     for (const i of configuration.issues) {
       (hardCodes.includes(i.code) ? blockers : warnings).push({ code: `CONFIG_${i.code}`, message: i.message });
     }
     if (input.selection && configuration.status !== 'INVALID') {
-      selected = computePrice({ detail, listing, selection: input.selection, quantity, kind: 'SELECTED' });
+      try { selected = computePrice({ detail, listing, selection: input.selection, quantity, kind: 'SELECTED' }); }
+      catch (error) {
+        if (!(error instanceof RangeError)) throw error;
+        blockers.push({ code: 'PRICE_UNVERIFIED', message: 'Preço ou quantidade fora dos limites de cálculo seguro' });
+      }
     }
     // Defesa em profundidade: alergia hoje nunca resulta PASS (constraints.ts, issue #3); se um dia resultar,
     // a classificação cobriria só o item-base e nenhuma opção seria verificada.
@@ -176,6 +205,7 @@ export function evaluateCandidate(input: CandidateInput, constraints: UserConstr
   const price = selected ?? (input.selection ? null : minimum.price);
   if (price) {
     if (price.status === 'UNAVAILABLE') blockers.push({ code: 'PRICE_UNAVAILABLE', message: 'Preço indisponível no getItem' });
+    if (price.flags.includes('PRICE_ANOMALY')) blockers.push({ code: 'PRICE_UNVERIFIED', message: 'Valores de preço inconsistentes no catálogo' });
     if (price.flags.includes('AMBIGUOUS_OPTION_PRICING')) {
       warnings.push({ code: 'PRICE_AMBIGUOUS', message: `Preço ambíguo no catálogo: ${fmtRange(price.unitTotalRange)} por unidade (só o carrinho confirma)` });
     }

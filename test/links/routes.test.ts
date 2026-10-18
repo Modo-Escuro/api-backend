@@ -248,8 +248,10 @@ describe('/api/evaluate em centavos (contrato do bot)', () => {
     const ok = body.eligible.find((c: { item: { name: string } }) => c.item.name === 'Combo Individual - 1 Pizza 22cm + 1 Pizza Doce 22cm.');
     const okp = ok.pricing.minimumConfigurable;
     expect(okp.status).toBe('ESTIMATED');
-    expect(okp.estimatedTotalCents).toBe(okp.unitTotalCents + okp.delivery.feeCents);
-    expect(Number.isInteger(okp.estimatedTotalCents)).toBe(true);
+    expect(okp.itemsAndDeliverySubtotalCents).toBe(okp.unitTotalCents + okp.delivery.feeCents);
+    expect(Number.isInteger(okp.itemsAndDeliverySubtotalCents)).toBe(true);
+    expect(okp.estimatedTotalCents).toBeNull();
+    expect(okp.service).toEqual({ feeCents: null, status: 'UNKNOWN' });
     // Nenhum campo monetário decimal no contrato do bot
     const json = JSON.stringify(body);
     expect(json).not.toMatch(/"(unitTotal|estimatedTotal|listPrice|basePrice|fee|amount|unitPrice)":/);

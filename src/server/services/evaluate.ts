@@ -10,6 +10,8 @@ import { McpToolError } from '../mcp/errors.js';
 import type { CallOptions } from '../mcp/tools.js';
 import type { Address, ItemRestriction, LatLng, ListAddressesResult, SearchOffersArgs, SearchRefinements } from '../mcp/types.js';
 import { val } from '../domain/fields.js';
+import { centsToBrl } from '../domain/money.js';
+import type { CandidateLimits } from '../domain/limits.js';
 
 // ---------------- dependências (injetáveis para testes) ----------------
 
@@ -59,6 +61,8 @@ export interface EvaluateRequest {
   merchantType?: SearchOffersArgs['merchantType'];
   /** Repassados ao searchOffers (contexto: distância, tempo, avaliação, promoção, ordenação). */
   refinements?: Pick<SearchRefinements, 'maxDistanceKm' | 'maxDeliveryTimeMinutes' | 'minRating' | 'onlyWithPromotion' | 'maxDeliveryFee' | 'sort'>;
+  /** Alvos flexíveis: não são filtros MCP nem bloqueiam elegibilidade. Frete em centavos. */
+  softLimits?: CandidateLimits;
   limits?: Partial<EvaluateLimits>;
 }
 
@@ -205,6 +209,7 @@ export async function runEvaluation(req: EvaluateRequest, deps: EvaluateDeps, ca
   const mandatory = req.restrictions.filter((r) => requirementOf(r) === 'MANDATORY');
   const serverFilters = serverFiltersFor(mandatory);
   const refinements: SearchRefinements = { ...req.refinements };
+  if (req.refinements?.maxDeliveryFee !== undefined) refinements.maxDeliveryFee = centsToBrl(req.refinements.maxDeliveryFee);
   if (serverFilters.length) refinements.itemRestrictions = serverFilters;
 
   const seen = new Set<string>();
@@ -295,7 +300,8 @@ export async function runEvaluation(req: EvaluateRequest, deps: EvaluateDeps, ca
   });
 
   // ---- avaliação determinística (domain/*)
-  const constraints = { restrictions: req.restrictions, budget: req.budget };
+  const constraints = { restrictions: req.restrictions, budget: req.budget,
+    mandatoryLimits: req.refinements, preferredLimits: req.softLimits };
   const candidates: EvaluatedCandidate[] = listings.map(({ listing, page }, i) => {
     const outcome = outcomes[i]!;
     let detail: NormalizedItemDetail | null = outcome.status === 'DETAILED' ? outcome.detail : null;

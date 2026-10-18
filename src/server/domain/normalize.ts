@@ -8,7 +8,6 @@ import {
   type Field,
   isString,
   mapField,
-  money,
   present,
   readBoolean,
   readField,
@@ -16,6 +15,7 @@ import {
   readString,
   val,
 } from './fields.js';
+import { brlToCents, cents, formatCents } from './money.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const isUuid = (v: unknown): v is string => typeof v === 'string' && UUID_RE.test(v);
@@ -30,10 +30,13 @@ export class NormalizationError extends Error {
 }
 
 // ---------------- modelos ----------------
+// Todos os campos monetários normalizados abaixo estão em centavos, inclusive os que preservam nomes do MCP.
 
 export interface NormalizedRating {
   /** reviewRating arredondado a 2 casas (o MCP envia float32, ex.: 4.900000095367432). */
   value: Field<number>;
+  /** Valor sem arredondamento para conferir limites rígidos; value é só apresentação. */
+  rawValue: Field<number>;
   count: Field<number>;
 }
 
@@ -139,6 +142,14 @@ export interface NormalizedSearchResult {
 const asObj = (v: unknown): Record<string, unknown> | null =>
   v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
 
+// Não promover dinheiro inválido a zero ou ao preço de fallback.
+function readMoney(raw: unknown, key: string): Field<number> {
+  const field = readNumber(raw, key);
+  if (field.state !== 'PRESENT') return field;
+  try { return present(brlToCents(field.value)); }
+  catch { return { state: 'INVALID', raw: field.value }; }
+}
+
 const round2 = (v: number) => Math.round(v * 100) / 100;
 
 function unknownKeys(o: Record<string, unknown>, known: readonly string[]): string[] {
@@ -146,16 +157,17 @@ function unknownKeys(o: Record<string, unknown>, known: readonly string[]): stri
 }
 
 export function normalizePromotion(o: unknown): NormalizedPromotion {
-  const unitPrice = mapField(readNumber(o, 'unitPrice'), money);
-  const promotionalUnitPrice = mapField(readNumber(o, 'promotionalUnitPrice'), money);
+  const unitPrice = readMoney(o, 'unitPrice');
+  const promotionalUnitPrice = readMoney(o, 'promotionalUnitPrice');
   const unit = val(unitPrice);
   const promo = val(promotionalUnitPrice);
-  const basePrice = promo ?? unit ?? null;
+  const invalid = unitPrice.state === 'INVALID' || promotionalUnitPrice.state === 'INVALID';
+  const basePrice = invalid ? null : promo ?? unit ?? null;
   let discountPerUnit = 0;
-  let anomaly: string | null = null;
+  let anomaly: string | null = invalid ? 'Preço monetário inválido no MCP' : null;
   if (unit !== undefined && promo !== undefined) {
-    if (promo < unit) discountPerUnit = money(unit - promo);
-    else if (promo > unit) anomaly = `promotionalUnitPrice (${promo}) maior que unitPrice (${unit})`;
+    if (promo < unit) discountPerUnit = cents(unit - promo);
+    else if (promo > unit) anomaly = `promotionalUnitPrice (${formatCents(promo)}) maior que unitPrice (${formatCents(unit)})`;
   }
   return {
     unitPrice,
@@ -163,7 +175,7 @@ export function normalizePromotion(o: unknown): NormalizedPromotion {
     basePrice,
     hasPromotion: discountPerUnit > 0,
     discountPerUnit,
-    discountPercent: unit && discountPerUnit > 0 ? Math.round((discountPerUnit / unit) * 100) : 0,
+    discountPercent: unit && discountPerUnit > 0 ? Number((BigInt(discountPerUnit) * 100n + BigInt(unit) / 2n) / BigInt(unit)) : 0,
     anomaly,
   };
 }
@@ -173,15 +185,15 @@ function normalizeDelivery(raw: unknown): Field<NormalizedDelivery> {
   if (raw === null) return { state: 'NULL' };
   const d = asObj(raw);
   if (!d) return { state: 'INVALID', raw };
-  const fee = mapField(readNumber(d, 'fee'), money);
-  const promotionalFee = mapField(readNumber(d, 'promotionalFee'), money);
+  const fee = readMoney(d, 'fee');
+  const promotionalFee = readMoney(d, 'promotionalFee');
   const eta = asObj(d.estimatedMinutes);
   return present({
     deliveryMethodId: readString(d, 'deliveryMethodId'),
     mode: readString(d, 'deliveryMethodMode'),
     fee,
     promotionalFee,
-    effectiveFee: val(promotionalFee) ?? val(fee) ?? null,
+    effectiveFee: fee.state === 'INVALID' || promotionalFee.state === 'INVALID' ? null : val(promotionalFee) ?? val(fee) ?? null,
     etaMinutes: { min: readNumber(eta, 'min'), max: readNumber(eta, 'max') },
   });
 }
@@ -195,9 +207,9 @@ export function normalizeMerchant(raw: unknown, path = 'merchant'): NormalizedMe
     name: readString(m, 'merchantName'),
     logoUrl: readString(m, 'merchantLogoUrl'),
     isOpen: readBoolean(m, 'isOpen'),
-    minimumOrderAmount: mapField(readNumber(m, 'minimumOrderAmount'), money),
-    rating: { value: mapField(readNumber(m, 'reviewRating'), round2), count: readNumber(m, 'ratingCount') },
-    distanceKm: mapField(readNumber(m, 'straightLineDistanceKm'), round2),
+    minimumOrderAmount: readMoney(m, 'minimumOrderAmount'),
+    rating: { value: mapField(readNumber(m, 'reviewRating'), round2), rawValue: readNumber(m, 'reviewRating'), count: readNumber(m, 'ratingCount') },
+    distanceKm: readNumber(m, 'straightLineDistanceKm'),
     delivery: 'deliveryMethod' in m ? normalizeDelivery(m.deliveryMethod) : ABSENT,
   };
 }
@@ -250,8 +262,9 @@ function normalizeOptionGroup(raw: unknown, path: string): NormalizedOptionGroup
   if (!g) throw new NormalizationError('optionGroup inválido', path);
   if (!isString(g.optionGroupId) || !g.optionGroupId) throw new NormalizationError('optionGroupId ausente', `${path}.optionGroupId`);
   const groupId = g.optionGroupId;
-  const minSelections = readNumber(g, 'minSelections');
-  const maxSelections = readNumber(g, 'maxSelections');
+  const isCount = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
+  const minSelections = readField(g, 'minSelections', isCount);
+  const maxSelections = readField(g, 'maxSelections', isCount);
   const issues: string[] = [];
   const options: NormalizedOption[] = [];
   const rawOptions = Array.isArray(g.options) ? g.options : [];
@@ -267,7 +280,7 @@ function normalizeOptionGroup(raw: unknown, path: string): NormalizedOptionGroup
       optionGroupId: groupId,
       name: readString(x, 'name'),
       description: readString(x, 'description'),
-      additionalPrice: mapField(readNumber(x, 'additionalPrice'), money),
+      additionalPrice: readMoney(x, 'additionalPrice'),
     });
   });
   const min = val(minSelections);
@@ -320,7 +333,7 @@ export function normalizeItemDetail(raw: unknown): NormalizedItemDetail {
     itemDescription: readString(o, 'itemDescription'),
     imageUrl: readString(o, 'itemImageUrl'),
     merchantName: readString(o, 'merchantName'),
-    merchantMinimumOrderAmount: mapField(readNumber(o, 'merchantMinimumOrderAmount'), money),
+    merchantMinimumOrderAmount: readMoney(o, 'merchantMinimumOrderAmount'),
     price: normalizePromotion(o),
     optionGroups,
     appDeeplink: readField(o, 'appDeeplink', isString),
