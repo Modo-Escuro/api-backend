@@ -3,23 +3,26 @@
 // Garantias:
 //  - Identidade do organizador vem SÓ do adaptador autenticado (botAuth), nunca do corpo/LLM.
 //  - Tentativa OAuth: state + PKCE aleatórios, validade, uso único, presa ao organizador que a criou.
-//  - Após o callback, o vínculo fica AGUARDANDO CONFIRMAÇÃO: o organizador confirma no Telegram com o
-//    código exibido no navegador que concluiu o login (impede uso de link encaminhado por terceiros).
+//  - Link encaminhado: (1) com callback localhost, início e retorno só aceitam conexões da própria máquina;
+//    (2) o primeiro navegador que abre o link "reivindica" a tentativa (cookie HttpOnly) e só ele conclui;
+//    (3) após o callback, o vínculo fica AGUARDANDO CONFIRMAÇÃO e o bot mostra a identidade mascarada da
+//    conta (quando verificável) com o botão "Confirmar conexão" — referência opaca `confirmationId`.
 //  - Cada vínculo tem IfoodAuth, arquivo de tokens, sessão MCP e cache próprios.
 //  - "Token presente" ≠ operacional: só uma leitura autenticada real (listAddresses) libera operações.
 //  - Rede/provedor fora ⇒ UNAVAILABLE (tokens mantidos). Credencial rejeitada ⇒ RECONNECT_REQUIRED.
 //  - Login não aprova compra (não há operação de compra no backend).
 //  - A sessão global antiga (.tokens.json) nunca é importada como vínculo.
 
-import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { IfoodAuth, LOGIN_ATTEMPT_TTL_MS, randomToken, type StoredTokens } from '../auth.js';
 import type { AppConfig } from '../config.js';
 import { ItemCache, type EvaluateDeps } from '../services/evaluate.js';
 import { classifyFailure } from './classify.js';
+import { identityFromGetUser, UNAVAILABLE_IDENTITY, type AccountIdentity } from './identity.js';
 import { LinkStore, type LinkRecord } from './store.js';
 
 export const CONFIRMATION_TTL_MS = 10 * 60_000;
-export const MAX_CODE_FAILURES = 5;
+const IDENTITY_TIMEOUT_MS = 10_000;
 
 export type LinkState =
   | 'DISCONNECTED'
@@ -40,6 +43,8 @@ export const OPERATION_SCOPES: Record<Operation, string[]> = {
 /** Sessão MCP de UM vínculo (deps de leitura ligados ao cliente MCP desse vínculo). */
 export interface LinkMcpSession {
   deps: EvaluateDeps;
+  /** Perfil básico (getUser sem profileData) — usado só para a identidade mascarada da confirmação. */
+  getUser?(): Promise<unknown>;
   close(): Promise<void>;
 }
 export type SessionFactory = (auth: IfoodAuth) => LinkMcpSession;
@@ -59,7 +64,6 @@ type AttemptStatus =
   | 'EXPIRED'
   | 'FAILED'
   | 'SUPERSEDED'
-  | 'LOCKED'
   | 'CANCELLED';
 
 interface Attempt {
@@ -71,9 +75,11 @@ interface Attempt {
   createdAt: number;
   authorizationExpiresAt: number;
   status: AttemptStatus;
+  /** sha256 do segredo do cookie do navegador que abriu o link primeiro. */
+  browserBinding: string | null;
+  confirmationId: string | null;
   confirmationExpiresAt: number | null;
-  verificationCode: string | null;
-  codeFailures: number;
+  identity: AccountIdentity | null;
   tokens: StoredTokens | null;
   failure: string | null;
 }
@@ -114,8 +120,18 @@ export interface LinkStatus {
   operational: boolean;
   verification: { status: 'OK' | 'PENDING' | 'FAILED'; at: string | null; reason: string | null };
   token: { expiresAt: string | null; willRefresh: boolean } | null;
-  account: { addressCount: number | null } | null;
-  attempt: { attemptId: string; status: 'PENDING_AUTHORIZATION' | 'PENDING_CONFIRMATION'; expiresAt: string; codeAttemptsLeft: number | null } | null;
+  account: { identity: AccountIdentity | null; addressCount: number | null } | null;
+  attempt: {
+    attemptId: string;
+    status: 'PENDING_AUTHORIZATION' | 'PENDING_CONFIRMATION';
+    expiresAt: string;
+    /** Referência opaca para o botão "Confirmar conexão" (só após callback válido). */
+    confirmationId: string | null;
+    /** Identidade mascarada da conta que autorizou (só em PENDING_CONFIRMATION). */
+    accountIdentity: AccountIdentity | null;
+    /** O link já foi aberto num navegador (reivindicado). */
+    browserClaimed: boolean;
+  } | null;
   allowedOperations: Operation[];
   scopeEvidence: 'TOKEN_SCOPES' | 'NOT_PROVIDED' | null;
   missingScopes: string[];
@@ -124,17 +140,9 @@ export interface LinkStatus {
   nextActions: string[];
 }
 
-const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem 0/O, 1/I
-function verificationCode(): string {
-  const bytes = randomBytes(6);
-  const chars = [...bytes].map((b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join('');
-  return `${chars.slice(0, 3)}-${chars.slice(3)}`;
-}
-const normCode = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, '');
+const sha = (s: string) => createHash('sha256').update(s).digest();
 function safeEqual(a: string, b: string): boolean {
-  const ha = createHash('sha256').update(a).digest();
-  const hb = createHash('sha256').update(b).digest();
-  return timingSafeEqual(ha, hb);
+  return timingSafeEqual(sha(a), sha(b));
 }
 const iso = (t: number | null | undefined) => (t ? new Date(t).toISOString() : null);
 
@@ -146,9 +154,12 @@ export interface LinkServiceOptions {
   store?: LinkStore;
 }
 
+const ACTIVE: AttemptStatus[] = ['PENDING_AUTHORIZATION', 'EXCHANGING', 'PENDING_CONFIRMATION', 'CONFIRMING'];
+
 export class IfoodLinkService {
   private attempts = new Map<string, Attempt>(); // por attemptId
   private byState = new Map<string, string>(); // oauthState → attemptId
+  private byConfirmation = new Map<string, string>(); // confirmationId → attemptId
   private current = new Map<string, string>(); // organizerId → attemptId ativo
   private links = new Map<string, LinkRuntime>(); // organizerId → vínculo confirmado
   private lastEnd = new Map<string, string>(); // organizerId → motivo do último encerramento
@@ -202,9 +213,10 @@ export class IfoodLinkService {
     }
     // Remove registros terminais antigos (mantém por 1 h para responder "repetido/expirado").
     for (const [id, a] of this.attempts) {
-      if (!['PENDING_AUTHORIZATION', 'EXCHANGING', 'PENDING_CONFIRMATION', 'CONFIRMING'].includes(a.status) && now - a.createdAt > 60 * 60_000) {
+      if (!ACTIVE.includes(a.status) && now - a.createdAt > 60 * 60_000) {
         this.attempts.delete(id);
         this.byState.delete(a.oauthState);
+        if (a.confirmationId) this.byConfirmation.delete(a.confirmationId);
       }
     }
   }
@@ -213,7 +225,6 @@ export class IfoodLinkService {
     a.status = status;
     a.failure = reason;
     a.tokens = null; // tokens de tentativa não confirmada são descartados
-    a.verificationCode = null;
     if (this.current.get(a.organizerId) === a.attemptId) {
       this.current.delete(a.organizerId);
       if (status !== 'CONFIRMED') this.lastEnd.set(a.organizerId, reason);
@@ -223,7 +234,7 @@ export class IfoodLinkService {
   private activeAttempt(organizerId: string): Attempt | null {
     const id = this.current.get(organizerId);
     const a = id ? this.attempts.get(id) : undefined;
-    return a && ['PENDING_AUTHORIZATION', 'EXCHANGING', 'PENDING_CONFIRMATION', 'CONFIRMING'].includes(a.status) ? a : null;
+    return a && ACTIVE.includes(a.status) ? a : null;
   }
 
   /** Cria tentativa (substitui a anterior do mesmo organizador). */
@@ -243,9 +254,10 @@ export class IfoodLinkService {
       createdAt: now,
       authorizationExpiresAt: now + LOGIN_ATTEMPT_TTL_MS,
       status: 'PENDING_AUTHORIZATION',
+      browserBinding: null,
+      confirmationId: null,
       confirmationExpiresAt: null,
-      verificationCode: null,
-      codeFailures: 0,
+      identity: null,
       tokens: null,
       failure: null,
     };
@@ -258,25 +270,46 @@ export class IfoodLinkService {
     return { status: await this.status(organizerId), authorizationUrl: url.toString(), attemptId: a.attemptId, expiresAt: iso(a.authorizationExpiresAt)! };
   }
 
-  /** Navegador abre o link do bot: valida a tentativa e gera a URL do iFood (PAR feito agora, não na criação). */
-  async startAuthorization(attemptId: string, startToken: string): Promise<string> {
+  /**
+   * Navegador abre o link do bot: valida a tentativa, reivindica-a para este navegador e gera a URL do
+   * iFood (PAR feito agora). Retorna o segredo a gravar em cookie quando é a primeira abertura.
+   */
+  async startAuthorization(
+    attemptId: string,
+    startToken: string,
+    browserSecret?: string | null,
+  ): Promise<{ url: string; browserSecret: string }> {
     await this.init();
     this.gc();
     const a = this.attempts.get(attemptId);
     if (!a || !safeEqual(a.startToken, startToken)) throw new LinkError('ATTEMPT_NOT_FOUND', 'Link de conexão inválido', 404);
     if (a.status === 'EXPIRED') throw new LinkError('ATTEMPT_EXPIRED', 'Link de conexão expirado — gere outro no Telegram', 410);
     if (a.status !== 'PENDING_AUTHORIZATION') throw new LinkError('ATTEMPT_USED', 'Link de conexão já utilizado ou substituído — gere outro no Telegram', 410);
+    let secret = browserSecret ?? null;
+    if (a.browserBinding) {
+      if (!secret || !safeEqual(a.browserBinding, sha(secret).toString('hex'))) {
+        throw new LinkError('BROWSER_MISMATCH', 'Este link já foi aberto em outro navegador. Se não foi você, gere um novo link no Telegram.', 409);
+      }
+    } else {
+      secret = randomToken(32);
+      a.browserBinding = sha(secret).toString('hex');
+    }
     const authForUrl = new IfoodAuth(this.cfg, this.fetchImpl, { tokenFile: null, now: this.now });
     try {
-      return await authForUrl.authorizationUrl(a.oauthState, a.verifier);
+      return { url: await authForUrl.authorizationUrl(a.oauthState, a.verifier), browserSecret: secret };
     } catch (e) {
       const c = classifyFailure(e);
       throw new LinkError('PROVIDER_UNAVAILABLE', `Não foi possível iniciar a autorização no iFood (${c.kind === 'OTHER' ? 'erro' : c.reason})`, 503);
     }
   }
 
-  /** Callback OAuth. Retorna o código de verificação a exibir no navegador. */
-  async handleCallback(q: { state?: string; code?: string; error?: string }): Promise<{ verificationCode: string; expiresAt: string }> {
+  /** attemptId dono de um state (para o cookie do navegador no callback). */
+  attemptIdForState(state: string | undefined): string | null {
+    return state ? this.byState.get(state) ?? null : null;
+  }
+
+  /** Callback OAuth: valida, troca o código, consulta a identidade mascarada e deixa AGUARDANDO CONFIRMAÇÃO. */
+  async handleCallback(q: { state?: string; code?: string; error?: string; browserSecret?: string | null }): Promise<{ expiresAt: string; identity: AccountIdentity }> {
     await this.init();
     this.gc();
     const id = q.state ? this.byState.get(q.state) : undefined;
@@ -288,52 +321,72 @@ export class IfoodLinkService {
       this.endAttempt(a, 'EXPIRED', 'ATTEMPT_EXPIRED');
       throw new LinkError('ATTEMPT_EXPIRED', 'Tentativa expirada — gere um novo link no Telegram', 410);
     }
+    // Só o navegador que abriu o link conclui (não consome a tentativa em caso de divergência).
+    if (!a.browserBinding || !q.browserSecret || !safeEqual(a.browserBinding, sha(q.browserSecret).toString('hex'))) {
+      throw new LinkError('BROWSER_MISMATCH', 'Conclua o login no mesmo navegador em que abriu o link do Telegram.', 409);
+    }
     a.status = 'EXCHANGING'; // consumo único: callbacks concorrentes com o mesmo state param aqui
     if (q.error || !q.code) {
       this.endAttempt(a, 'FAILED', 'AUTHORIZATION_DENIED');
       throw new LinkError('AUTHORIZATION_DENIED', 'Autorização não concedida no iFood', 400);
     }
+    const pendingAuth = new IfoodAuth(this.cfg, this.fetchImpl, { tokenFile: null, now: this.now });
     try {
-      const exchanger = new IfoodAuth(this.cfg, this.fetchImpl, { tokenFile: null, now: this.now });
-      a.tokens = await exchanger.exchangeCode(q.code, a.verifier, 'telegram-link');
+      a.tokens = await pendingAuth.exchangeCode(q.code, a.verifier, 'telegram-link');
     } catch (e) {
       const c = classifyFailure(e);
       this.endAttempt(a, 'FAILED', c.kind === 'UNAVAILABLE' ? 'PROVIDER_UNAVAILABLE' : 'CODE_EXCHANGE_FAILED');
       throw new LinkError('CODE_EXCHANGE_FAILED', 'Não foi possível concluir a autorização — gere um novo link no Telegram', c.kind === 'UNAVAILABLE' ? 503 : 400);
     }
+    // Identidade mascarada para confirmação consciente (falha ⇒ UNAVAILABLE, não bloqueia).
+    await pendingAuth.setTokens(a.tokens);
+    a.identity = await this.fetchIdentity(pendingAuth);
     if (a.status !== 'EXCHANGING') {
       // Substituída/cancelada durante a troca: descarta.
       a.tokens = null;
       throw new LinkError('ATTEMPT_USED', 'Tentativa substituída — use o link mais recente', 410);
     }
     a.status = 'PENDING_CONFIRMATION';
-    a.verificationCode = verificationCode();
+    a.confirmationId = randomToken(18);
+    this.byConfirmation.set(a.confirmationId, a.attemptId);
     a.confirmationExpiresAt = this.now() + CONFIRMATION_TTL_MS;
-    return { verificationCode: a.verificationCode, expiresAt: iso(a.confirmationExpiresAt)! };
+    return { expiresAt: iso(a.confirmationExpiresAt)!, identity: a.identity };
   }
 
-  /** Organizador confirma no Telegram com o código exibido no navegador. */
-  async confirm(organizerId: string, attemptId: string, code: string): Promise<{ status: LinkStatus; previousLinkId: string | null }> {
+  private async fetchIdentity(auth: IfoodAuth): Promise<AccountIdentity> {
+    const s = this.sessionFactory(auth);
+    try {
+      if (!s.getUser) return UNAVAILABLE_IDENTITY;
+      const payload = await Promise.race([
+        s.getUser(),
+        new Promise<never>((_, rej) => setTimeout(() => rej(new Error('identity timeout')), IDENTITY_TIMEOUT_MS).unref?.()),
+      ]);
+      return identityFromGetUser(payload);
+    } catch {
+      return UNAVAILABLE_IDENTITY;
+    } finally {
+      await s.close().catch(() => undefined);
+    }
+  }
+
+  /** Organizador toca em "Confirmar conexão" no Telegram (bot envia o confirmationId recebido no status). */
+  async confirm(organizerId: string, confirmationId: string): Promise<{ status: LinkStatus; previousLinkId: string | null }> {
     await this.init();
     this.gc();
-    const a = this.attempts.get(attemptId);
+    const id = this.byConfirmation.get(confirmationId);
+    const a = id ? this.attempts.get(id) : undefined;
     // Tentativa de outro organizador ⇒ mesmo erro de inexistente (sem oráculo).
-    if (!a || a.organizerId !== organizerId) throw new LinkError('ATTEMPT_NOT_FOUND', 'Tentativa não encontrada', 404);
-    if (a.status === 'PENDING_AUTHORIZATION' || a.status === 'EXCHANGING') {
-      throw new LinkError('AUTHORIZATION_PENDING', 'O login no iFood ainda não foi concluído no navegador', 409, 'AWAITING_AUTHORIZATION');
+    if (!a || a.organizerId !== organizerId) throw new LinkError('CONFIRMATION_NOT_FOUND', 'Confirmação não encontrada', 404);
+    if (a.status === 'EXPIRED') throw new LinkError('CONFIRMATION_EXPIRED', 'Confirmação expirada — gere um novo link', 410);
+    if (a.status === 'CONFIRMED' || a.status === 'CONFIRMING') {
+      throw new LinkError('ALREADY_CONFIRMED', 'Esta conexão já foi confirmada', 410, (await this.status(organizerId)).state);
     }
-    if (a.status === 'LOCKED') throw new LinkError('ATTEMPT_LOCKED', 'Muitos códigos incorretos — gere um novo link', 423);
-    if (a.status === 'EXPIRED') throw new LinkError('ATTEMPT_EXPIRED', 'Confirmação expirada — gere um novo link', 410);
-    if (a.status !== 'PENDING_CONFIRMATION') throw new LinkError('ATTEMPT_USED', 'Tentativa já utilizada ou substituída', 410);
-    if (!safeEqual(normCode(a.verificationCode ?? ''), normCode(code))) {
-      a.codeFailures++;
-      if (a.codeFailures >= MAX_CODE_FAILURES) {
-        this.endAttempt(a, 'LOCKED', 'TOO_MANY_CODE_FAILURES');
-        throw new LinkError('ATTEMPT_LOCKED', 'Muitos códigos incorretos — gere um novo link', 423);
-      }
-      throw new LinkError('INVALID_VERIFICATION_CODE', `Código incorreto (${MAX_CODE_FAILURES - a.codeFailures} tentativa(s) restante(s))`, 400);
+    if (a.status !== 'PENDING_CONFIRMATION') throw new LinkError('CONFIRMATION_INVALID', 'Tentativa substituída ou cancelada — gere um novo link', 410);
+    if (a.confirmationExpiresAt && this.now() > a.confirmationExpiresAt) {
+      this.endAttempt(a, 'EXPIRED', 'CONFIRMATION_EXPIRED');
+      throw new LinkError('CONFIRMATION_EXPIRED', 'Confirmação expirada — gere um novo link', 410);
     }
-    a.status = 'CONFIRMING'; // confirmações concorrentes param aqui
+    a.status = 'CONFIRMING'; // confirmações concorrentes/repetidas param aqui
     const tokens = a.tokens!;
     const linkId = randomToken(18);
     const record: LinkRecord = {
@@ -342,6 +395,7 @@ export class IfoodLinkService {
       confirmedAt: this.now(),
       tokenFileName: `${linkId}.tokens.json`,
       reconnectReason: null,
+      accountIdentity: a.identity,
     };
     const rt = this.runtimeFor(record);
     await rt.auth.setTokens(tokens);
@@ -529,7 +583,7 @@ export class IfoodLinkService {
     if (a) {
       state = a.status === 'PENDING_CONFIRMATION' || a.status === 'CONFIRMING' ? 'AWAITING_CONFIRMATION' : 'AWAITING_AUTHORIZATION';
       reason = rt ? `RECONNECTING_FROM_${linkState}` : null;
-      nextActions.push(state === 'AWAITING_AUTHORIZATION' ? 'OPEN_AUTHORIZATION_LINK' : 'CONFIRM_WITH_CODE', 'CANCEL');
+      nextActions.push(state === 'AWAITING_AUTHORIZATION' ? 'OPEN_AUTHORIZATION_LINK' : 'CONFIRM_CONNECTION', 'CANCEL');
     } else if (linkState) {
       state = linkState;
       if (state === 'CONNECTED') nextActions.push(operational ? 'USE' : 'VERIFY', 'DISCONNECT');
@@ -549,13 +603,15 @@ export class IfoodLinkService {
       operational,
       verification,
       token,
-      account: rt && operational ? { addressCount: rt.lastCheck?.addressCount ?? null } : null,
+      account: rt ? { identity: rt.record.accountIdentity ?? null, addressCount: operational ? (rt.lastCheck?.addressCount ?? null) : null } : null,
       attempt: a
         ? {
             attemptId: a.attemptId,
             status: a.status === 'PENDING_CONFIRMATION' || a.status === 'CONFIRMING' ? 'PENDING_CONFIRMATION' : 'PENDING_AUTHORIZATION',
             expiresAt: iso(a.status === 'PENDING_CONFIRMATION' || a.status === 'CONFIRMING' ? a.confirmationExpiresAt : a.authorizationExpiresAt)!,
-            codeAttemptsLeft: a.status === 'PENDING_CONFIRMATION' ? MAX_CODE_FAILURES - a.codeFailures : null,
+            confirmationId: a.status === 'PENDING_CONFIRMATION' ? a.confirmationId : null,
+            accountIdentity: a.status === 'PENDING_CONFIRMATION' ? a.identity : null,
+            browserClaimed: a.browserBinding !== null,
           }
         : null,
       allowedOperations: allowed,

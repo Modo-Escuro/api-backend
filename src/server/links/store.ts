@@ -3,6 +3,7 @@
 
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import type { AccountIdentity } from './identity.js';
 
 export interface LinkRecord {
   linkId: string;
@@ -12,6 +13,8 @@ export interface LinkRecord {
   tokenFileName: string;
   /** Preenchido quando a credencial foi comprovadamente rejeitada; persiste entre reinícios. */
   reconnectReason: string | null;
+  /** Identidade MASCARADA mostrada e confirmada pelo organizador (null em registros antigos). */
+  accountIdentity?: AccountIdentity | null;
 }
 
 interface FileShape {

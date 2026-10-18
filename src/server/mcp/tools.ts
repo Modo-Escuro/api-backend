@@ -19,6 +19,9 @@ export const ALLOWED_TOOLS = new Set([
   'getRecommendations',
   'getItem',
   'getMerchant',
+  // Exceção (F3.5): só para exibir a identidade mascarada da conta na confirmação do vínculo.
+  // Contrato observado em 2026-10-17: { success, data: { fullName, email, phone } }; readOnlyHint=true; escopo mcp.user.basic.read.
+  'getUser',
 ]);
 
 export interface RawToolResult {
@@ -75,6 +78,9 @@ export function searchOffers(args: SearchOffersArgs, client?: Client, opts?: Cal
 
 export const getItem = (a: { itemId: string; merchantId: string; userLocation: LatLng }, client?: Client, opts?: CallOptions) =>
   callReadTool<GetItemResult>('getItem', { ...a }, client, opts);
+
+/** Perfil básico. Nunca pede profileData (comportamental). */
+export const getUser = (client?: Client, opts?: CallOptions) => callReadTool<unknown>('getUser', { includeProfileData: false }, client, opts);
 
 export const getMerchant = (a: { merchantId: string; userLocation: LatLng }, client?: Client) =>
   callReadTool<Record<string, unknown>>('getMerchant', { ...a }, client);

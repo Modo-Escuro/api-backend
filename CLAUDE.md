@@ -25,6 +25,7 @@ npm test
 - Resource metadata: `https://consumer-mcp.ifood.com.br/.well-known/oauth-protected-resource/marketplace`
 - Ferramentas do MVP (somente estas, conforme schemas observados):
   `listAddresses`, `searchOffers`, `browseOffers`, `getRecommendations`, `getItem`, `getMerchant`
+  + exceção `getUser` (só `includeProfileData=false`, só para a identidade MASCARADA na confirmação do vínculo; telefone nunca sai)
 - Campos/ capacidades novos só podem ser usados se aparecerem em resposta real do MCP.
 
 ## Credenciais (nunca commitar, nunca logar)
@@ -39,6 +40,8 @@ npm test
 ## Vínculo Telegram ↔ iFood (F3.5) — contrato em `docs/bot-api.md`
 - Bot→API: `Authorization: Bearer $BOT_API_TOKEN` + `X-Telegram-User-Id` (validado pelo adaptador; nunca do corpo/LLM),
   conferido contra `ALLOWED_ORGANIZER_IDS`. Rotas: `/api/bot/ifood/{status,connect,confirm,verify,link}`.
+- Confirmação do vínculo por botão no Telegram (`confirmationId` opaco, sem código digitado); início/callback só por
+  loopback + navegador vinculado por cookie; identidade mascarada exibida antes de confirmar.
 - `/api/addresses` e `/api/evaluate` exigem vínculo confirmado e operacional (`allowedOperations`), com tokens/sessão MCP/cache por vínculo.
 - Token presente ≠ operacional; falha de rede ⇒ `UNAVAILABLE` (não logout); refresh recusado ⇒ `RECONNECT_REQUIRED`.
 - Sessão global antiga só com `DEV_GLOBAL_SESSION=true`; nunca importada como vínculo. Login não aprova compra.
@@ -77,6 +80,7 @@ fixtures/             # respostas reais salvas p/ testes offline
 ```
 
 ## Convenções
-- Dinheiro: number decimal BRL (ex.: `32.9`); enums `SCREAMING_SNAKE_CASE`; JSON `lowerCamelCase`.
+- Dinheiro: number decimal BRL (ex.: `32.9`) no domínio; **contrato do bot em centavos inteiros** (campos `*Cents`,
+  conversão só na borda em `services/cents.ts`). Enums `SCREAMING_SNAKE_CASE`; JSON `lowerCamelCase`.
 - IDs sempre UUID vindos do MCP; em testes, fixtures de respostas reais — nunca IDs fabricados em produção.
 - Pipeline de recomendação é função pura testável (`domain/*` não faz fetch).

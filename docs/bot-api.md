@@ -1,131 +1,171 @@
 # Contrato bot Telegram → api-backend (F3.5 — login iFood do organizador)
 
-Status: **proposta implementada no api-backend** (2026-10-17), pendente de aceite do telegram-bot.
-Baseado em `telegram-bot/docs/login-ifood.md` (commit 65a1d1d). Não há operação de compra; login não aprova pedido.
+Status: **implementado no api-backend** (2026-10-17). Decisões aceitas: confirmação por **botão** (sem código digitado),
+`BOT_API_TOKEN` + `X-Telegram-User-Id`, dinheiro em **centavos inteiros** no contrato do bot, demo com um organizador.
+Base: `telegram-bot/docs/login-ifood.md`. Login **não** aprova compra; não há operação de compra no backend.
 
 ## 1. Autenticação bot → API
 
 Toda chamada do bot leva:
 
-| Cabeçalho | Valor | Observação |
-|---|---|---|
-| `Authorization` | `Bearer <BOT_API_TOKEN>` | segredo compartilhado (≥ 32 caracteres), só em variável de ambiente dos dois lados |
-| `X-Telegram-User-Id` | ID numérico | `from.id` do update **já validado pelo adaptador** (conversa privada, organizador permitido) |
+| Cabeçalho | Valor |
+|---|---|
+| `Authorization` | `Bearer <BOT_API_TOKEN>` (≥ 32 caracteres; mesmo valor nos dois lados, só em variável de ambiente) |
+| `X-Telegram-User-Id` | `from.id` do update/callback_query **já validado pelo adaptador** (conversa privada, organizador permitido) |
+| `Content-Type` | `application/json` nas rotas com corpo |
 
-- O backend confere o ID contra `ALLOWED_ORGANIZER_IDS`. IDs em corpo, query ou texto do usuário/LLM são ignorados ou rejeitados (corpos são `strict`).
-- Sem `BOT_API_TOKEN`/`ALLOWED_ORGANIZER_IDS` configurados ⇒ `503 BOT_API_NOT_CONFIGURED` (fail closed).
-- Erros: `401 BOT_AUTH_REQUIRED`, `400 ORGANIZER_REQUIRED`, `403 ORGANIZER_NOT_ALLOWED`.
-- O backend não registra IDs, query strings, tokens nem códigos em log.
+- O backend confere o ID contra `ALLOWED_ORGANIZER_IDS`. Identidade no corpo/query/texto do usuário ou do LLM é ignorada
+  ou rejeitada (corpos são `strict`).
+- Erros: `401 BOT_AUTH_REQUIRED`, `400 ORGANIZER_REQUIRED`, `403 ORGANIZER_NOT_ALLOWED`, `503 BOT_API_NOT_CONFIGURED` (fail closed).
+- Formato de erro: `{ "error": { "kind": "<CÓDIGO>", "message": "...", "state": <estado|null>, "reason": <motivo|null> } }`.
 
 ## 2. Estados
 
-`state` (+ `reason`) em todas as respostas de vínculo:
+| state | significado | reason (exemplos) | bot mostra |
+|---|---|---|---|
+| `DISCONNECTED` | sem vínculo nem tentativa | `NEVER_CONNECTED`, `DISCONNECTED_BY_USER`, `ATTEMPT_EXPIRED`, `CONFIRMATION_EXPIRED`, `AUTHORIZATION_DENIED`, `CODE_EXCHANGE_FAILED`, `PROVIDER_UNAVAILABLE`, `ATTEMPT_SUPERSEDED` | botão **Conectar iFood** |
+| `AWAITING_AUTHORIZATION` | link gerado; login no navegador não concluído | `RECONNECTING_FROM_<estado>` se já havia vínculo | botão-URL do link + **Verificar** |
+| `AWAITING_CONFIRMATION` | iFood autorizou; falta o organizador confirmar | | identidade mascarada + **Confirmar conexão** / **Cancelar** |
+| `CONNECTED` | vínculo confirmado | `null` (operacional), `VERIFICATION_PENDING`, `TOKEN_REFRESH_PENDING` | liberar fluxo **só se** `allowedOperations` não vazio |
+| `RECONNECT_REQUIRED` | credencial comprovadamente inválida | `REFRESH_REJECTED`, `TOKEN_EXPIRED`, `TOKEN_REJECTED`, `ACCESS_FORBIDDEN`, `TOKENS_MISSING` | **Conectar iFood** de novo |
+| `UNAVAILABLE` | iFood/AS/rede fora — **não é logout**; tokens mantidos | `PROVIDER_ERROR`, `AUTH_PROVIDER_UNAVAILABLE`, `MCP_UNAVAILABLE`, `NETWORK_ERROR` | "iFood indisponível" + **Verificar** |
 
-| state | significado | reason (exemplos) |
-|---|---|---|
-| `DISCONNECTED` | sem vínculo nem tentativa | `NEVER_CONNECTED`, `DISCONNECTED_BY_USER`, `ATTEMPT_EXPIRED`, `CONFIRMATION_EXPIRED`, `AUTHORIZATION_DENIED`, `TOO_MANY_CODE_FAILURES` |
-| `AWAITING_AUTHORIZATION` | link gerado; login no navegador ainda não concluído | `RECONNECTING_FROM_<estado>` quando já havia vínculo |
-| `AWAITING_CONFIRMATION` | iFood autorizou; falta o organizador confirmar no Telegram | |
-| `CONNECTED` | vínculo confirmado | `null` (operacional), `VERIFICATION_PENDING`, `TOKEN_REFRESH_PENDING` |
-| `RECONNECT_REQUIRED` | credencial comprovadamente inválida | `REFRESH_REJECTED`, `TOKEN_EXPIRED`, `TOKEN_REJECTED`, `ACCESS_FORBIDDEN`, `TOKENS_MISSING` |
-| `UNAVAILABLE` | iFood/AS/rede indisponível — **não é logout**, tokens mantidos | `PROVIDER_ERROR`, `AUTH_PROVIDER_UNAVAILABLE`, `MCP_UNAVAILABLE`, `NETWORK_ERROR` |
-
-**Liberar o fluxo de conta somente se `allowedOperations` não estiver vazio.** `CONNECTED` sozinho não basta:
-`operational` só é `true` após uma leitura autenticada real (`listAddresses`) bem-sucedida e com token não vencido.
-
-Corpo de status (sem tokens, sem códigos OAuth, sem dados da conta antes da confirmação):
+Corpo de status (todas as rotas de vínculo devolvem este objeto; nunca há token, código OAuth, telefone, e-mail ou nome completo):
 
 ```json
 {
-  "state": "CONNECTED", "reason": null,
-  "linkId": "opaco", "connectedAt": "2026-10-17T23:30:00.000Z",
-  "operational": true,
-  "verification": { "status": "OK", "at": "…", "reason": null },
-  "token": { "expiresAt": "…", "willRefresh": true },
-  "account": { "addressCount": 1 },
-  "attempt": null,
-  "allowedOperations": ["ADDRESSES_READ", "OFFERS_EVALUATE"],
-  "scopeEvidence": "TOKEN_SCOPES", "missingScopes": [],
+  "state": "AWAITING_CONFIRMATION",
+  "reason": null,
+  "linkId": null,
+  "connectedAt": null,
+  "operational": false,
+  "verification": { "status": "PENDING", "at": null, "reason": null },
+  "token": null,
+  "account": null,
+  "attempt": {
+    "attemptId": "opaco-24",
+    "status": "PENDING_CONFIRMATION",
+    "expiresAt": "2026-10-17T23:58:00.000Z",
+    "confirmationId": "opaco-24",
+    "accountIdentity": { "status": "VERIFIED", "displayName": "Maria S.", "emailMasked": "m***@example.com", "source": "getUser" },
+    "browserClaimed": true
+  },
+  "allowedOperations": [],
+  "scopeEvidence": null,
+  "missingScopes": [],
   "purchaseAuthorized": false,
   "limitations": ["Login não aprova compra…", "O callback OAuth é http://localhost:8000…"],
-  "nextActions": ["USE", "DISCONNECT"]
+  "nextActions": ["CONFIRM_CONNECTION", "CANCEL"]
 }
 ```
 
-`linkId` muda a cada nova confirmação (troca de conta/reconexão). O bot deve invalidar sacola/aprovação associada a um
-`linkId` diferente. `confirm` também devolve `previousLinkId`.
+- `accountIdentity.status`: `VERIFIED` (nome/e-mail mascarados do `getUser`), `NOT_PROVIDED` (iFood respondeu sem esses
+  campos) ou `UNAVAILABLE` (consulta falhou). Nos dois últimos, o bot deve dizer que a identidade não pôde ser verificada.
+- Em `CONNECTED`: `account = { "identity": {…mascarada…}, "addressCount": <n|null> }`, `linkId` opaco, `attempt: null`.
+- `linkId` muda a cada nova confirmação (reconexão/troca de conta). O bot deve invalidar sacola/aprovação associada a outro
+  `linkId`. `confirm` também devolve `previousLinkId`.
 
-## 3. Endpoints do bot (exigem a autenticação da seção 1)
+## 3. Endpoints do bot
 
-| Método e rota | Uso | Respostas |
+| Método e rota | Corpo | Sucesso | Erros |
+|---|---|---|---|
+| `GET /api/bot/ifood/status` | — | 200 status (sem chamada ao iFood) | — |
+| `POST /api/bot/ifood/connect` | — | 201 status + `authorizationUrl`, `attemptExpiresAt` | 503 `IFOOD_CLIENT_NOT_CONFIGURED` |
+| `POST /api/bot/ifood/confirm` | `{ "confirmationId": "<de attempt.confirmationId>" }` | 200 status + `previousLinkId` | 400 `VALIDATION`; 404 `CONFIRMATION_NOT_FOUND` (inexistente **ou de outro organizador**); 410 `CONFIRMATION_EXPIRED`, `ALREADY_CONFIRMED` (traz `state`), `CONFIRMATION_INVALID` (tentativa substituída/cancelada) |
+| `POST /api/bot/ifood/verify` | — | 200 status (leitura autenticada real; renova token se preciso) | 409 `IFOOD_LINK_REQUIRED` |
+| `DELETE /api/bot/ifood/link` | — | 200 status + `providerRevocation: "NOT_ATTEMPTED"` | — |
+
+Operações de conta (mesma autenticação; exigem vínculo confirmado **e** operacional):
+
+| Rota | Operação | Erros de vínculo |
 |---|---|---|
-| `GET /api/bot/ifood/status` | estado atual (sem chamada ao iFood) | 200 |
-| `POST /api/bot/ifood/connect` | cria tentativa (substitui a anterior) | 201 + status + `authorizationUrl`, `attemptExpiresAt` |
-| `POST /api/bot/ifood/confirm` | `{ "attemptId", "verificationCode" }` | 200 status + `previousLinkId`; 400 código errado; 404 tentativa inexistente/de outro organizador; 409 login ainda não concluído; 410 expirada/usada; 423 bloqueada (5 erros) |
-| `POST /api/bot/ifood/verify` | leitura autenticada real; renova token se preciso | 200 status; 409 sem vínculo |
-| `DELETE /api/bot/ifood/link` | desconecta: remove vínculo e tokens locais | 200 status + `providerRevocation: "NOT_ATTEMPTED"` |
+| `GET /api/addresses` | `ADDRESSES_READ` | 409 `IFOOD_LINK_REQUIRED` · 409 `IFOOD_RECONNECT_REQUIRED` · 503 `IFOOD_UNAVAILABLE` · 403 `IFOOD_SCOPE_MISSING` |
+| `POST /api/evaluate` | `OFFERS_EVALUATE` | idem; corpo/resposta em centavos (seção 6) |
 
-Operações de conta (mesma autenticação; exigem vínculo confirmado e operacional):
-
-| Rota | Operação | Sem vínculo/indisponível |
-|---|---|---|
-| `GET /api/addresses` | `ADDRESSES_READ` | `409 IFOOD_LINK_REQUIRED` / `409 IFOOD_RECONNECT_REQUIRED` / `503 IFOOD_UNAVAILABLE` / `403 IFOOD_SCOPE_MISSING` |
-| `POST /api/evaluate` | `OFFERS_EVALUATE` (contrato do corpo em `src/server/routes/evaluate.ts`) | idem |
-
-Se o token vencer, a operação renova sozinha; renovação recusada ⇒ `RECONNECT_REQUIRED`; falha de rede ⇒ `UNAVAILABLE`.
-Antes da primeira operação após reinício do backend, uma verificação é feita automaticamente.
-
-## 4. Fluxo
+## 4. Fluxo que o bot deve implementar
 
 ```
-Bot                         API                                   Navegador (mesma máquina do backend)   iFood
- | POST connect  ─────────▶ cria tentativa (state, PKCE, 10 min)
- | ◀── authorizationUrl = http://localhost:8000/auth/ifood/start?a=…&t=…
- | mostra botão "Conectar iFood" ───────────────────────────────▶ abre o link
- |                          GET /auth/ifood/start ◀──────────────
- |                          PAR (state, S256) ───────────────────────────────────────────────────────────▶
- |                          302 ───────────────────────────────▶ login no iFood ────────────────────────▶
- |                          GET /?state&code ◀──────────────────────────────────────────── redirect registrado
- |                          valida state/validade/uso único, troca o code (tokens só no backend)
- |                          página: "envie o código ABC-123 no Telegram" ─▶ (URL limpa, no-store)
- | organizador digita o código
- | POST confirm {attemptId, verificationCode} ─▶ cria vínculo, verifica com listAddresses
- | ◀── CONNECTED + allowedOperations
+1. /start ou "Conectar":   POST /connect  → 201 { authorizationUrl, attempt.expiresAt }
+   Mensagem com botão-URL "Abrir login do iFood" (authorizationUrl) + aviso:
+   "Abra no navegador DESTE computador (o mesmo do backend). O link vale 10 min."
+2. Usuário faz login no navegador. A página final diz "volte ao Telegram e toque em Confirmar conexão".
+3. Bot consulta GET /status (botão "Verificar" ou polling curto, ex.: a cada 5 s por até 10 min):
+   - AWAITING_AUTHORIZATION → continuar aguardando ("ainda não concluído" — um "já entrei" não comprova nada)
+   - AWAITING_CONFIRMATION  → enviar mensagem:
+       "Conectar esta conta iFood? Maria S. · m***@example.com
+        Se não reconhece esta conta, toque em Cancelar."
+       Inline keyboard: [Confirmar conexão] callback_data = "ifc:" + attempt.confirmationId   (≤ 64 bytes)
+                        [Cancelar]          callback_data = "ifx"
+     (se accountIdentity.status ≠ VERIFIED: "Não foi possível verificar a identidade da conta.")
+4. callback_query "ifc:<id>": o adaptador valida from.id == organizador (como em qualquer update) e chama
+   POST /confirm { confirmationId: <id> } com X-Telegram-User-Id = from.id.
+   - 200 CONNECTED e allowedOperations ≠ [] → "Conta conectada". Login não aprova compras.
+   - 200 com state UNAVAILABLE → "iFood indisponível, tente Verificar depois" (vínculo existe, operações bloqueadas).
+   - 410 ALREADY_CONFIRMED (clique duplicado) → apenas mostrar o status atual; NÃO tratar como nova conexão.
+   - 410 CONFIRMATION_EXPIRED / CONFIRMATION_INVALID, 404 → "Confirmação inválida/expirada; gere um novo link".
+   Responder answerCallbackQuery sempre; remover o teclado da mensagem após uso.
+5. "ifx" (Cancelar) → DELETE /link (cancela a tentativa pendente; se havia vínculo confirmado, ele também é removido —
+   para cancelar só a tentativa, basta ignorar: ela expira em 10 min).
+6. Antes de qualquer operação de conta: status.allowedOperations deve conter a operação; se a rota devolver
+   409/503, mostrar a ação correspondente (Conectar / Verificar).
 ```
 
-- Tentativa: expira em 10 min (autorização) e mais 10 min (confirmação); uso único; presa ao organizador que a criou;
-  nova `connect` invalida a anterior; 5 códigos errados bloqueiam.
-- O código de verificação **não é credencial do iFood**. Só é aceito na API autenticada do bot e para o organizador dono da
-  tentativa; serve para provar que quem concluiu o login no navegador é quem está no Telegram (protege contra link encaminhado).
-- "Já entrei" ou clique sem código **não** confirma nada: `confirm` antes do callback devolve 409.
+Regras para o bot:
+- Nunca pedir senha, código OAuth, token, URL de retorno ou qualquer código no chat.
+- Nunca construir `confirmationId`/`attemptId`; usar apenas os valores do status mais recente.
+- Não confirmar automaticamente: a confirmação é sempre um clique humano do organizador.
+- Não guardar tokens (o bot nunca os recebe). `linkId` pode ser guardado para invalidar sacolas.
 
-## 5. Callback localhost
+## 5. Proteção contra link encaminhado e garantias da tentativa
 
-O redirect registrado no client OAuth é **`http://localhost:8000`** (exato). O link do bot e o callback só funcionam num
-navegador **na mesma máquina do backend**. Abrir no Telegram do celular não funciona. Para a demo: Telegram Desktop e navegador
-no computador do backend. Acesso pelo celular exige outro redirect cadastrado no iFood e `PUBLIC_BASE_URL` alcançável.
-Nunca pedir senha, código OAuth, token ou URL de retorno no chat.
+| Camada | Comportamento |
+|---|---|
+| Mesma máquina | Com `PUBLIC_BASE_URL` local (padrão), `/auth/ifood/start` e o callback (`/`) só aceitam conexões de loopback (127.0.0.1/::1). Outro computador recebe 403. |
+| Mesmo navegador | O primeiro navegador que abre o link recebe cookie HttpOnly/SameSite=Lax e "reivindica" a tentativa. Outro navegador recebe 409; o callback em navegador sem o cookie é rejeitado (409) **sem consumir** a tentativa. |
+| Confirmação consciente | Após o callback o vínculo fica `AWAITING_CONFIRMATION`; o bot mostra a identidade mascarada da conta e só o organizador que criou a tentativa consegue confirmar (outro ⇒ 404). |
+| Tentativa | `state` e PKCE S256 aleatórios; validade de 10 min para o login e mais 10 min para confirmar; `state` de uso único (callbacks concorrentes: só um troca o código); nova `connect` invalida a anterior; `confirmationId` só existe após callback válido e só vale uma vez. |
+| Sessão | Após confirmar, uma leitura autenticada real (`listAddresses`) define `operational`. Tokens, sessão MCP e cache são próprios de cada vínculo. |
 
-## 6. Recorte da demo (não é isolamento multiusuário completo)
+Identidade da conta: `getUser` com `includeProfileData=false` (contrato observado 2026-10-17: `{ success, data: { fullName, email, phone } }`,
+`readOnlyHint=true`, escopo `mcp.user.basic.read`). Só saem do backend nome mascarado ("Maria S.") e e-mail mascarado
+("m***@example.com"); telefone nunca. Falha do `getUser` não bloqueia, mas é explicitada.
 
-- Um organizador em `ALLOWED_ORGANIZER_IDS` e uma conta iFood dedicada de teste.
-- O backend já mantém por vínculo: arquivo de tokens, `IfoodAuth`, sessão MCP e cache próprios; testes cobrem dois organizadores.
-- Não há: banco de dados, criptografia dos tokens em repouso (arquivos modo 600 em `IFOOD_LINKS_DIR`, fora do Git),
-  rate limiting, revogação no provedor, auditoria, nem multi-processo (estado de tentativas em memória).
-- A sessão global antiga (`.tokens.json`, `/api/auth/*`) fica desligada (`DEV_GLOBAL_SESSION=false`) e nunca é importada como vínculo.
+## 6. Dinheiro em centavos (`/api/evaluate` no contrato do bot)
 
-## 7. Configuração
+- Entrada: `budget.maxItemPriceCents`, `budget.maxOrderTotalCents`, `refinements.maxDeliveryFeeCents` — inteiros.
+  Campos decimais antigos (`maxItemPrice` etc.) são rejeitados com 400.
+- Saída: `money: { "currency": "BRL", "unit": "CENTS" }` e **todo** campo monetário termina em `Cents` (inteiro) ou é uma
+  faixa `{ minCents, maxCents }`: `listingPrice.unitPriceCents`, `pricing.minimumConfigurable.unitTotalCents`,
+  `unitTotalRange`, `estimatedTotalCents`, `estimatedTotalRange`, `delivery.feeCents`, `minimumOrder.amountCents`,
+  `options.mandatory[].totalCents`, `confirmedTotalCents` (sempre `null`), etc.
+- Quando o preço é ambíguo (`status: "UNCERTAIN"`), `unitTotalCents`/`estimatedTotalCents` vêm `null` e só as faixas valem.
+- Mensagens (`blockers[].message`, `notes`) continuam em texto "R$ x.yz" para leitura humana.
+- Internamente o domínio usa BRL decimal; a conversão é feita só na borda (`src/server/services/cents.ts`).
+
+## 7. Callback localhost
+
+Redirect registrado: **`http://localhost:8000`** (exato). Para a demo: Telegram Desktop e navegador **no computador do backend**.
+Abrir pelo celular não funciona (e é bloqueado). Para uso pelo celular seria preciso outro redirect cadastrado no iFood e
+`PUBLIC_BASE_URL` público — e então a proteção "mesma máquina" deixa de existir (restam navegador vinculado + confirmação).
+
+## 8. Recorte da demo (não é isolamento multiusuário completo)
+
+- Um organizador em `ALLOWED_ORGANIZER_IDS`, uma conta iFood dedicada de teste.
+- Sem banco de dados, sem criptografia dos tokens em repouso (arquivos modo 600 em `IFOOD_LINKS_DIR`, fora do Git), sem rate
+  limiting, sem auditoria, sem revogação no provedor, um único processo (tentativas pendentes ficam em memória).
+- Sessão global antiga (`/api/auth/*`) desligada por padrão e nunca importada como vínculo.
+
+## 9. Configuração
 
 ```bash
-BOT_API_TOKEN=<segredo ≥ 32 chars, o mesmo no bot>
+# api-backend (.env)
+BOT_API_TOKEN=<segredo ≥ 32 chars>       # node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 ALLOWED_ORGANIZER_IDS=<ID numérico do organizador>
 PUBLIC_BASE_URL=http://localhost:8000
 IFOOD_LINKS_DIR=.ifood-links
+
+# telegram-bot (sugestão de nomes; decisão do bot)
+BACKEND_URL=http://localhost:8000
+BOT_API_TOKEN=<o mesmo segredo>
+TELEGRAM_ALLOWED_USER_ID=<mesmo ID de ALLOWED_ORGANIZER_IDS>   # enviado como X-Telegram-User-Id
 ```
-
-## 8. Decisões abertas para o telegram-bot
-
-1. **Código de verificação digitado no Telegram** (proposto e implementado). Alternativa sem digitação: comparar códigos
-   exibidos nos dois lados (mais fraca). Precisa de aceite.
-2. Nomes de variáveis no bot (`BACKEND_URL`, `BOT_API_TOKEN`) e reutilização de `TELEGRAM_ALLOWED_USER_ID` como `X-Telegram-User-Id`.
-3. Valores em centavos: `/api/evaluate` ainda devolve BRL decimal (regra do CLAUDE.md); o AGENTS.md do bot pede centavos inteiros.

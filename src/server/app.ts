@@ -75,7 +75,10 @@ export function createApp(auth: IfoodAuth = defaultAuth, opts: AppOptions = {}) 
   registerBotRoutes(app as unknown as Hono, links);
 
   // ---------- Navegador: início do login e callback OAuth (redirect registrado: http://localhost:8000) ----------
-  registerBrowserRoutes(app as unknown as Hono, links);
+  // Callback localhost ⇒ só conexões da própria máquina abrem o início/retorno do login (anti link encaminhado).
+  const host = new URL(cfg.publicBaseUrl).hostname;
+  const requireLoopback = ['localhost', '127.0.0.1', '[::1]', '::1'].includes(host);
+  registerBrowserRoutes(app as unknown as Hono, links, { requireLoopback });
 
   const devCallback = async (c: Context) => {
     const { code, state, error, error_description } = c.req.query();
@@ -99,7 +102,7 @@ export function createApp(auth: IfoodAuth = defaultAuth, opts: AppOptions = {}) 
     const q = c.req.query();
     if (!q.state && !q.code && !q.error) return null;
     const isDev = (s: string) => cfg.devGlobalSession && auth.hasPendingState(s);
-    return (await handleLinkCallback(c, links, isDev)) ?? devCallback(c);
+    return (await handleLinkCallback(c, links, isDev, { requireLoopback })) ?? devCallback(c);
   };
   app.get('/callback', async (c) => (await callback(c)) ?? c.text('callback sem state', 400));
   app.get('/', async (c) => (await callback(c)) ?? c.redirect(cfg.webOrigin));

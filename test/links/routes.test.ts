@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../../src/server/app';
 import { IfoodAuth } from '../../src/server/auth';
-import { ADDRESS, BOT_TOKEN, ORG_A, ORG_B, connectAndConfirm, setup } from '../helpers/fakes';
+import { ADDRESS, BOT_TOKEN, ORG_A, ORG_B, authorize, connectAndConfirm, setup } from '../helpers/fakes';
 
 function mk(over: Parameters<typeof setup>[0] = {}) {
   const env = setup(over);
@@ -13,8 +13,14 @@ function mk(over: Parameters<typeof setup>[0] = {}) {
     if (opts.org !== null) headers['x-telegram-user-id'] = opts.org ?? ORG_A;
     return app.request(path, { method, headers, body: opts.body === undefined ? undefined : JSON.stringify(opts.body) });
   };
-  return { env, app, call };
+  const LOCAL = { incoming: { socket: { remoteAddress: '127.0.0.1' } } };
+  /** Navegador na máquina do backend (ou em outro IP), com cookies. */
+  const browser = (path: string, cookie?: string, remoteAddress = '127.0.0.1') =>
+    app.request(path, { headers: cookie ? { cookie } : {} }, remoteAddress === '127.0.0.1' ? LOCAL : { incoming: { socket: { remoteAddress } } });
+  return { env, app, call, browser };
 }
+
+const cookieOf = (r: Response) => r.headers.get('set-cookie')!.split(';')[0]!;
 
 describe('autenticação bot→API', () => {
   it.each([
@@ -67,44 +73,58 @@ describe('sem vínculo confirmado, nenhuma operação iFood', () => {
 });
 
 describe('fluxo HTTP completo', () => {
-  it('connect → navegador (start + callback) → confirm → operações', async () => {
-    const { call, app, env } = mk();
+  it('connect → navegador (start + callback) → botão confirmar → operações', async () => {
+    const { call, browser, env } = mk();
     const c = await call('POST', '/api/bot/ifood/connect');
     expect(c.status).toBe(201);
     const cj = await c.json();
-    expect(cj).toMatchObject({ state: 'AWAITING_AUTHORIZATION', attempt: { status: 'PENDING_AUTHORIZATION' } });
+    expect(cj).toMatchObject({ state: 'AWAITING_AUTHORIZATION', attempt: { status: 'PENDING_AUTHORIZATION', confirmationId: null } });
     const startUrl = new URL(cj.authorizationUrl);
 
-    // Navegador: abre o link do bot (sem cabeçalhos do bot)
-    const start = await app.request(startUrl.pathname + startUrl.search);
+    // Navegador abre o link do bot: reivindica a tentativa com cookie HttpOnly
+    const start = await browser(startUrl.pathname + startUrl.search);
     expect(start.status).toBe(302);
     expect(start.headers.get('location')).toMatch(/^https:\/\/as\.test\/authorize\?/);
+    expect(start.headers.get('set-cookie')).toMatch(/HttpOnly/i);
+    expect(start.headers.get('set-cookie')).toMatch(/SameSite=Lax/i);
+    const cookie = cookieOf(start);
 
-    // iFood redireciona para o redirect registrado (raiz)
+    // iFood redireciona para o redirect registrado (raiz), no mesmo navegador
     const state = env.as.lastState();
-    const cb = await app.request(`/?state=${encodeURIComponent(state)}&code=oauth-code-xyz`);
+    const cb = await browser(`/?state=${encodeURIComponent(state)}&code=oauth-code-xyz`, cookie);
     expect(cb.status).toBe(200);
     expect(cb.headers.get('cache-control')).toBe('no-store');
     expect(cb.headers.get('referrer-policy')).toBe('no-referrer');
     const html = await cb.text();
-    expect(html).not.toMatch(/oauth-code-xyz|at-\d|rt-\d/);
-    const verification = /<code>([A-Z0-9-]+)<\/code>/.exec(html)![1]!;
+    expect(html).toContain('Maria S.');
+    expect(html).toContain('Confirmar conexão');
+    expect(html).not.toMatch(/oauth-code-xyz|at-\d|rt-\d|Souza|99999/);
 
-    // Antes de confirmar: nada liberado
+    // Antes de confirmar: nada liberado; status traz confirmationId e identidade mascarada
     expect((await call('GET', '/api/addresses')).status).toBe(409);
     const pending = await (await call('GET', '/api/bot/ifood/status')).json();
-    expect(pending).toMatchObject({ state: 'AWAITING_CONFIRMATION', account: null });
+    expect(pending).toMatchObject({
+      state: 'AWAITING_CONFIRMATION',
+      account: null,
+      attempt: { status: 'PENDING_CONFIRMATION', accountIdentity: { displayName: 'Maria S.', emailMasked: 'm***@example.com' } },
+    });
+    const confirmationId: string = pending.attempt.confirmationId;
+    expect(confirmationId.length).toBeLessThanOrEqual(64); // cabe em callback_data do Telegram
 
     // Replay do callback
-    const replay = await app.request(`/?state=${encodeURIComponent(state)}&code=outra`);
-    expect(replay.status).toBe(410);
+    expect((await browser(`/?state=${encodeURIComponent(state)}&code=outra`, cookie)).status).toBe(410);
 
-    // Confirmação no Telegram
-    const conf = await call('POST', '/api/bot/ifood/confirm', { body: { attemptId: cj.attempt.attemptId, verificationCode: verification } });
+    // Botão "Confirmar conexão"
+    const conf = await call('POST', '/api/bot/ifood/confirm', { body: { confirmationId } });
     expect(conf.status).toBe(200);
     const confJson = await conf.json();
-    expect(confJson).toMatchObject({ state: 'CONNECTED', operational: true, purchaseAuthorized: false });
+    expect(confJson).toMatchObject({ state: 'CONNECTED', operational: true, purchaseAuthorized: false, account: { identity: { displayName: 'Maria S.' } } });
     expect(JSON.stringify(confJson)).not.toMatch(/at-\d|rt-\d|oauth-code/);
+
+    // Clique repetido
+    const again = await call('POST', '/api/bot/ifood/confirm', { body: { confirmationId } });
+    expect(again.status).toBe(410);
+    expect((await again.json()).error).toMatchObject({ kind: 'ALREADY_CONFIRMED', state: 'CONNECTED' });
 
     // Operações
     const addr = await call('GET', '/api/addresses');
@@ -120,23 +140,61 @@ describe('fluxo HTTP completo', () => {
     expect((await call('GET', '/api/addresses')).status).toBe(409);
   });
 
+  it('confirm exige confirmationId (attemptId ou código não servem)', async () => {
+    const { call, env } = mk();
+    const a = await authorize(env, ORG_A);
+    expect((await call('POST', '/api/bot/ifood/confirm', { body: { attemptId: a.attemptId } })).status).toBe(400);
+    expect((await call('POST', '/api/bot/ifood/confirm', { body: { confirmationId: a.attemptId } })).status).toBe(404);
+    expect((await call('POST', '/api/bot/ifood/confirm', { body: { confirmationId: a.confirmationId, verificationCode: 'X' } })).status).toBe(400);
+  });
+
   it('callback com state inválido ⇒ 400; link de início adulterado ⇒ 404', async () => {
-    const { app } = mk();
-    expect((await app.request('/?state=inventado&code=x')).status).toBe(400);
-    expect((await app.request('/auth/ifood/start?a=x&t=y')).status).toBe(404);
+    const { browser } = mk();
+    expect((await browser('/?state=inventado&code=x')).status).toBe(400);
+    expect((await browser('/auth/ifood/start?a=x&t=y')).status).toBe(404);
+  });
+});
+
+describe('link encaminhado', () => {
+  it('início e callback só aceitam conexões da própria máquina (callback localhost)', async () => {
+    const { call, browser, app } = mk();
+    const cj = await (await call('POST', '/api/bot/ifood/connect')).json();
+    const u = new URL(cj.authorizationUrl);
+    expect((await browser(u.pathname + u.search, undefined, '192.168.0.50')).status).toBe(403);
+    expect((await app.request(u.pathname + u.search)).status).toBe(403); // endereço desconhecido ⇒ fecha
+    expect((await browser('/?state=x&code=y', undefined, '10.0.0.7')).status).toBe(403);
+    expect((await browser(u.pathname + u.search)).status).toBe(302);
+  });
+
+  it('segundo navegador não usa o link já aberto; callback em outro navegador não conclui', async () => {
+    const { call, browser, env } = mk();
+    const cj = await (await call('POST', '/api/bot/ifood/connect')).json();
+    const u = new URL(cj.authorizationUrl);
+    const first = await browser(u.pathname + u.search);
+    const cookie = cookieOf(first);
+    expect((await browser(u.pathname + u.search)).status).toBe(409); // outro navegador (sem cookie)
+    const state = env.as.lastState();
+    expect((await browser(`/?state=${encodeURIComponent(state)}&code=c`)).status).toBe(409); // sem cookie
+    expect((await browser(`/?state=${encodeURIComponent(state)}&code=c`, cookie)).status).toBe(200);
+  });
+
+  it('PUBLIC_BASE_URL público desativa a exigência de loopback (documentado como risco)', async () => {
+    const { call, browser } = mk({ publicBaseUrl: 'https://demo.example.com' });
+    const cj = await (await call('POST', '/api/bot/ifood/connect')).json();
+    const u = new URL(cj.authorizationUrl);
+    expect((await browser(u.pathname + u.search, undefined, '203.0.113.9')).status).toBe(302);
   });
 });
 
 describe('acesso cruzado', () => {
   it('organizador B não vê, não confirma e não usa o vínculo de A', async () => {
     const { call, env } = mk();
-    const r = await call('POST', '/api/bot/ifood/connect');
-    const { attempt } = await r.json();
     const a = await connectAndConfirm(env, ORG_A); // A conecta (pela API de serviço)
     expect(a.status.state).toBe('CONNECTED');
     const sb = await (await call('GET', '/api/bot/ifood/status', { org: ORG_B })).json();
     expect(sb).toMatchObject({ state: 'DISCONNECTED', linkId: null });
-    expect((await call('POST', '/api/bot/ifood/confirm', { org: ORG_B, body: { attemptId: attempt.attemptId, verificationCode: 'AAA-AAA' } })).status).toBe(404);
+    const pendingA = await authorize(env, ORG_A); // nova tentativa de A aguardando confirmação
+    expect((await call('POST', '/api/bot/ifood/confirm', { org: ORG_B, body: { confirmationId: pendingA.confirmationId } })).status).toBe(404);
     expect((await call('GET', '/api/addresses', { org: ORG_B })).status).toBe(409);
     expect((await call('GET', '/api/addresses', { org: ORG_A })).status).toBe(200);
   });
@@ -161,6 +219,8 @@ describe('/api/evaluate com vínculo (erros preservados)', () => {
     [{ query: '' }],
     [{ query: 'pizza', restrictions: [{ kind: 'ALLERGY', code: 'PEANUT', requirement: 'PREFERENCE' }] }],
     [{ query: 'pizza', refinements: { sort: 'RATING' } }],
+    [{ query: 'pizza', budget: { maxItemPrice: 100 } }], // decimal não é aceito: contrato em centavos
+    [{ query: 'pizza', budget: { maxItemPriceCents: 99.5 } }],
   ] as [unknown][])('400 de validação %j (antes de qualquer chamada)', async (body) => {
     const { call, env } = mk();
     await connectAndConfirm(env, ORG_A);
@@ -169,3 +229,34 @@ describe('/api/evaluate com vínculo (erros preservados)', () => {
     expect(env.mcp.used.length).toBe(before);
   });
 });
+
+describe('/api/evaluate em centavos (contrato do bot)', () => {
+  it('orçamento em centavos é convertido; preços saem em centavos inteiros com sufixo Cents', async () => {
+    const { call, env } = mk();
+    await connectAndConfirm(env, ORG_A);
+    const r = await call('POST', '/api/evaluate', { body: { query: 'pizza', budget: { maxItemPriceCents: 10_000 } } });
+    expect(r.status).toBe(200);
+    const body = await r.json();
+    expect(body.money).toEqual({ currency: 'BRL', unit: 'CENTS' });
+    const pizza = body.blocked.find((c: { item: { name: string } }) => c.item.name === 'Promoção pizza grande');
+    expect(pizza.blockers.map((b: { code: string }) => b.code)).toEqual(['ITEM_BUDGET_UNVERIFIED']); // faixa 6500–14300 vs teto 10000
+    const p = pizza.pricing.minimumConfigurable;
+    expect(p.unitTotalRange).toEqual({ minCents: 6500, maxCents: 14300 });
+    expect(p.unit).toMatchObject({ listPriceCents: 7800, promotionalPriceCents: 6500, discountPerUnitCents: 1300 });
+    expect(pizza.listingPrice).toEqual({ unitPriceCents: 7800, promotionalUnitPriceCents: 7800, definitive: false });
+    expect(pizza.pricing.confirmedTotalCents).toBeNull();
+    const ok = body.eligible.find((c: { item: { name: string } }) => c.item.name === 'Combo Individual - 1 Pizza 22cm + 1 Pizza Doce 22cm.');
+    const okp = ok.pricing.minimumConfigurable;
+    expect(okp.status).toBe('ESTIMATED');
+    expect(okp.estimatedTotalCents).toBe(okp.unitTotalCents + okp.delivery.feeCents);
+    expect(Number.isInteger(okp.estimatedTotalCents)).toBe(true);
+    // Nenhum campo monetário decimal no contrato do bot
+    const json = JSON.stringify(body);
+    expect(json).not.toMatch(/"(unitTotal|estimatedTotal|listPrice|basePrice|fee|amount|unitPrice)":/);
+    const nums: number[] = [];
+    JSON.parse(json, (k, v) => (k.endsWith('Cents') && typeof v === 'number' && nums.push(v), v));
+    expect(nums.length).toBeGreaterThan(10);
+    expect(nums.every(Number.isInteger)).toBe(true);
+  });
+});
+

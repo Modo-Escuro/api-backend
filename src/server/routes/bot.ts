@@ -1,10 +1,12 @@
 // Rotas do vínculo Telegram↔iFood (exigem botAuth) e rotas públicas do navegador (início + callback).
 import type { Context, Hono } from 'hono';
+import { getCookie, setCookie } from 'hono/cookie';
 import { z } from 'zod';
 import { organizerOf } from '../botAuth.js';
+import type { AccountIdentity } from '../links/identity.js';
 import type { IfoodLinkService } from '../links/service.js';
 
-const ConfirmBody = z.object({ attemptId: z.string().min(10).max(100), verificationCode: z.string().min(4).max(20) }).strict();
+const ConfirmBody = z.object({ confirmationId: z.string().min(10).max(64) }).strict();
 
 export function registerBotRoutes(app: Hono, links: IfoodLinkService) {
   app.get('/api/bot/ifood/status', async (c) => c.json(await links.status(organizerOf(c))));
@@ -22,8 +24,8 @@ export function registerBotRoutes(app: Hono, links: IfoodLinkService) {
       return c.json({ error: { kind: 'VALIDATION', message: 'Corpo deve ser JSON' } }, 400);
     }
     const parsed = ConfirmBody.safeParse(json);
-    if (!parsed.success) return c.json({ error: { kind: 'VALIDATION', message: 'Informe attemptId e verificationCode' } }, 400);
-    const r = await links.confirm(organizerOf(c), parsed.data.attemptId, parsed.data.verificationCode);
+    if (!parsed.success) return c.json({ error: { kind: 'VALIDATION', message: 'Informe confirmationId (do status AWAITING_CONFIRMATION)' } }, 400);
+    const r = await links.confirm(organizerOf(c), parsed.data.confirmationId);
     return c.json({ ...r.status, previousLinkId: r.previousLinkId });
   });
 
@@ -35,54 +37,89 @@ export function registerBotRoutes(app: Hono, links: IfoodLinkService) {
   });
 }
 
-// ---------- páginas mínimas do navegador (sem recursos externos, sem dados da conta) ----------
+// ---------- navegador ----------
 const esc = (s: string) => s.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
+const cookieName = (attemptId: string) => `ifl_${attemptId}`;
 
-export function browserPage(c: Context, status: 200 | 400 | 404 | 410 | 503, title: string, body: string) {
+type PageStatus = 200 | 400 | 403 | 404 | 409 | 410 | 503;
+
+export function browserPage(c: Context, status: PageStatus, title: string, body: string) {
   c.header('Cache-Control', 'no-store');
   c.header('Referrer-Policy', 'no-referrer');
   c.header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'");
   return c.html(
     `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">` +
       `<title>${esc(title)}</title><style>body{font-family:system-ui,sans-serif;max-width:32rem;margin:3rem auto;padding:0 1rem;color:#222}` +
-      `code{font-size:2rem;letter-spacing:.2rem;background:#f3f3f3;padding:.3rem .6rem;border-radius:6px}</style></head>` +
+      `.acc{background:#f3f3f3;padding:.6rem .8rem;border-radius:6px}</style></head>` +
       // Remove o `code` OAuth do histórico/URL visível.
       `<body><script>history.replaceState(null,'',location.pathname)</script><h1>${esc(title)}</h1>${body}</body></html>`,
     status,
   );
 }
 
-export function registerBrowserRoutes(app: Hono, links: IfoodLinkService) {
+const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
+
+/** Com callback localhost, início e retorno do login só podem vir da própria máquina do backend. */
+export function isLoopbackRequest(c: Context): boolean {
+  const addr = (c.env as { incoming?: { socket?: { remoteAddress?: string } } } | undefined)?.incoming?.socket?.remoteAddress;
+  return addr !== undefined && LOOPBACK.has(addr);
+}
+
+function errorPage(c: Context, e: unknown, title: string) {
+  const err = e as { httpStatus?: number; message?: string };
+  const allowed: PageStatus[] = [400, 403, 404, 409, 410, 503];
+  const status = (allowed.includes(err.httpStatus as PageStatus) ? err.httpStatus : 400) as PageStatus;
+  return browserPage(c, status, title, `<p>${esc(err.message ?? 'Erro')}</p>`);
+}
+
+const notLocal = (c: Context) =>
+  browserPage(c, 403, 'Abra no computador do backend', '<p>Este link só funciona no navegador da mesma máquina em que o backend está rodando.</p>');
+
+export function registerBrowserRoutes(app: Hono, links: IfoodLinkService, opts: { requireLoopback: boolean }) {
   app.get('/auth/ifood/start', async (c) => {
+    if (opts.requireLoopback && !isLoopbackRequest(c)) return notLocal(c);
     const a = c.req.query('a') ?? '';
     const t = c.req.query('t') ?? '';
     try {
-      return c.redirect(await links.startAuthorization(a, t));
+      const r = await links.startAuthorization(a, t, getCookie(c, cookieName(a)) ?? null);
+      setCookie(c, cookieName(a), r.browserSecret, { path: '/', httpOnly: true, sameSite: 'Lax', maxAge: 30 * 60 });
+      return c.redirect(r.url);
     } catch (e) {
-      const err = e as { httpStatus?: number; message?: string };
-      const status = (err.httpStatus === 404 || err.httpStatus === 410 || err.httpStatus === 503 ? err.httpStatus : 400) as 400 | 404 | 410 | 503;
-      return browserPage(c, status, 'Não foi possível iniciar', `<p>${esc(err.message ?? 'Erro')}</p>`);
+      return errorPage(c, e, 'Não foi possível iniciar');
     }
   });
 }
 
-/** Trata o callback de vínculo. Retorna null se o state não pertence a nenhuma tentativa de vínculo. */
-export async function handleLinkCallback(c: Context, links: IfoodLinkService, isLegacyState: (state: string) => boolean) {
+function identityHtml(i: AccountIdentity): string {
+  if (i.status !== 'VERIFIED') return '<p class="acc">Não foi possível exibir a identidade da conta; confira no Telegram antes de confirmar.</p>';
+  const parts = [i.displayName, i.emailMasked].filter(Boolean).map((x) => esc(x!));
+  return `<p class="acc">Conta iFood autorizada: <strong>${parts.join(' · ')}</strong></p>`;
+}
+
+/** Trata o callback de vínculo. Retorna null se o state pertence ao login de desenvolvimento. */
+export async function handleLinkCallback(
+  c: Context,
+  links: IfoodLinkService,
+  isLegacyState: (state: string) => boolean,
+  opts: { requireLoopback: boolean },
+) {
   const { state, code, error } = c.req.query();
   if (state && isLegacyState(state)) return null;
+  if (opts.requireLoopback && !isLoopbackRequest(c)) return notLocal(c);
+  const attemptId = links.attemptIdForState(state);
+  const browserSecret = attemptId ? (getCookie(c, cookieName(attemptId)) ?? null) : null;
   try {
-    const r = await links.handleCallback({ state, code, error });
+    const r = await links.handleCallback({ state, code, error, browserSecret });
     return browserPage(
       c,
       200,
       'Autorização recebida',
-      `<p>Volte à conversa com o bot no Telegram e envie este código de verificação:</p><p><code>${esc(r.verificationCode)}</code></p>` +
-        `<p>Ele vale até ${esc(new Date(r.expiresAt).toLocaleTimeString('pt-BR'))}. Se você não iniciou esta conexão, apenas feche esta página.</p>` +
+      identityHtml(r.identity) +
+        `<p>Volte à conversa com o bot no Telegram e toque em <strong>Confirmar conexão</strong> se esta for a conta certa ` +
+        `(até ${esc(new Date(r.expiresAt).toLocaleTimeString('pt-BR'))}). Se você não iniciou esta conexão, apenas feche esta página.</p>` +
         `<p>Este login não aprova nenhuma compra.</p>`,
     );
   } catch (e) {
-    const err = e as { httpStatus?: number; message?: string };
-    const status = (err.httpStatus === 410 || err.httpStatus === 503 ? err.httpStatus : 400) as 400 | 410 | 503;
-    return browserPage(c, status, 'Autorização não concluída', `<p>${esc(err.message ?? 'Erro')}</p>`);
+    return errorPage(c, e, 'Autorização não concluída');
   }
 }

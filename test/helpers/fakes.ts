@@ -86,6 +86,9 @@ export class FakeMcp {
   searchPages: unknown[] = [{ ...fx('searchOffers-pizza.json'), hasMore: false, nextPageToken: undefined }];
   sessions = 0;
   closed = 0;
+  /** Resposta SINTÉTICA de getUser (formato observado: { success, data: { fullName, email, phone } }). */
+  user: unknown = { success: true, data: { fullName: 'Maria Clara Souza', email: 'maria.souza@example.com', phone: '+5516999990000' } };
+  userFailure: McpFailure = 'none';
 
   private async gate(auth: IfoodAuth, op: string) {
     const token = await auth.getAccessToken(); // exercita expiração/refresh do vínculo
@@ -116,7 +119,13 @@ export class FakeMcp {
         return structuredClone(it);
       },
     };
-    return { deps, close: async () => void this.closed++ };
+    const getUser = async () => {
+      await auth.getAccessToken();
+      if (this.userFailure === 'internal') throw new McpToolError('getUser', [{ message: 'falha sintética', code: 'INTERNAL' }]);
+      if (this.userFailure === 'network') throw new TypeError('fetch failed');
+      return structuredClone(this.user);
+    };
+    return { deps, getUser, close: async () => void this.closed++ };
   };
 }
 
@@ -146,17 +155,25 @@ export function setup(over: Partial<AppConfig> = {}) {
   return { cfg, as, mcp, clock, links };
 }
 
-/** Fluxo completo até o callback; devolve dados para confirmar. */
-export async function authorize(env: ReturnType<typeof setup>, org: string) {
+/** Abre o link de início como um navegador (devolve o segredo do cookie). */
+export async function openStart(env: ReturnType<typeof setup>, org: string) {
   const c = await env.links.connect(org);
   const u = new URL(c.authorizationUrl);
-  await env.links.startAuthorization(u.searchParams.get('a')!, u.searchParams.get('t')!);
-  const state = env.as.lastState();
-  const cb = await env.links.handleCallback({ state, code: `code-${org}` });
-  return { attemptId: c.attemptId, state, code: cb.verificationCode };
+  const a = u.searchParams.get('a')!;
+  const t = u.searchParams.get('t')!;
+  const r = await env.links.startAuthorization(a, t, null);
+  return { attemptId: c.attemptId, a, t, browserSecret: r.browserSecret, state: env.as.lastState() };
+}
+
+/** Fluxo completo até o callback; devolve o confirmationId que o bot leria no status. */
+export async function authorize(env: ReturnType<typeof setup>, org: string) {
+  const o = await openStart(env, org);
+  const cb = await env.links.handleCallback({ state: o.state, code: `code-${org}`, browserSecret: o.browserSecret });
+  const st = await env.links.status(org);
+  return { ...o, identity: cb.identity, confirmationId: st.attempt!.confirmationId! };
 }
 
 export async function connectAndConfirm(env: ReturnType<typeof setup>, org: string) {
   const a = await authorize(env, org);
-  return env.links.confirm(org, a.attemptId, a.code);
+  return env.links.confirm(org, a.confirmationId);
 }

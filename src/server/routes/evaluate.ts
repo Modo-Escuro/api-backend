@@ -1,4 +1,5 @@
 // POST /api/evaluate — avaliação read-only (sem ranking, sem carrinho).
+// Contrato do bot: dinheiro em CENTAVOS inteiros na entrada e na saída; conversão explícita aqui (domínio é BRL decimal).
 
 import type { Context, Hono } from 'hono';
 import { z } from 'zod';
@@ -6,8 +7,10 @@ import { ALLERGENS, DIETARY } from '../domain/constraints.js';
 import { SORTS } from '../mcp/types.js';
 import { EvaluateInputError, type EvaluateOutcome, type EvaluateRequest } from '../services/evaluate.js';
 import { evaluateView } from '../services/evaluate-view.js';
+import { evaluateViewCents, fromCents } from '../services/cents.js';
 
-const money = z.number().finite().positive().max(10_000);
+/** Centavos inteiros (≤ R$ 10.000,00). */
+const cents = z.number().int().positive().max(1_000_000);
 
 export const EvaluateBody = z
   .object({
@@ -25,14 +28,14 @@ export const EvaluateBody = z
       )
       .max(15)
       .default([]),
-    budget: z.object({ maxItemPrice: money.optional(), maxOrderTotal: money.optional() }).strict().optional(),
+    budget: z.object({ maxItemPriceCents: cents.optional(), maxOrderTotalCents: cents.optional() }).strict().optional(),
     quantity: z.number().int().min(1).max(20).optional(),
     merchantType: z.enum(['RESTAURANT', 'GROCERIES', 'LIQUORSTORE', 'DRUGSTORE', 'PETSTORE', 'SHOPPING']).optional(),
     refinements: z
       .object({
         maxDistanceKm: z.number().positive().max(100).optional(),
         maxDeliveryTimeMinutes: z.number().int().positive().max(300).optional(),
-        maxDeliveryFee: z.number().min(0).max(1_000).optional(),
+        maxDeliveryFeeCents: z.number().int().min(0).max(100_000).optional(),
         minRating: z.number().min(0).max(5).optional(),
         onlyWithPromotion: z.boolean().optional(),
         sort: z.enum(SORTS).optional(),
@@ -54,6 +57,24 @@ export const EvaluateBody = z
   .strict()
   .refine((b) => !(b.addressId && b.userLocation), { message: 'Informe addressId OU userLocation, não ambos' });
 
+type Body = z.infer<typeof EvaluateBody>;
+
+/** Converte o corpo do bot (centavos) para a requisição do domínio (BRL decimal). */
+export function toDomainRequest(b: Body): EvaluateRequest {
+  const { budget, refinements, ...rest } = b;
+  const req: EvaluateRequest = { ...(rest as Omit<EvaluateRequest, 'budget' | 'refinements'>) };
+  if (budget) {
+    req.budget = {};
+    if (budget.maxItemPriceCents !== undefined) req.budget.maxItemPrice = fromCents(budget.maxItemPriceCents);
+    if (budget.maxOrderTotalCents !== undefined) req.budget.maxOrderTotal = fromCents(budget.maxOrderTotalCents);
+  }
+  if (refinements) {
+    const { maxDeliveryFeeCents, ...r } = refinements;
+    req.refinements = { ...r, ...(maxDeliveryFeeCents !== undefined ? { maxDeliveryFee: fromCents(maxDeliveryFeeCents) } : {}) };
+  }
+  return req;
+}
+
 const INPUT_STATUS: Record<string, 400 | 409> = { ADDRESS_AMBIGUOUS: 409, NO_ADDRESS: 409 };
 
 /** `run` executa a avaliação na sessão do vínculo do organizador (definido pelo app). */
@@ -70,8 +91,8 @@ export function registerEvaluate(app: Hono, run: (c: Context, req: EvaluateReque
       return c.json({ error: { kind: 'VALIDATION', message: 'Requisição inválida', issues: parsed.error.issues.map((i) => ({ path: i.path.join('.'), message: i.message })) } }, 400);
     }
     try {
-      const outcome = await run(c, parsed.data as EvaluateRequest);
-      return c.json(evaluateView(outcome));
+      const outcome = await run(c, toDomainRequest(parsed.data));
+      return c.json(evaluateViewCents(evaluateView(outcome)));
     } catch (e) {
       if (e instanceof EvaluateInputError) return c.json({ error: { kind: 'INPUT', code: e.code, message: e.message } }, INPUT_STATUS[e.code] ?? 400);
       throw e; // McpToolError/AuthError → app.onError (502/401)
