@@ -11,6 +11,8 @@ import { removeStaleTemps, writeFileDurable } from '../storage/durableFile.js';
 import type { AccountIdentity } from './identity.js';
 
 export interface LinkRecord {
+  /** Hash interno issuer/client/sub; nunca enviado ao bot/modelo. */
+  accountKey?: string;
   linkId: string;
   organizerId: string;
   confirmedAt: number;
@@ -64,6 +66,7 @@ export function parseLinksFile(text: string): Record<string, LinkRecord> {
       typeof r.confirmedAt === 'number' &&
       typeof r.tokenFileName === 'string' &&
       TOKEN_FILE_RE.test(r.tokenFileName) &&
+      (r.accountKey === undefined || (typeof r.accountKey === 'string' && /^[a-f0-9]{64}$/.test(r.accountKey))) &&
       (r.reconnectReason === null || typeof r.reconnectReason === 'string');
     if (!ok) throw new LinkStorageError('LINKS_FILE_CORRUPT', 'RECORD_INVALID');
   }

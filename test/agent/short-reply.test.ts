@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { shortReply } from '../../src/server/agent/short-reply';
-import { missingQuestions } from '../../src/server/agent/policy';
+import { missingQuestions, planActions } from '../../src/server/agent/policy';
 import { renderSnapshot } from '../../src/server/agent/render';
 import { applyPatch } from '../../src/server/domain/purchase';
 import type { Snapshot } from '../../src/server/contracts/conversation';
@@ -16,10 +16,36 @@ function setup() {
 describe('resposta curta vinculada à pergunta exibida', () => {
   it('Não/Nao/nenhuma responde somente à primeira pessoa ainda não perguntada', () => {
     const { state, snapshot } = setup();
-    for (const message of ['Não', 'Nao', 'nenhuma.']) {
+    for (const message of ['Não', 'Nao', 'nenhuma.', 'não tenho', 'Não tenho restrições', 'não tenho nenhuma alergia.']) {
       expect(shortReply(state, snapshot, message)?.proposal.actions).toEqual([
         { action: 'SET_NO_RESTRICTIONS', participant: { ref: state.participants[0]!.participantId } },
       ]);
+    }
+  });
+  it('sai do ciclo de confirmação já persistido, sem atingir a próxima pessoa', () => {
+    const { state } = setup();
+    const id = state.participants[0]!.participantId;
+    const unclear = applyPatch(state, [{ op: 'MARK_UNCLEAR', target: id, field: 'RESTRICTIONS',
+      question: 'Bruna tem alguma alergia ou restrição alimentar? Pode confirmar?' }], { ...ctx, eventId: 'loop' }).state;
+    for (const message of ['não', 'não tenho', 'Não tenho restrições']) {
+      const snapshot = renderSnapshot(base, unclear, [], missingQuestions(unclear));
+      const direct = shortReply(unclear, snapshot, message)!;
+      expect(direct).not.toBeNull();
+      const plan = planActions(unclear, direct.proposal, change => change.ops.length ? applyPatch(unclear, change.ops, ctx).state : unclear, null, direct.policyMessage);
+      const next = applyPatch(unclear, plan.ops, ctx).state;
+      expect(next.participants[0]!.restrictions.state).toBe('NONE');
+      expect(next.participants[1]!.restrictions.state).toBe('NOT_ASKED');
+      expect(next.clarifications).toEqual([]);
+      expect(missingQuestions(next)[0]).toBe('bia tem alguma alergia ou restrição alimentar?');
+    }
+  });
+  it('não apaga alergia declarada mesmo com pergunta canônica pendente', () => {
+    const { state } = setup();
+    const id = state.participants[0]!.participantId;
+    const changed = applyPatch(state, [{ op: 'ADD_RESTRICTION', participantId: id, key: { kind: 'ALLERGY', code: 'MILK' } },
+      { op: 'MARK_UNCLEAR', target: id, field: 'RESTRICTIONS', question: 'Bruna tem alguma alergia ou restrição alimentar? Pode confirmar?' }], ctx).state;
+    for (const message of ['não', 'não tenho', 'não tenho restrições']) {
+      expect(shortReply(changed, renderSnapshot(base, changed, [], missingQuestions(changed)), message)).toBeNull();
     }
   });
   it('não sem pergunta, com nota de endereço, recusa ou outro contexto não libera ninguém', () => {

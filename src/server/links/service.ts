@@ -21,6 +21,7 @@ import { ItemCache, type EvaluateDeps } from '../services/evaluate.js';
 import { classifyFailure } from './classify.js';
 import { identityFromGetUser, UNAVAILABLE_IDENTITY, type AccountIdentity } from './identity.js';
 import { LinkStorageError, LinkStore, type LinkRecord } from './store.js';
+import { ContractError } from '../contracts/guards.js';
 
 export const CONFIRMATION_TTL_MS = 10 * 60_000;
 const IDENTITY_TIMEOUT_MS = 10_000;
@@ -163,6 +164,26 @@ export interface LinkServiceOptions {
 const ACTIVE: AttemptStatus[] = ['PENDING_AUTHORIZATION', 'EXCHANGING', 'PENDING_CONFIRMATION', 'CONFIRMING'];
 
 export class IfoodLinkService {
+  /** Serializa o contexto da conversa com connect/confirm/disconnect. Falha não mistura grupos. */
+  async withConversationAccount<T>(organizerId: string, fn: (account: { key: string; linkId: string }) => Promise<T>): Promise<T> {
+    await this.init();
+    return this.withLock(organizerId, async () => {
+      const rt = this.links.get(organizerId);
+      if (!rt || rt.record.reconnectReason || this.activeAttempt(organizerId)) throw new ContractError('LINK_CHANGED');
+      const info = await rt.auth.tokenInfo();
+      if (!info.present || (info.expired && !info.hasRefreshToken)) throw new ContractError('LINK_CHANGED');
+      if (!rt.record.accountKey) {
+        let key: string;
+        try { key = await rt.auth.accountKey(); } catch { throw new ContractError('UNAVAILABLE'); }
+        const record = { ...rt.record, accountKey: key };
+        // Persistir antes de liberar. Falha mantém o registro anterior.
+        await this.store.save({ ...this.records, [organizerId]: record });
+        this.records[organizerId] = record;
+        rt.record = record;
+      }
+      return fn({ key: rt.record.accountKey!, linkId: rt.record.linkId });
+    });
+  }
   private attempts = new Map<string, Attempt>(); // por attemptId
   private byState = new Map<string, string>(); // oauthState → attemptId
   private byConfirmation = new Map<string, string>(); // confirmationId → attemptId
@@ -529,11 +550,12 @@ export class IfoodLinkService {
   }
 
   /** Cancela SÓ a tentativa pendente (link/confirmação). Não mexe em vínculo já confirmado. */
-  async cancelAttempt(organizerId: string): Promise<{ status: LinkStatus; cancelled: boolean }> {
+  async cancelAttempt(organizerId: string, expectedAttempt?: string): Promise<{ status: LinkStatus; cancelled: boolean }> {
     await this.init();
     const cancelled = await this.withLock(organizerId, async () => {
       this.gc();
       const a = this.activeAttempt(organizerId);
+      if (expectedAttempt && a?.attemptId !== expectedAttempt) throw new LinkError('ATTEMPT_USED', 'Tentativa substituída.', 409);
       if (!a) return false;
       this.endAttempt(a, 'CANCELLED', 'ATTEMPT_CANCELLED');
       return true;
@@ -552,10 +574,11 @@ export class IfoodLinkService {
    * Remove SÓ o vínculo confirmado e encerra a sessão local (tokens, sessão MCP, cache). Tentativa pendente não é
    * afetada — use cancelAttempt. Não revoga no provedor (sem suporte verificado).
    */
-  async disconnect(organizerId: string): Promise<{ status: LinkStatus; providerRevocation: 'NOT_ATTEMPTED'; removed: boolean }> {
+  async disconnect(organizerId: string, expectedLink?: string): Promise<{ status: LinkStatus; providerRevocation: 'NOT_ATTEMPTED'; removed: boolean }> {
     await this.init();
     const removed = await this.withLock(organizerId, async () => {
       const rt = this.links.get(organizerId);
+      if (expectedLink && rt?.record.linkId !== expectedLink) throw new LinkError('CONFIRMATION_INVALID', 'A conta conectada mudou.', 409);
       if (!rt) return false;
       this.links.delete(organizerId);
       delete this.records[organizerId];

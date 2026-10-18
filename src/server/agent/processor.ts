@@ -22,6 +22,7 @@ import { buildModelInput, missingQuestions, planActions } from './policy.js';
 import { renderSnapshot, SNAPSHOT_BUDGET_BYTES } from './render.js';
 import { AddressError } from '../services/delivery-addresses.js';
 import { shortReply } from './short-reply.js';
+import { resolveConversationAction } from './conversation-actions.js';
 
 export interface AgentOptions {
   model: ConversationModel;
@@ -101,7 +102,6 @@ export function createAgentProcessor(opts: AgentOptions): TurnProcessor {
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > MAX_TIMEOUT_MS) throw new Error('timeoutMs do agente inválido.');
   if (!Number.isSafeInteger(maxOutputTokens) || maxOutputTokens < 1) throw new Error('maxOutputTokens do agente inválido.');
   return async (ctx: TurnContext): Promise<TurnResult> => {
-    if (ctx.event.input.kind !== 'TEXT') throw new ContractError('ACTION_UNAVAILABLE');
     // Um único orçamento de tempo para o turno inteiro (vínculo + modelo), sempre abaixo do prazo da operação.
     const signal = AbortSignal.any([ctx.signal, AbortSignal.timeout(timeoutMs)]);
     let linkId: string | null;
@@ -110,8 +110,11 @@ export function createAgentProcessor(opts: AgentOptions): TurnProcessor {
     } catch (e) {
       fail(reason(e, 'LINK_LOOKUP'));
     }
-    const direct = shortReply(ctx.purchase, ctx.snapshot, ctx.event.input.text);
-    const input = buildModelInput(ctx.purchase, ctx.snapshot.phase, ctx.event.input.text);
+    const code = ctx.event.input.kind === 'ACTION' ? resolveConversationAction(ctx.event, ctx.snapshot, ctx.purchase, linkId, now()) : null;
+    const message = ctx.event.input.kind === 'TEXT' ? ctx.event.input.text
+      : code?.startsWith('choose') ? `Quero a opção ${code.slice(6)}` : code === 'none' ? 'Não tenho restrições' : code === 'more' ? 'Ver outras' : code === 'clear' ? 'Esvaziar sacola' : code === 'review' ? 'Revisar carrinho' : 'Mudar busca';
+    const direct = code === 'review' ? { proposal: { actions: [{ action: 'REQUEST_ORDER' as const }] }, policyMessage: message } : shortReply(ctx.purchase, ctx.snapshot, message);
+    const input = buildModelInput(ctx.purchase, ctx.snapshot.phase, message, ctx.snapshot);
     const reservedTokens = estimateInputTokens(input) + maxOutputTokens;
     const reserved = direct ? undefined : opts.budget?.reserve(conversationKey(scopeKey(ctx.principal)), reservedTokens);
     if (reserved && !reserved.ok) {
@@ -157,7 +160,15 @@ export function createAgentProcessor(opts: AgentOptions): TurnProcessor {
     const plan = human
       ? { ops: [...human.ops], state: human.ops.length ? ctx.previewDomain({ ops: human.ops, ...(linkId ? { linkId } : {}) }) : ctx.purchase,
           applied: human.ops.length ? [human.note] : [], notes: human.ops.length ? [] : [human.note], suggest: null as string | null }
-      : planActions(ctx.purchase, parsed.data, (change) => ctx.previewDomain(change), linkId, direct?.policyMessage ?? ctx.event.input.text, visible);
+      : planActions(ctx.purchase, parsed.data, (change) => ctx.previewDomain(change), linkId, direct?.policyMessage ?? message, visible);
+    if (direct && 'note' in direct && direct.note) plan.applied.push(direct.note);
+    if (plan.suggest !== null) {
+      plan.ops.push({ op: 'SET_SEARCH_QUERY', query: plan.suggest });
+      plan.state = ctx.previewDomain({ ops: plan.ops, ...(linkId ? { linkId } : {}) });
+    } else if (!direct?.note && plan.ops.length && plan.state?.searchQuery && !plan.state.bag && !plan.state.proposals?.length
+      && !plan.notes.length && !missingQuestions(plan.state).length) {
+      plan.suggest = plan.state.searchQuery;
+    }
     const extraNotes: string[] = [];
     if (plan.suggest !== null) {
       const state = plan.state;
@@ -210,6 +221,8 @@ export function createAgentProcessor(opts: AgentOptions): TurnProcessor {
     }
     metrics.inc('agent_turns_total', { outcome: 'OK' });
     return {
+      clearGroup: Boolean(human?.ops.some(op => op.op === 'END')),
+      conversationActions: true,
       snapshot,
       completeness: plan.notes.length ? 'PARTIAL' : 'COMPLETE',
       paths: ['PHASE'],

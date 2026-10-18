@@ -9,6 +9,7 @@
 //  - Nenhum texto livre do modelo é exibido, gravado ou devolvido ao modelo: perguntas vêm de modelos fixos do servidor.
 //  - `refusal` descarta todas as ações; remover e recriar alguém no mesmo turno é recusado.
 import { DomainError, type DomainChange, type DomainOp, type Participant, type PurchaseState } from '../domain/purchase.js';
+import type { Snapshot } from '../contracts/conversation.js';
 import type { RestrictionKey } from '../domain/constraints.js';
 import { formatCents } from '../domain/money.js';
 import { label as ptLabel } from './render.js';
@@ -21,7 +22,7 @@ export const ALLOWED_ACTIONS: readonly AgentAction['action'][] = [
 ];
 
 const CONFIRMATION = 'precisa de confirmação explícita sua, que ainda não pode ser dada por mensagem nesta etapa; nada foi alterado';
-export const REVIEW_NOTE = 'Para fazer o pedido, o carrinho simulado precisa ser revisado e aprovado por botão. Essa revisão ainda não está disponível nesta etapa; nenhuma compra foi feita.';
+export const REVIEW_NOTE = 'Confira a composição em Revisar carrinho, quando essa função estiver habilitada. Preparar o carrinho exige uma confirmação específica; enviar o pedido ainda não está disponível.';
 
 const fold = (s: string) => s.normalize('NFD').replace(/[\p{M}\p{Cf}]/gu, '').trim().toLocaleLowerCase('pt-BR');
 /** Acima disto (R$ 100 mil) o valor é tratado como implausível: na prática equivaleria a "sem teto" sem ninguém dizer. */
@@ -56,7 +57,7 @@ function limitView(d: PurchaseState['groupLimit']): AgentModelInput['groupLimit'
 }
 
 /** Contexto do modelo por allowlist: sem linkId, purchaseId, eventId, IDs de conta, aprovações ou tokens. */
-export function buildModelInput(purchase: PurchaseState | null, phase: string, message: string): AgentModelInput {
+export function buildModelInput(purchase: PurchaseState | null, phase: string, message: string, snapshot?: Snapshot): AgentModelInput {
   const s = purchase && purchase.status === 'ACTIVE' ? purchase : null;
   return {
     contractVersion: '1.0',
@@ -65,6 +66,9 @@ export function buildModelInput(purchase: PurchaseState | null, phase: string, m
     groupLimit: s ? limitView(s.groupLimit) : 'NOT_ASKED',
     priority: s ? (s.priority.state === 'DECLARED' ? s.priority.value : s.priority.state === 'UNCLEAR' ? 'UNCLEAR' : 'NOT_ASKED') : 'NOT_ASKED',
     openQuestions: missingQuestions(s),
+    ...(s?.searchQuery ? { searchQuery: s.searchQuery } : {}),
+    ...(snapshot ? { visibleOptions: (s?.proposals ?? []).flatMap((p, i) => snapshot.blocks.some(b => b.kind === 'PROPOSAL' && b.proposalRef === p.proposalId)
+      ? [{ position: i + 1, names: p.lines.map(l => l.name).slice(0, 4) }] : []) } : {}),
     allowedActions: ALLOWED_ACTIONS,
     message,
   };

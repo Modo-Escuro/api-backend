@@ -161,6 +161,8 @@ export const PurchaseStateSchema = z.object({
   proposals: z.array(ProposalSchema).max(MAX_PROPOSALS).optional(),
   /** Carrinho simulado escolhido (consumo por participante). */
   bag: BagSchema.optional(),
+  /** Intenção de busca, preservada durante a coleta; não é informação de catálogo. */
+  searchQuery: shortText(80).optional(),
 }).strict();
 export type PurchaseState = z.infer<typeof PurchaseStateSchema>;
 
@@ -191,6 +193,7 @@ export const DomainOpSchema = z.discriminatedUnion('op', [
   z.object({ op: z.literal('SET_PROPOSALS'), proposals: z.array(ProposalSchema).max(MAX_PROPOSALS) }).strict(),
   z.object({ op: z.literal('SELECT_PROPOSAL'), proposalId: serverId }).strict(),
   z.object({ op: z.literal('CLEAR_BAG') }).strict(),
+  z.object({ op: z.literal('SET_SEARCH_QUERY'), query: shortText(80) }).strict(),
 ]);
 export type DomainOp = z.infer<typeof DomainOpSchema>;
 export const DomainPatchSchema = z.array(DomainOpSchema).min(1).max(MAX_OPS_PER_PATCH);
@@ -522,6 +525,10 @@ export function applyPatch(current: PurchaseState | null, rawOps: unknown, ctx: 
         paths.add('CART');
         break;
       }
+      case 'SET_SEARCH_QUERY':
+        s.searchQuery = op.query;
+        paths.add('PROPOSALS');
+        break;
       case 'CLEAR_BAG':
         if (s.bag) {
           // Loja fixada só pela escolha volta a "não perguntada"; loja declarada pelo usuário é preservada.
@@ -531,6 +538,7 @@ export function applyPatch(current: PurchaseState | null, rawOps: unknown, ctx: 
           }
           delete s.bag;
         }
+        delete s.searchQuery;
         paths.add('CART');
         break;
     }

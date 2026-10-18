@@ -44,6 +44,8 @@ export interface AppConfig {
   cartEnabled: boolean;
   /** Opt-in da infraestrutura RUN-01; o modelo tem opt-in separado. */
   conversationRuntime?: { dbFile: string; botId: string };
+  /** Grupos por identidade estável UserInfo; habilitar somente com integração autenticada validada. */
+  accountGroups?: boolean;
   /**
    * OPS-02: liberação gradual da conversa. Lista vazia = todos os organizadores autorizados (ALLOWED_ORGANIZER_IDS).
    * Só restringe; nunca autoriza alguém fora de ALLOWED_ORGANIZER_IDS.
@@ -128,6 +130,8 @@ export function parseRollout(raw: string | undefined): string[] {
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
+  if (env.CONVERSATION_ACCOUNT_GROUPS_ENABLED && !['true', 'false'].includes(env.CONVERSATION_ACCOUNT_GROUPS_ENABLED)) throw new Error('CONVERSATION_ACCOUNT_GROUPS_ENABLED deve ser true ou false.');
+  if (env.CONVERSATION_ACCOUNT_GROUPS_ENABLED === 'true' && env.CONVERSATION_RUNTIME_ENABLED !== 'true') throw new Error('Grupos por conta exigem runtime de conversa.');
   if (env.BOT_PASSWORD_ACCESS_ENABLED && !['true', 'false'].includes(env.BOT_PASSWORD_ACCESS_ENABLED)) {
     throw new Error('BOT_PASSWORD_ACCESS_ENABLED deve ser true ou false.');
   }
@@ -208,6 +212,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     devGlobalSession: env.DEV_GLOBAL_SESSION === 'true',
     cartEnabled: env.IFOOD_CART_ENABLED === 'true',
     conversationRuntime,
+    accountGroups: env.CONVERSATION_ACCOUNT_GROUPS_ENABLED === 'true',
     conversationOrganizerIds: parseRollout(env.CONVERSATION_ORGANIZER_IDS),
     submitFlagIgnored: env.IFOOD_SUBMIT_ENABLED !== undefined,
     conversationModel,

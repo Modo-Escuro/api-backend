@@ -45,7 +45,7 @@ const BLOCKER_TEXT: Record<ApprovalBlocker, string> = {
   RESTRICTIONS_UNVERIFIED: 'Há restrições alimentares sem confirmação.',
   BAG_NEEDS_REVALIDATION: 'A compra mudou depois da escolha; peça novas sugestões.',
 };
-const SIMULATED = 'Carrinho simulado: aprovação e pedido ainda não estão disponíveis nesta etapa.';
+const SIMULATED = 'Composição local: preparar no iFood exige revisão e confirmação específicas. Nenhum pedido foi enviado.';
 
 function planText(title: string, plan: PlanEvaluation, state: PurchaseState, compact = false): string {
   const who = (id: string) => state.participants.find((p) => p.participantId === id)?.displayName ?? '?';
@@ -58,7 +58,7 @@ function planText(title: string, plan: PlanEvaluation, state: PurchaseState, com
   }
   // Uma linha por informação, com emoji, para separar bem as propostas no Telegram (o bot põe preços em negrito).
   const single = state.participants.length === 1;
-  const lines = plan.proposal.lines.map((l) => `• ${l.name}${single ? '' : ` (${l.consumerIds.map(who).join(', ')})`}: ${formatCents(l.unitMinCents)}${l.unitMaxCents === l.unitMinCents ? '' : l.unitMaxCents === null ? '+' : `–${formatCents(l.unitMaxCents)}`}`);
+  const lines = plan.proposal.lines.map((l) => `• ${l.quantity} × ${l.name}${single ? '' : ` (${l.consumerIds.map(who).join(', ')})`}: ${formatCents(l.unitMinCents)}${l.unitMaxCents === l.unitMinCents ? '' : l.unitMaxCents === null ? '+' : `–${formatCents(l.unitMaxCents)}`} por unidade`);
   const delivery = plan.proposal.deliveryFeeCents === null ? '🛵 Entrega: não informada' : `🛵 Entrega: ${formatCents(plan.proposal.deliveryFeeCents)}`;
   const floor = plan.lowerBoundCents === null ? [] : [`💰 Soma dos preços observados: ${formatCents(plan.lowerBoundCents)} (não é o total: sem taxa de serviço; descontos não visíveis podem mudar o valor)`];
   const out = plan.coverage.filter((c) => c.status !== 'COVERED').map((c) => who(c.participantId));
@@ -113,7 +113,7 @@ function build(base: Snapshot, state: PurchaseState | null, applied: string[], p
     }
   }
   const omitted = shown < plans.proposals.length
-    ? [`Grupo grande: só ${shown} de ${plans.proposals.length} propostas aparecem aqui; a escolha pela posição (1 a ${plans.proposals.length}) continua valendo.`] : [];
+    ? [`Grupo grande: só ${shown} de ${plans.proposals.length} propostas aparecem aqui; escolha apenas uma opção exibida ou peça outra busca.`] : [];
   const phase: Snapshot['phase'] = plans.bag ? 'EDITING_CART' : plans.proposals.length ? 'PROPOSALS_READY' : 'COLLECTING';
   return {
     contractVersion: '1.0', conversationId: base.conversationId, version: base.version + 1, phase,

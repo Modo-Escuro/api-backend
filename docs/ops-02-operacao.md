@@ -80,7 +80,7 @@ Há dois conjuntos de limites, ambos em memória por processo e zerados ao reini
 
 Rollout sugerido: (1) ligar a conversa com `CONVERSATION_ORGANIZER_IDS=<1 organizador de teste>`; (2) acompanhar `/api/ops/status` (fila, `resultUnknown`, `budget_exceeded`, erros MCP/modelo); (3) ampliar a lista; (4) esvaziar a lista só depois de QA-01.
 
-**Rollback** = desligar a flag ou tirar o organizador da lista. Nenhuma migração é revertida e nada é apagado. O schema SQLite é aditivo (v1 → v2 → v3 com CART-01), e um binário antigo recusa versão mais nova sem substituí-la. Vínculos (`.ifood-links`), compras e `RESULT_UNKNOWN` continuam no disco e voltam a aparecer ao reativar (teste `rollback ... não apaga`). Binário anterior à CART-01 não abre banco v3: restaurar o binário compatível, nunca rebaixar `user_version` ou aplicar backup antigo sobre operação desconhecida.
+**Rollback** = desligar a flag ou tirar o organizador da lista. Nenhuma migração é revertida e nada é apagado. O schema SQLite é aditivo (v1 → v2 → v3 com CART-01 → v5 com a [conversa guiada](conversa-guiada.md)), e um binário antigo recusa versão mais nova sem substituí-la. Vínculos (`.ifood-links`), compras e `RESULT_UNKNOWN` continuam no disco e voltam a aparecer ao reativar (teste `rollback ... não apaga`). Usar binário compatível com o schema persistido; nunca rebaixar `user_version` ou aplicar backup antigo sobre operação desconhecida.
 
 ## Retenção (D7)
 
