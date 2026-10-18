@@ -1,6 +1,7 @@
 // Entradas derivadas de fixtures/tools-list.json. Saídas: adaptador conservador, ainda
 // sem captura autenticada de cart; formatos não reconhecidos nunca viram preço confirmado.
 import { z } from 'zod';
+import { extractErrors } from '../mcp/errors.js';
 
 export class CartError extends Error {
   constructor(readonly code: string, message: string, readonly status: 400 | 403 | 404 | 409 | 410 | 502 | 503 = 409,
@@ -36,8 +37,27 @@ export const WRITES: ReadonlySet<string> = new Set(['createCart', 'addItemToCart
   'setCartDelivery', 'setCartPayment', 'setVoucher', 'removeVoucher']);
 
 export function payload(raw: unknown): unknown {
-  if (raw && typeof raw === 'object' && 'data' in raw) return (raw as { data: unknown }).data;
-  return raw;
+  const value = raw && typeof raw === 'object' && 'data' in raw ? (raw as { data: unknown }).data : raw;
+  for (const candidate of value === raw ? [raw] : [raw, value]) {
+    if (extractErrors(candidate).length || (candidate && typeof candidate === 'object' && 'success' in candidate && candidate.success !== true)) {
+      throw new CartError('CART_CONTRACT_UNVERIFIED', 'Resposta do MCP contém erro ou não confirma sucesso.', 502);
+    }
+  }
+  return value;
+}
+
+// Hipótese mínima já usada pelos fakes de F7; NÃO é outputSchema observado do provedor.
+// Não aceitar undefined/texto/{}/queued=true como prova de que a escrita foi concluída.
+const mutationConfirmation = z.object({ success: z.literal(true) }).strict();
+export function assertMutationConfirmation(raw: unknown): void {
+  if (!mutationConfirmation.safeParse(payload(raw)).success)
+    throw new CartError('CART_CONTRACT_UNVERIFIED', 'Confirmação de escrita não reconhecida; reconciliar antes de repetir.', 502);
+}
+
+export function parseCreatedCart(raw: unknown): { cartId: string } {
+  const result = z.object({ cartId: id }).safeParse(payload(raw));
+  if (!result.success) throw new CartError('CART_CONTRACT_UNVERIFIED', 'createCart não retornou cartId reconhecido.', 502);
+  return result.data;
 }
 export function parseSnapshot(raw: unknown): Snapshot {
   const result = snapshotSchema.safeParse(payload(raw));

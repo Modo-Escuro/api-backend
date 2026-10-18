@@ -3,6 +3,10 @@
 Implementação do carrinho com gateway MCP por vínculo e testes offline. **Envio de pedido e aprovação de compra
 permanecem desabilitados**, inclusive quando o carrinho é habilitado. Login não autoriza compra.
 
+Auditoria INT-01: [matriz de evidências, correção de respostas desconhecidas e ensaio autenticado pendente](int-01-audit.md). A correção não valida saídas reais nem habilita a integração.
+
+**Escopo vigente:** a [DEC-01 D8](decisoes-conversacionais.md) adota sacola simulada e MCP somente leitura. Manter `IFOOD_CART_ENABLED=false`; este documento descreve o adaptador legado e não autoriza preparação de carrinho real na demo. Validação futura de outputs não basta para alterar essa decisão de escopo. Aprovação fictícia não usa `/purchase-approvals` nem envia pedido.
+
 ## Evidência do contrato e limite da entrega
 
 Os nomes, parâmetros, obrigatoriedade e formatos de entrada foram inspecionados em `fixtures/tools-list.json`,
@@ -23,6 +27,8 @@ não foram lidos tokens locais e nenhuma operação real de carrinho/pedido foi 
 A captura **não contém outputSchema nem respostas reais de carrinho**. Os HTMLs locais do portal não fornecem
 payloads úteis dessas respostas. Portanto, o adaptador de saída é **provisório**, exercitado com MCP sintético;
 não é evidência de integração validada com o iFood. Formatos desconhecidos produzem `CART_CONTRACT_UNVERIFIED`.
+Confirmações de escrita de formato desconhecido não marcam a intenção como DONE; mantêm RESULT_UNKNOWN. Além do cartId na criação, as demais mutações reconhecem provisoriamente apenas `{success:true}` direto ou em `data`, sem campos adicionais nesse objeto de confirmação. É o formato dos fakes, ainda sem comprovação do provedor. Erro no envelope ou dentro de `data` bloqueia antes da projeção.
+
 Os DTOs abaixo especificam o que o adaptador aceita; não afirmam que o provedor devolva esse formato:
 
 ```text
@@ -42,7 +48,7 @@ o adaptador. Totais BRL completos, finitos, não negativos e com precisão de ce
 `subtotal + deliveryFee + serviceFee - discount` deve coincidir com `total`. Ausência ⇒ `UNAVAILABLE` e valores
 `null`; divergência ⇒ `DIVERGENT` e revisão bloqueada. Não se completam componentes ausentes com zero.
 
-Por essas limitações, `IFOOD_CART_ENABLED=false` continua sendo o padrão. **Não habilitar em uma conta real até validar as respostas de saída.** As correções relacionadas a #2/#3 já foram incorporadas de origin/main (20e46fd e 686300d). Essa flag não habilita checkout.
+Por essas limitações e pela DEC-01, manter `IFOOD_CART_ENABLED=false`. Validar saídas não autoriza mudar o escopo simulado. As correções relacionadas a #2/#3 já foram incorporadas de origin/main (20e46fd e 686300d). Essa flag não habilita checkout.
 
 ## Associação, proveniência e validação
 

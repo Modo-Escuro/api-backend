@@ -194,6 +194,8 @@ TELEGRAM_ALLOWED_USER_ID=<mesmo ID de ALLOWED_ORGANIZER_IDS>   # enviado como X-
 
 ## 10. F7 — Contrato do carrinho e revisão
 
+Contrato legado, fora da demo [DEC-01 D8](decisoes-conversacionais.md): manter `IFOOD_CART_ENABLED=false`. A sacola da demo é simulada; esta seção não autoriza criar carrinho real nem usar `/purchase-approvals` para aprovação fictícia. Auditoria e limites: [INT-01](int-01-audit.md).
+
 Rotas em `/api/bot/cart` usam a mesma autenticação de adaptador deste documento, JSON estrito, centavos inteiros e vínculo operacional. O contrato completo de endpoints, corpos, respostas, estados e retries está em [f7-cart-checkout.md](f7-cart-checkout.md#endpoints-do-telegram).
 
 Fluxo: consultar `/catalog` com endereço da conta → escolher itemRef/opções → criar carrinho → consultar e selecionar entrega/pagamento/cupom → ler getCart → revisão informativa. O bot gera requestId por intenção e preserva em retries. Não inventar referências nem obter IDs da LLM. A revisão não oferece compra: approve/submit retornam CHECKOUT_DISABLED. RESULT_UNKNOWN exige reconciliação, nunca um novo requestId automático. Cartões não expõem tokens e a configuração real ainda depende da validação das saídas MCP; as correções #2/#3 já estão incorporadas. O catálogo devolve resultados parciais e erros sanitizados por candidato; tentativas de releitura com o mesmo requestId não repetem escritas confirmadas.

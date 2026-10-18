@@ -6,6 +6,7 @@
 4. [Requisitos do incremento anterior](requirements.md): histórico do recorte de recomendação, com ressalvas de escopo atual.
 5. [Auditoria de preço](pricing-audit.md): evidência e ambiguidades observadas no catálogo.
 6. [Persistência dos vínculos (OPS-01)](ops-01-persistencia.md): volume, migração, backup, restauração e limitações.
+7. [Auditoria INT-01](int-01-audit.md): matriz de contratos F7, bloqueio de resultados desconhecidos e limites da DEC-01; [inventário offline](int-01-tools-audit.json) e [consulta manual de metadados](int-01-console-command.sh), sem chamadas de negócio.
 
 Plano completo e contrato futuro estão no [telegram-bot](https://github.com/Modo-Escuro/telegram-bot/blob/codex/plano-conversacional/docs/plano-conversacional.md). A [StRS preservada](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/baseline/stakeholder-requirements-specification.md) continua em validação.
 

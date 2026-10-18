@@ -1,7 +1,7 @@
 // Gateway exclusivo por vínculo. Não aceita cliente global e nunca expõe submitOrder.
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import type { CartGateway, CartTool } from '../cart/contracts.js';
-import { WRITES } from '../cart/contracts.js';
+import { WRITES, assertMutationConfirmation, parseCreatedCart, payload } from '../cart/contracts.js';
 import { MCP_TIMEOUT_MS } from './client.js';
 import { McpToolError } from './errors.js';
 import { parseToolResult, type RawToolResult } from './tools.js';
@@ -16,6 +16,10 @@ export function cartGateway(getClient: () => Promise<Client>): CartGateway {
     const parsed = parseToolResult(tool, result as RawToolResult);
     if (parsed && typeof parsed === 'object' && 'success' in parsed && parsed.success === false)
       throw new McpToolError(tool, [{ code: 'UNCONFIRMED', message: 'O MCP não confirmou a operação.' }]);
+    // Conferir também erros aninhados antes de projetar dados; ausência de erro não confirma escrita.
+    payload(parsed);
+    if (tool === 'createCart') parseCreatedCart(parsed);
+    else if (WRITES.has(tool)) assertMutationConfirmation(parsed);
     return parsed;
   } };
 }

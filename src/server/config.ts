@@ -23,7 +23,7 @@ export interface AppConfig {
   publicBaseUrl: string;
   /** Habilita a sessão global antiga (/api/auth/*, diagnóstico com MCP). Só desenvolvimento; nunca vira vínculo. */
   devGlobalSession: boolean;
-  /** Habilitar só após validar saída MCP e integrar correções #2/#3. Nunca habilita checkout. */
+  /** F7 legada: manter false na demo DEC-01; saída validada não autoriza mudar o escopo. Nunca habilita checkout. */
   cartEnabled: boolean;
   /** Opt-in da infraestrutura RUN-01; não instala processador de IA/domínio. */
   conversationRuntime?: { dbFile: string; botId: string };

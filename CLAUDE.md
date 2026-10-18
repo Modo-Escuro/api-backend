@@ -59,7 +59,7 @@ npm test
 2. **`getItem` antes de recomendar/preço final** — `searchOffers` pode mostrar preço promo, mas só `getItem` traz `optionGroups` e limites.
 3. **Ausente ≠ `null` ≠ lista vazia** — tratar e mostrar explicitamente (ex.: alérgenos ausentes ⇒ "informação indisponível", nunca "não contém").
 4. **Restrição com dados insuficientes ⇒ marcar como "não verificado"**, não concluir.
-5. **Sem checkout**: `submitOrder` real continua proibido. F7 autoriza preparar carrinho exclusivamente pelo gateway por vínculo, feature desligada por padrão; ver `docs/f7-cart-checkout.md`. A proibição de escrita continua valendo para o pipeline de recomendação.
+5. **MCP somente leitura na demo (DEC-01 D8)**: sacola e aprovação são simuladas. Manter F7 desligada (`IFOOD_CART_ENABLED=false`); sua implementação legada não autoriza preparar carrinho real. `createCart`, alterações, pagamento e `submitOrder` não podem ser chamados para validar a demo. Ver `docs/f7-cart-checkout.md` e `docs/int-01-audit.md`; metadados e fixtures sintéticas não autorizam escrita.
 6. **Preço exibido = composição**: base (`promotionalUnitPrice` ?? `unitPrice`) + Σ `additionalPrice` das opções escolhidas; avisar se < `merchantMinimumOrderAmount`.
    Exceção observada: quando Σ das opções obrigatórias mais baratas = `unitPrice`, a semântica é ambígua (preço "a partir de")
    ⇒ mostrar faixa, nunca um valor único. Ver `docs/pricing-audit.md`. Todo preço é estimativa; total confirmado só no carrinho.
@@ -95,8 +95,8 @@ fixtures/             # respostas reais salvas p/ testes offline
 - IDs sempre UUID vindos do MCP; em testes, fixtures de respostas reais — nunca IDs fabricados em produção.
 - Pipeline de recomendação é função pura testável (`domain/*` não faz fetch).
 
-## F7 — Carrinho isolado (exceção autorizada ao escopo original)
+## F7 — Carrinho legado isolado (fora da demo DEC-01)
 - Contrato e limites: `docs/f7-cart-checkout.md`; bot: `docs/bot-api.md` seção 10.
-- `IFOOD_CART_ENABLED=false` por padrão: não habilitar em conta real antes de validar as saídas reais do MCP. As correções #2/#3 já foram incorporadas de origin/main.
+- Manter `IFOOD_CART_ENABLED=false` conforme DEC-01. Uma evolução real exigiria nova decisão de escopo, saídas verificadas, persistência, aprovação e reconciliação; validar saídas isoladamente não habilita F7. As correções #2/#3 já foram incorporadas de origin/main.
 - Não usar sessão global, não repetir escritas com resultado desconhecido e não habilitar submitOrder.
 - Entradas reais em `fixtures/tools-list.json`; saídas de cart ainda não capturadas, testes explicitamente sintéticos.
