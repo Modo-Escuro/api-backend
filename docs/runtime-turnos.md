@@ -10,7 +10,7 @@ Implementada a infraestrutura de aceite, fila, execução limitada, consulta, ca
 
 DATA-01 permanece responsável por representar participantes/restrições/origem, validar patches e conservar o acordo da compra. OPS-01 permanece responsável pelo volume e preservação dos vínculos existentes. O armazenamento de snapshots da RUN-01 não substitui esse domínio nem comprova que a migração operacional foi feita. A integração real com o bot também precisa da outbox/acompanhamento restantes da BOT-01.
 
-A base foi atualizada para `main@cd22b9f`, que inclui a [DEC-01](decisoes-conversacionais.md): demo com sacola simulada, MCP somente leitura e política D7 de exclusão. Aprovação fictícia não autoriza transação real. O ajuste de contrato para revisão simulada permanece separado; RUN-01 não reutiliza `/purchase-approvals` para esse fim.
+A base foi atualizada para `main@9aa02f2`, que inclui OPS-01 e a [DEC-01](decisoes-conversacionais.md): demo com sacola simulada, MCP somente leitura e política D7 de exclusão. Aprovação fictícia não autoriza transação real. O ajuste de contrato para revisão simulada permanece separado; RUN-01 não reutiliza `/purchase-approvals` para esse fim.
 
 ## Código e fluxo
 
@@ -102,6 +102,6 @@ npm run build
 
 CI adicionada para Windows/Ubuntu e Node 22.13/24. Os testes específicos usam SQLite em disco e processos filhos que terminam sem encerramento limpo, com falhas injetadas no aceite/commit, replay, origem, concorrência, token antigo, limites, cancelamento, prazo e efeito desconhecido. Os processadores e autorizações dos testes são sintéticos: nenhuma chamada de negócio ao iFood ou instância real do bot é iniciada.
 
-Validação local em 18/10/2026, Windows/Node 24.13, após incorporar `main@cd22b9f`: **404 testes TypeScript passaram**, incluindo 34 da RUN-01; typecheck, lint e build passaram. Os seis testes Python de conformidade da API-01 também passaram. O resultado da matriz de CI deve ser conferido na PR. Não houve merge, deploy, mudança de variáveis Railway nem ensaio com conta real.
+Validação local em 18/10/2026, Windows/Node 24.13, após incorporar `main@9aa02f2`: **439 testes TypeScript passaram**, incluindo 34 da RUN-01; dois testes POSIX de permissões da OPS-01 foram omitidos no Windows, conforme a condição já existente nessa base. Typecheck, lint e build passaram. Os seis testes Python de conformidade da API-01 também passaram. O resultado da matriz de CI deve ser conferido na PR. Não houve merge na main, deploy, mudança de variáveis Railway nem ensaio com conta real.
 
 Para entrega operacional completa: integrar DATA-01 na persistência/validação de domínio e exclusão D7, instalar o processador AI-01, concluir OPS-01 com volume/recuperação verificados e ensaiar o bot via RUN-01. Manter zero escrita MCP, conforme DEC-01. Aprovação simulada exige ajuste explícito do contrato e suas tarefas; escrita real está fora dessa demo. Esses trabalhos não são marcados como concluídos pelos testes da infraestrutura.
