@@ -6,8 +6,7 @@
 > Groq/Anthropic do #35 (comparação abandonada / HTTP 400) foram removidos.
 
 Base: `main@2df4e54` da API. Continuação do bot: [PR #11](https://github.com/Modo-Escuro/telegram-bot/pull/11)
-integrado em `main@681d21d`. A BOT-02 continua aberta. DEC-01 permanece: sacola simulada, MCP somente leitura,
-sem envio real. Nenhuma variável, volume, credencial ou instância Railway foi alterada por este incremento.
+integrado em `main@681d21d`. A BOT-02 foi encerrada pelo alcance implementado; ensaio humano é evidência separada. A DEC-01 vigente permite carrinho real confirmado; CART-01 nova continua local, com ativação condicionada à INT-02. Envio e pagamento seguem proibidos. Nenhuma variável, volume, credencial ou instância Railway foi alterada por este incremento.
 
 ## Entrega e limites
 
@@ -21,7 +20,7 @@ Não existe fallback de regras em produção.
   (`UNAVAILABLE`); só falha de armazenamento interrompe o turno. Operações que dependem do MCP (sugestões) passam
   por `withOperational`, que exige vínculo operacional e devolve mensagem específica quando não há.
 - **Sugestões (GRP-01) ligadas:** "Sugere pizza" lê `searchOffers`/`getItem` pelo vínculo; escolha só por posição;
-  sacola simulada, total `UNKNOWN`, aprovação bloqueada. Nenhuma ferramenta de escrita é alcançável.
+  composição local ainda não sincronizada, total `UNKNOWN` e aprovação de pedido bloqueada. A preparação real depende da integração CART-01 e confirmação PREPARE_CART. Nenhuma ferramenta de escrita é alcançável.
 
 ## Configuração explícita na API
 
@@ -116,7 +115,7 @@ Ambiente: Linux, worktree de integração sobre o #36 + `main@8191a0f` (GRP-01) 
 - `npm run ai:demo:offline`: 18/18 casos (stub = esperado; não é inferência).
 - `npm run eval:agent`: 7/8 casos pelo stub de regras; `teto-ambiguo` reprovado por limitação conhecida do stub.
 - Testes com transporte Gemini falso: rotas autenticadas Hono, serviço real de vínculos com OAuth/MCP falsos,
-  coleta com iFood indisponível, fluxo "Sugere pizza" → proposta → sacola simulada (MCP só leitura), limites por
+  coleta com iFood indisponível, fluxo "Sugere pizza" → proposta → composição local (transporte MCP falso, sem escrita externa), limites por
   processo/conversa/gasto, cota preservando estado, respostas truncadas/malformadas e ausência de segredos nos logs.
 - **Avaliação ao vivo não executada nesta consolidação:** nenhuma chave exclusiva de teste disponível no ambiente.
   A evidência real continua sendo a rodada do #35 ([resultado](ai-01-result.md)); repetir com
@@ -137,7 +136,7 @@ Chave de teste local (sem Railway), só dados sintéticos; `modelVersion` report
   máx. 8,7 s); E2E pelas rotas autenticadas (Gemini real, OAuth/MCP falsos com fixtures reais) aprovado duas vezes.
 - **Auditoria adversarial (F1, corrigido):** o modelo sozinho podia trocar restrição `UNCLEAR` (com pergunta pendente) por
   `NONE`, liberando a pessoa. Agora `SET_NO_RESTRICTIONS` exige frase explícita do usuário ("sem restrições", "não tem
-  alergia"...), como `SET_NO_LIMIT`; senão vira pergunta e preserva o estado. Pendentes, não bloqueiam a demo simulada:
+  alergia"...), como `SET_NO_LIMIT`; senão vira pergunta e preserva o estado. Pendências registradas naquela avaliação histórica (não são aprovação para ativar carrinho real):
   aumento de teto rígido sem confirmação (F2); prompt acima de 8 KB em grupos grandes trava a conversa em `UNAVAILABLE`
   (F3); nome proposto pelo modelo ecoado em pendências (F4); `CONVERSATION_MODEL_ENABLED=""` desliga sem motivo (N1);
   dieta sem `requirement` vira obrigatória (N2).

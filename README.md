@@ -1,11 +1,12 @@
 # Compra com Contexto — API
 
-Backend Node/TypeScript e Hono para o bot Telegram. Login e avaliação existem na main de referência; agente conversacional e compra coletiva fazem parte do desenvolvimento planejado.
+API Node/TypeScript e Hono do bot Telegram. O código remoto conferido já integra login/vínculos, persistência de grupo e turnos, regras em centavos, ranking, propostas coletivas e montagem Gemini/AI-02 com configuração explícita.
 
-- [Índice da documentação](docs/README.md)
-- [Plano de execução e tarefas da API](docs/plano-conversacional.md)
-- [Contrato atual bot → API](docs/bot-api.md)
-- [Revisão da branchBruna](docs/reviews/branchBruna-8393615.md)
-- [Épico integrado](https://github.com/Modo-Escuro/telegram-bot/issues/6)
+- [Estado remoto e alterações locais](docs/estado-remoto-local.md)
+- [Decisões vigentes — carrinho real com confirmação humana](docs/decisoes-conversacionais.md)
+- [Plano de execução e pendências](docs/plano-conversacional.md)
+- [Índice técnico](docs/README.md)
 
-O incremento é documental. Nenhuma feature de compra é habilitada por este plano. Preservar vínculos antes de redeploy e seguir os gates de aprovação e reconciliação.
+Carrinho real está aprovado no escopo, mas a nova CART-01 ainda é trabalho local e a validação externa permanece na INT-02. A main conferida mantém a F7 desligada e propostas e composição local ainda não sincronizada com o iFood. Login, senha e texto do agente não autorizam escrita. Envio de pedido e pagamento continuam proibidos neste incremento.
+
+Código integrado não comprova configuração operacional, deploy nem conversa completa no Telegram. Esta revisão é somente documental e preserva as evidências históricas.

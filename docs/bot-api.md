@@ -297,7 +297,7 @@ TELEGRAM_ALLOWED_USER_ID=<mesmo ID de ALLOWED_ORGANIZER_IDS>   # enviado como X-
 
 ## 10. F7 — Contrato do carrinho e revisão
 
-Contrato legado, fora da demo [DEC-01 D8](decisoes-conversacionais.md): manter `IFOOD_CART_ENABLED=false`. A sacola da demo é simulada; esta seção não autoriza criar carrinho real nem usar `/purchase-approvals` para aprovação fictícia. Auditoria e limites: [INT-01](int-01-audit.md).
+Contrato legado anterior à nova CART-01: manter `IFOOD_CART_ENABLED=false`. A [DEC-01 vigente](decisoes-conversacionais.md) já permite carrinho real confirmado, mas sua implementação nova é local e não faz parte destas rotas na main conferida. PREPARE_CART não usa `/purchase-approvals`; pedido/pagamento continuam proibidos. Auditoria e limites: [INT-01](int-01-audit.md).
 
 Rotas em `/api/bot/cart` usam a mesma autenticação de adaptador deste documento, JSON estrito, centavos inteiros e vínculo operacional. O contrato completo de endpoints, corpos, respostas, estados e retries está em [f7-cart-checkout.md](f7-cart-checkout.md#endpoints-do-telegram).
 
