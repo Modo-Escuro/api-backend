@@ -58,6 +58,7 @@ export interface EligibilityResult {
   restrictions: RestrictionCheck[];
   /** Configuração avaliada: a do usuário ou a mínima. */
   selection: { source: 'USER' | 'MINIMUM_CONFIGURABLE'; options: OptionSelection[] } | null;
+  quantity: number;
   configuration: ConfigValidation | null;
   pricing: {
     /** "A partir de" honesto: obrigatórias mais baratas compatíveis com as restrições. */
@@ -98,6 +99,7 @@ export function evaluateCandidate(input: CandidateInput, constraints: UserConstr
     availability,
     restrictions: [],
     selection: null,
+    quantity: input.quantity ?? 1,
     configuration: null,
     pricing: { minimumConfigurable: null, selected: null, confirmedTotal: null },
     budget: { itemPrice: null, orderTotal: null },
@@ -141,7 +143,27 @@ export function evaluateCandidate(input: CandidateInput, constraints: UserConstr
 
   // ---- preço mínimo configurável (sempre calculado)
   const quantity = input.quantity ?? 1;
-  const minimum = computeMinimumConfigurablePrice(detail, listing, blocked, quantity, avoided);
+  const minimumPreferred = computeMinimumConfigurablePrice(detail, listing, blocked, quantity, avoided);
+  let minimum = minimumPreferred;
+  // Preferência opcional não pode excluir o candidato: se a configuração preferida
+  // não respeita o teto por item, preserva-se a configuração obrigatoriamente
+  // válida mais barata e informa que a preferência não foi atendida.
+  if (avoided.size > 0 && minimumPreferred.price) {
+    const capItem = constraints.budget?.maxItemPrice;
+    const capOrder = constraints.budget?.maxOrderTotal;
+    let over = false;
+    if (capItem !== undefined && checkCap(minimumPreferred.price.unitTotalRange, capItem) === 'FAIL') over = true;
+    if (capOrder !== undefined && checkCap(minimumPreferred.price.estimatedTotalRange, capOrder) === 'FAIL') over = true;
+    if (over) {
+      const fallback = computeMinimumConfigurablePrice(detail, listing, blocked, quantity, new Set());
+      if (fallback.price) {
+        minimum = fallback;
+        if (!minimumPreferred.preferenceGaps.length) {
+          warnings.push({ code: 'PREFERENCE_NOT_MET', message: `grupo obrigatório: preferência opcional não atendida — mantida a configuração obrigatoriamente válida mais barata` });
+        }
+      }
+    }
+  }
   for (const p of minimum.problems) blockers.push({ code: 'NO_VALID_CONFIGURATION', message: p });
   for (const g of minimum.preferenceGaps) warnings.push({ code: 'PREFERENCE_NOT_MET', message: g });
 
@@ -216,6 +238,7 @@ export function evaluateCandidate(input: CandidateInput, constraints: UserConstr
   return result({
     restrictions,
     selection,
+    quantity: input.quantity ?? 1,
     configuration,
     pricing: { minimumConfigurable: minimum.price, selected, confirmedTotal: null },
     budget,

@@ -347,6 +347,7 @@ function proposeAlternative(
 ): AlternativeConfiguration | null {
   const d = c.detail;
   if (!d || d.optionGroups.state !== 'PRESENT') return null;
+  const quantity = c.evaluation.quantity ?? 1;
   const chosen = c.evaluation.selection?.options ?? [];
   const chosenIds = new Set(chosen.map((o) => o.optionId));
   const blocked = blockedOptions(c.evaluation.restrictions);
@@ -367,13 +368,14 @@ function proposeAlternative(
       const selection: OptionSelection[] = [...chosen, { optionId: o.optionId, quantity: 1 }];
       const configuration = validateSelection(d, selection, blocked, avoided);
       if (configuration.status !== 'VALID') continue;
-      const pricing = computePrice({ detail: d, listing: c.listing, selection, quantity: 1, kind: 'SELECTED' });
+      const pricing = computePrice({ detail: d, listing: c.listing, selection, quantity, kind: 'SELECTED' });
       const budget = { itemPrice: null as TriState | null, orderTotal: null as TriState | null };
       const cap = constraints?.budget;
       if (cap?.maxItemPrice !== undefined) budget.itemPrice = checkCap(pricing.unitTotalRange, cap.maxItemPrice);
       if (cap?.maxOrderTotal !== undefined) budget.orderTotal = checkCap(pricing.estimatedTotalRange, cap.maxOrderTotal);
-      if (budget.itemPrice === 'FAIL' || budget.orderTotal === 'FAIL') continue;
-      const total = pricing.unitTotalRange.max ?? pricing.unitTotalRange.min;
+      if (cap?.maxItemPrice !== undefined && budget.itemPrice !== 'PASS') continue;
+      if (cap?.maxOrderTotal !== undefined && budget.orderTotal !== 'PASS') continue;
+      const total = pricing.unitTotalRange.max ?? (pricing.unitTotalRange.min === pricing.unitTotalRange.max ? pricing.unitTotalRange.min : null);
       const reason =
         `configuração alternativa revalidada (não aplicada — sugestão): adicionar "${val(o.name) ?? o.optionId}" atenderia a "${term}"; ` +
         `preço recalculado ${total !== null ? brl(total) : 'indisponível'}; a configuração avaliada e o preço permanecem os mesmos`;
