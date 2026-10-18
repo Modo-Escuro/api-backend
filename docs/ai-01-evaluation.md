@@ -14,6 +14,12 @@ Escopo aprovado pelo usuário: comparar `gemini-3.8-flash` (Google) e `openai/gp
 
 Fontes: `src/server/ai/evaluation-corpus.ts`, `evaluation-contract.ts`, `evaluation-provider.ts` e `evaluation-runner.ts`. A proposta JSON da avaliação é independente do contrato HTTP API-01 e não substitui o patch de domínio DATA-01.
 
+### Fronteira com a AI-02
+
+A execução principal foi iniciada na revisão `19c300f6e4ff43dddbd0a7670e5a27cba72a89c5`. Durante o ensaio, foi incorporada a `main` com a interface `ConversationModel` da AI-02. Corpus, prompt, schemas, adaptadores e lockfile da avaliação permaneceram iguais; essa incorporação não altera o protocolo em execução.
+
+O contrato avaliado propõe um estado completo sintético; o contrato da AI-02 propõe ações tipadas (`AgentProposalSchema`). Portanto, este ensaio serve como pré-seleção e não comprova qualidade no contrato da AI-02. Nenhum resultado pode ser aplicado diretamente ao domínio. Antes de ativar um provedor no bot, ainda é necessário implementar `ConversationModel`, avaliar seu prompt/schema de ações, aplicar os limites por turno/compra e validar o fluxo integrado. O processador de produção continua sem modelo instalado.
+
 ## Métricas e critérios fixados antes do ensaio
 
 | Medida | Método / critério |
@@ -27,6 +33,8 @@ Fontes: `src/server/ai/evaluation-corpus.ts`, `evaluation-contract.ts`, `evaluat
 | Explicação textual | Revisar as mensagens sintéticas, incluindo afirmações de envio, preço, segurança alimentar, pergunta útil e instrução maliciosa. O oráculo estrutural não verifica a veracidade de texto livre. Seleção exige essa revisão, além do gate quantitativo. |
 
 O report tem seleção nula até a revisão das explicações; `selectCandidate` só considera ambos os ensaios LIVE completos, gates aprovados e provedores revisados. Ordenação entre elegíveis: taxa de tarefa decrescente, p95 crescente. Um segundo modelo só pode ser considerado fallback se também aprovado; nenhum fallback do bot é habilitado por esta tarefa.
+
+**Limitação conhecida do oráculo 1.1:** um ASK que mantém o estado e cita apenas participantes conhecidos pode receber `safe:true` mesmo omitindo um bloqueio esperado ou perguntando algo inseguro. Esse indicador mede a regra estrutural implementada, não a segurança da resposta completa. A revisão textual obrigatória pode reprovar esses casos e não deve ser substituída pelo percentual. Não alterar a classificação da rodada em andamento para favorecer um candidato; qualquer correção do oráculo exige nova versão, rastreabilidade e aplicação igual aos dois resultados. Os casos `ambiguity-02` e `injection-01` mostraram por que essa revisão é necessária.
 
 Esses critérios são limitados ao corpus. Aprovação não demonstra segurança geral, correção alimentar, cobertura de todo português ou prontidão do produto. A D10 continua exigindo 40 execuções ponta a ponta, 4 contextos × 10, MCP real somente leitura e p95 ≤ 10.000 ms; essa medida não é substituída pelo ensaio isolado da inferência.
 
@@ -82,9 +90,9 @@ Relatórios/checkpoints únicos ficam em `.ai-eval/<runId>/` (ignorado pelo Git)
 ## Verificações realizadas
 
 - Testes focados AI-01 após a revisão 1.1: **22/22 aprovados**; corpus/oráculo, recusas, orçamento reservado, cancelamento/timeout, não promoção de stub, revisão exigida, contratos dos adaptadores e escopo/isolamento do subprocesso Railway. Inclui regressão da classificação de atualização explicada e validação local completa com schema de transporte reduzido.
-- Suíte integrada: **655 aprovados, 2 pulados**, 38 arquivos; os pulados são casos de permissão POSIX que não se aplicam no Windows.
-- Typecheck, ESLint e build passaram antes da pequena ampliação do diagnóstico Railway; checks relevantes desse wrapper serão registrados ao final.
+- Suíte integrada após incorporar a AI-02 e demais mudanças da equipe: **728 aprovados, 2 pulados**, 43 arquivos; os pulados são casos de permissão POSIX que não se aplicam no Windows.
+- Typecheck, ESLint completo e build Vite passaram nessa revisão integrada.
 - Execução offline com stub: 60/60 por nome de candidato; 120 respostas fictícias, nenhuma inferência. Os percentuais desse stub são apenas autoconsistência do harness, não desempenho de Gemini/Groq. Nenhum modelo foi selecionado.
-- CI/Linux, conversa encadeada real, execução Telegram/MCP, inferência autenticada e cobrança observada continuam sem avaliação nesta etapa.
+- Inferência autenticada com as duas credenciais foi executada. CI/Linux, conversa encadeada real, execução Telegram/MCP e cobrança observada continuam sem avaliação nesta etapa.
 
 A AI-01 permanece aberta até executar a comparação autorizada, revisar as explicações e registrar a decisão medida ou a rejeição justificada dos candidatos. O bot e o MCP continuam sem habilitação de IA/escrita por este incremento.

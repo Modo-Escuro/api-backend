@@ -1,6 +1,6 @@
 # AI-01 — Pré-seleção de modelos gratuitos
 
-Pesquisa em 18/10/2026 para [AI-01 #15](https://github.com/Modo-Escuro/api-backend/issues/15). Base do backend: `d2883f120419385c5ec902740330c3743f130b44`. Estado: **opções pesquisadas; nenhum vencedor medido ou provedor habilitado**. Não houve chamada de inferência, leitura de credenciais, contratação ou gasto.
+Pesquisa inicial em 18/10/2026 para [AI-01 #15](https://github.com/Modo-Escuro/api-backend/issues/15). Base dessa pesquisa: `d2883f120419385c5ec902740330c3743f130b44`. Este documento preserva a pré-seleção feita antes das inferências. O [protocolo de avaliação](ai-01-evaluation.md) registra a execução posterior autorizada e o estado atual; as hipóteses desta pesquisa não são resultados medidos.
 
 ## Contexto e escopo
 
@@ -31,6 +31,14 @@ A Groq documenta que Structured Outputs não pode ser combinado com tool use ou 
 
 OpenRouter foi pesquisado como rota alternativa, mas não é um modelo. As [cotas de modelos gratuitos](https://openrouter.ai/docs/api_reference/limits), disponibilidade e políticas dependem da conta e do endpoint/provedor. Não priorizar um roteador que escolhe modelos aleatoriamente para a avaliação reproduzível; se adotado depois, fixar modelo/provedor e conferir suporte e política de dados. Não presumir um número diário de requisições sem observar a cota da conta.
 
+### Contingência Claude autorizada durante o ensaio
+
+O usuário informou que a equipe tem assinatura **Max** e propôs Claude como alternativa caso os candidatos gratuitos não atendam. A [documentação oficial de créditos para assinantes](https://platform.claude.com/docs/en/about-claude/api-credits-for-subscribers), consultada em 18/10/2026, informa US$ 100/mês no Max 5x e US$ 200/mês no Max 20x, mediante vínculo com uma organização do Claude Console; planos elegíveis novos precisam de sete dias. Isso não comprova saldo resgatado ou chave disponível para este projeto.
+
+A integração de servidor usa uma chave da organização do Console (`ANTHROPIC_API_KEY`), não o login pessoal do chat. O usuário opera o vínculo pela interface. Antes de inferir, confirmar o saldo incluído e o limite do ensaio, mantendo recarga automática desligada e sem recorrer a créditos comprados ou faturamento adicional. O consumo continua sendo medido em dólares de crédito; não chamar isso de inferência sem custo ou acesso ilimitado pela assinatura.
+
+Na [lista atual de modelos](https://platform.claude.com/docs/en/models/overview), Sonnet 5.5 (`claude-sonnet-5-5`) é candidato para uma nova avaliação. Sua adequação ao português, ao contrato de ações e à meta de latência ainda não foi medida neste projeto. Claude não integra a rodada Google/Groq nem está habilitado como fallback; sua eventual avaliação terá manifesto próprio e revisão dos casos críticos.
+
 ## Tratamento de dados
 
 Nos serviços gratuitos da Google, prompts e respostas podem ser usados para melhoria de produtos e passar por revisão humana; os [termos Gemini](https://ai.google.dev/gemini-api/terms) orientam não enviar conteúdo pessoal, sensível ou confidencial. O corpus e a demonstração com esse free tier devem usar pessoas/restrições fictícias. Trocar nomes por aliases não basta para considerar uma alergia real como dado sintético.
@@ -52,4 +60,4 @@ Recomendação inicial: comparar **Gemini 3.8 Flash e GPT OSS 120B na Groq**, ac
 
 ## Estado da entrega
 
-Esta etapa atende ao pedido de apresentar opções **antes** de escolher/integrar. Não instala SDK, não configura provedor, não lê chaves e não roda inferência. A seleção final, corpus executável, testes com stub e relatório de avaliação real continuam pendentes na AI-01. Alteração somente documental: não foi repetida a suíte do backend. A documentação foi conferida quanto a fontes, estado da implementação e distinção entre preço/capacidade anunciados e desempenho medido.
+A pré-seleção atendeu ao pedido de apresentar opções **antes** de escolher/integrar. Naquele incremento, somente documental, não foram instalados SDKs nem executadas inferências ou a suíte do backend. Corpus, adaptadores, testes e ensaio autenticado foram desenvolvidos depois; consultar o [registro de avaliação](ai-01-evaluation.md) para não confundir esta etapa histórica com o estado da entrega.
