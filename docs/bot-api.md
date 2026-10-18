@@ -21,6 +21,8 @@ Toda chamada do bot leva:
 - O backend confere o ID contra `ALLOWED_ORGANIZER_IDS`. Identidade no corpo/query/texto do usuário ou do LLM é ignorada
   ou rejeitada (corpos são `strict`).
 - Erros: `401 BOT_AUTH_REQUIRED`, `400 ORGANIZER_REQUIRED`, `403 ORGANIZER_NOT_ALLOWED`, `503 BOT_API_NOT_CONFIGURED` (fail closed).
+- Qualquer rota de vínculo: `503 LINK_STORAGE_UNAVAILABLE` quando o armazenamento de vínculos não pode ser lido (arquivo
+  corrompido/ilegível); nada é alterado e a chamada seguinte tenta de novo. Ver [ops-01-persistencia](ops-01-persistencia.md).
 - Formato de erro: `{ "error": { "kind": "<CÓDIGO>", "message": "...", "state": <estado|null>, "reason": <motivo|null> } }`.
 
 ## 2. Estados
@@ -74,8 +76,8 @@ Corpo de status (todas as rotas de vínculo devolvem este objeto; nunca há toke
 | Método e rota | Corpo | Sucesso | Erros |
 |---|---|---|---|
 | `GET /api/bot/ifood/status` | — | 200 status (sem chamada ao iFood) | — |
-| `POST /api/bot/ifood/connect` | — | 201 status + `authorizationUrl`, `attemptExpiresAt` | 503 `IFOOD_CLIENT_NOT_CONFIGURED` |
-| `POST /api/bot/ifood/confirm` | `{ "confirmationId": "<de attempt.confirmationId>" }` | 200 status + `previousLinkId` | 400 `VALIDATION`; 404 `CONFIRMATION_NOT_FOUND` (inexistente **ou de outro organizador**); 410 `CONFIRMATION_EXPIRED`, `ALREADY_CONFIRMED` (traz `state`), `CONFIRMATION_INVALID` (tentativa substituída/cancelada) |
+| `POST /api/bot/ifood/connect` | — | 201 status + `authorizationUrl`, `attemptExpiresAt` | 503 `IFOOD_CLIENT_NOT_CONFIGURED`; 503 `LINK_STORAGE_NOT_DURABLE` (backend sem disco persistente) |
+| `POST /api/bot/ifood/confirm` | `{ "confirmationId": "<de attempt.confirmationId>" }` | 200 status + `previousLinkId` | 400 `VALIDATION`; 404 `CONFIRMATION_NOT_FOUND` (inexistente **ou de outro organizador**); 410 `CONFIRMATION_EXPIRED`, `ALREADY_CONFIRMED` (traz `state`), `CONFIRMATION_INVALID` (tentativa substituída/cancelada); 503 `LINK_STORAGE_FAILED` (gravação falhou; mesmo `confirmationId` continua válido), `LINK_STORAGE_NOT_DURABLE` |
 | `POST /api/bot/ifood/verify` | — | 200 status (leitura autenticada real; renova token se preciso) | 409 `IFOOD_LINK_REQUIRED` |
 | `POST /api/bot/ifood/cancel` | — | 200 status + `cancelled: true\|false` — cancela **só** a tentativa pendente (link/confirmação); vínculo confirmado continua; idempotente | — |
 | `DELETE /api/bot/ifood/link` | — | 200 status + `removed: true\|false`, `providerRevocation: "NOT_ATTEMPTED"` — remove **só** o vínculo confirmado (tokens, sessão, cache); tentativa pendente continua; idempotente | — |
@@ -171,6 +173,8 @@ Com origem pública, a proteção de loopback não se aplica; permanecem navegad
 - Um organizador em `ALLOWED_ORGANIZER_IDS`, uma conta iFood dedicada de teste.
 - Sem banco de dados, sem criptografia dos tokens em repouso (arquivos modo 600 em `IFOOD_LINKS_DIR`, fora do Git), sem rate
   limiting, sem auditoria, sem revogação no provedor, um único processo (tentativas pendentes ficam em memória).
+- Vínculos confirmados sobrevivem a reinício e redeploy **somente** se `IFOOD_LINKS_DIR` estiver num volume persistente
+  (OPS-01, [ops-01-persistencia](ops-01-persistencia.md)). Tentativas pendentes continuam voláteis.
 - Sessão global antiga (`/api/auth/*`) desligada por padrão e nunca importada como vínculo.
 
 ## 10. Configuração
@@ -180,7 +184,7 @@ Com origem pública, a proteção de loopback não se aplica; permanecem navegad
 BOT_API_TOKEN=<segredo ≥ 32 chars>       # node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 ALLOWED_ORGANIZER_IDS=<ID numérico do organizador>
 PUBLIC_BASE_URL=http://localhost:8000
-IFOOD_LINKS_DIR=.ifood-links
+IFOOD_LINKS_DIR=.ifood-links             # deploy: dentro do volume persistente (ex.: /data/ifood-links)
 
 # telegram-bot (sugestão de nomes; decisão do bot)
 BACKEND_BASE_URL=http://localhost:8000
