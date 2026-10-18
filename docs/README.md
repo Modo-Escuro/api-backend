@@ -5,6 +5,7 @@
 3. [Revisão da branchBruna](reviews/branchBruna-8393615.md): achados e reproduções sobre o commit 8393615.
 4. [Requisitos do incremento anterior](requirements.md): histórico do recorte de recomendação, com ressalvas de escopo atual.
 5. [Auditoria de preço](pricing-audit.md): evidência e ambiguidades observadas no catálogo.
+6. [Persistência dos vínculos (OPS-01)](ops-01-persistencia.md): volume, migração, backup, restauração e limitações.
 
 Plano completo e contrato futuro estão no [telegram-bot](https://github.com/Modo-Escuro/telegram-bot/blob/codex/plano-conversacional/docs/plano-conversacional.md). A [StRS preservada](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/baseline/stakeholder-requirements-specification.md) continua em validação.
 

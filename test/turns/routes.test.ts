@@ -63,7 +63,7 @@ describe('RUN-01 rotas autenticadas reais, sem MCP', () => {
   it('ajuda/status de saúde continuam responsivos durante trabalho pendente e cancelamento só é local', async () => {
     const pending = deferred<TurnResult>(); const { app, runtime } = setup(() => pending.promise);
     const accepted = runtime.accept(principal, event()).operation; runtime.tick();
-    const health = await app.request('/api/health'); expect(await health.json()).toEqual({ ok: true });
+    const health = await app.request('/api/health'); expect(await health.json()).toMatchObject({ ok: true });
     const envelope = cancelEnvelope(2);
     const cancel = await app.request(`${base}/operations/${accepted.operationId}/cancel`, {
       method: 'POST', headers: auth, body: JSON.stringify({ ...envelope, operationId: accepted.operationId }),
@@ -95,5 +95,6 @@ describe('RUN-01 rotas autenticadas reais, sem MCP', () => {
     expect(loadConfig({}).conversationRuntime).toBeUndefined();
     expect(() => loadConfig({ CONVERSATION_RUNTIME_ENABLED: 'true' })).toThrowError('RUN-01 exige');
     expect(() => loadConfig({ CONVERSATION_RUNTIME_ENABLED: 'true', BOT_TELEGRAM_ID: 'x', CONVERSATION_DB_FILE: 'db.sqlite' })).toThrow();
+    expect(() => loadConfig({ CONVERSATION_RUNTIME_ENABLED: 'true', BOT_TELEGRAM_ID: '900001', CONVERSATION_DB_FILE: 'db.sqlite', RAILWAY_SERVICE_ID: 'synthetic' })).toThrowError('armazenamento persistente');
   });
 });

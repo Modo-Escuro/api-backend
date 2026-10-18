@@ -82,7 +82,7 @@ CONVERSATION_DB_FILE=/data/conversations/turns.sqlite
 BOT_TELEGRAM_ID=<ID numérico do bot, obtido por getMe>
 ```
 
-Com a flag ligada, caminho e ID são obrigatórios. O exemplo de caminho pressupõe um volume já preparado; não cria/migra volume Railway. `BOT_API_TOKEN` e `ALLOWED_ORGANIZER_IDS` continuam obrigatórios para autenticação. O token do BotFather não pertence à API. Não modificar variáveis/segredos de produção para ensaiar esta infraestrutura sem DATA-01/OPS-01 e o processador integrados.
+Com a flag ligada, caminho e ID são obrigatórios. A classificação da OPS-01 é reutilizada para recusar banco em disco sabidamente efêmero (Railway sem volume/diretório fora dele ou Vercel). O exemplo de caminho pressupõe um volume já preparado; não cria/migra volume Railway. `BOT_API_TOKEN` e `ALLOWED_ORGANIZER_IDS` continuam obrigatórios para autenticação. O token do BotFather não pertence à API. Não modificar variáveis/segredos de produção para ensaiar esta infraestrutura sem DATA-01/OPS-01 e o processador integrados.
 
 Usar **uma instância/processo** da API e diretório dedicado no volume persistente. SQLite usa WAL e `synchronous=FULL`. Diretório/arquivo são configurados para 700/600 em POSIX; no Windows, conferir ACL do diretório, pois bits POSIX não representam a proteção NTFS. Banco inválido ou versão não suportada falha fechado e não é substituído por banco vazio.
 

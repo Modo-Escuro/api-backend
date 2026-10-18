@@ -77,7 +77,14 @@ export function createApp(auth: IfoodAuth = defaultAuth, opts: AppOptions = {}) 
     return c.json(body, status);
   });
 
-  app.get('/api/health', (c) => c.json({ ok: true }));
+  // Liveness: sempre 200. linksStorage resume o armazenamento de vínculos sem caminhos nem identidades (OPS-01).
+  app.get('/api/health', async (c) => c.json({ ok: true, linksStorage: await links.storageHealth() }));
+  // Readiness para healthcheck do deploy: 503 se os vínculos não podem ser lidos ou se o disco é sabidamente efêmero.
+  app.get('/api/health/ready', async (c) => {
+    const storage = await links.storageHealth();
+    const ready = storage.state !== 'UNAVAILABLE' && storage.acceptingNewLinks;
+    return c.json({ ready, linksStorage: storage }, ready ? 200 : 503);
+  });
 
   // ---------- Bot → API (autenticado; identidade do organizador vem do adaptador) ----------
   const requireBot = botAuth({ token: cfg.botApiToken, allowedOrganizerIds: cfg.allowedOrganizerIds });

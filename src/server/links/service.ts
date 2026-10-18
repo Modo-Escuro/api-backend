@@ -20,7 +20,7 @@ import type { AppConfig } from '../config.js';
 import { ItemCache, type EvaluateDeps } from '../services/evaluate.js';
 import { classifyFailure } from './classify.js';
 import { identityFromGetUser, UNAVAILABLE_IDENTITY, type AccountIdentity } from './identity.js';
-import { LinkStore, type LinkRecord } from './store.js';
+import { LinkStorageError, LinkStore, type LinkRecord } from './store.js';
 
 export const CONFIRMATION_TTL_MS = 10 * 60_000;
 const IDENTITY_TIMEOUT_MS = 10_000;
@@ -187,16 +187,60 @@ export class IfoodLinkService {
     this.sessionFactory = opts.sessionFactory;
   }
 
-  /** Carrega vínculos confirmados do disco. Nunca lê a sessão global antiga. */
+  /**
+   * Carrega vínculos confirmados do disco. Nunca lê a sessão global antiga.
+   * Falha de leitura ⇒ 503 LINK_STORAGE_UNAVAILABLE em todas as rotas (fail closed) e nada é gravado; a próxima
+   * chamada tenta carregar de novo, então corrigir o disco não exige reiniciar o processo.
+   */
   init(): Promise<void> {
     this.ready ??= (async () => {
-      this.records = await this.store.load();
-      for (const r of Object.values(this.records)) {
+      await this.store.cleanupTemps();
+      const records = await this.store.load();
+      const links = new Map<string, LinkRuntime>();
+      for (const r of Object.values(records)) {
         if (!this.cfg.allowedOrganizerIds.includes(r.organizerId)) continue; // organizador removido da allowlist
-        this.links.set(r.organizerId, this.runtimeFor(r));
+        links.set(r.organizerId, this.runtimeFor(r));
       }
-    })();
+      this.records = records;
+      this.links = links;
+    })().catch((e: unknown) => {
+      this.ready = null;
+      const code = e instanceof LinkStorageError ? e.code : ((e as NodeJS.ErrnoException)?.code ?? 'erro');
+      console.error('[links] armazenamento de vínculos indisponível:', code); // sem caminho/conteúdo
+      throw new LinkError('LINK_STORAGE_UNAVAILABLE', 'Armazenamento de conexões indisponível no backend — nada foi alterado', 503);
+    });
     return this.ready;
+  }
+
+  /** Novos vínculos só são aceitos em armazenamento que sobrevive a redeploy (ou com opt-in explícito). */
+  private assertDurableForNewLinks(): void {
+    const s = this.cfg.linksStorage;
+    if (s.durability === 'EPHEMERAL' && !s.allowEphemeral) {
+      throw new LinkError(
+        'LINK_STORAGE_NOT_DURABLE',
+        'O backend está sem armazenamento persistente para conexões; uma conexão nova se perderia no próximo deploy',
+        503,
+      );
+    }
+  }
+
+  /** Saúde do armazenamento, sem identidades nem caminhos. */
+  async storageHealth(): Promise<{
+    state: 'OK' | 'DEGRADED' | 'UNAVAILABLE';
+    durability: AppConfig['linksStorage']['durability'];
+    platform: AppConfig['linksStorage']['platform'];
+    acceptingNewLinks: boolean;
+    unpersistedLinks: number;
+  }> {
+    const s = this.cfg.linksStorage;
+    const acceptingNewLinks = !(s.durability === 'EPHEMERAL' && !s.allowEphemeral);
+    try {
+      await this.init();
+    } catch {
+      return { state: 'UNAVAILABLE', durability: s.durability, platform: s.platform, acceptingNewLinks: false, unpersistedLinks: 0 };
+    }
+    const unpersistedLinks = [...this.links.values()].filter((rt) => rt.auth.hasUnpersistedTokens).length;
+    return { state: unpersistedLinks ? 'DEGRADED' : 'OK', durability: s.durability, platform: s.platform, acceptingNewLinks, unpersistedLinks };
   }
 
   private async withLock<T>(organizerId: string, fn: () => Promise<T>): Promise<T> {
@@ -263,6 +307,7 @@ export class IfoodLinkService {
   /** Cria tentativa (substitui a anterior do mesmo organizador). */
   async connect(organizerId: string): Promise<{ status: LinkStatus; authorizationUrl: string; attemptId: string; expiresAt: string }> {
     await this.init();
+    this.assertDurableForNewLinks(); // antes do OAuth: não fazer a pessoa autorizar para perder a conexão depois
     return this.withLock(organizerId, () => this.connectLocked(organizerId));
   }
 
@@ -399,6 +444,7 @@ export class IfoodLinkService {
   /** Organizador toca em "Confirmar conexão" no Telegram (bot envia o confirmationId recebido no status). */
   async confirm(organizerId: string, confirmationId: string): Promise<{ status: LinkStatus; previousLinkId: string | null }> {
     await this.init();
+    this.assertDurableForNewLinks();
     const { rt, previousLinkId } = await this.withLock(organizerId, () => this.installLink(organizerId, confirmationId));
     // Verificação fora da fila (chamada de rede); ignorada se o vínculo for removido/substituído nesse meio-tempo.
     await this.verifyRuntime(rt);
