@@ -31,9 +31,16 @@ export function registerBotRoutes(app: Hono, links: IfoodLinkService) {
 
   app.post('/api/bot/ifood/verify', async (c) => c.json(await links.verify(organizerOf(c))));
 
+  // Cancela só a tentativa pendente (botão "Cancelar"); idempotente.
+  app.post('/api/bot/ifood/cancel', async (c) => {
+    const r = await links.cancelAttempt(organizerOf(c));
+    return c.json({ ...r.status, cancelled: r.cancelled });
+  });
+
+  // Remove só o vínculo confirmado ("Desconectar"); idempotente. Não cancela tentativa pendente.
   app.delete('/api/bot/ifood/link', async (c) => {
     const r = await links.disconnect(organizerOf(c));
-    return c.json({ ...r.status, providerRevocation: r.providerRevocation });
+    return c.json({ ...r.status, removed: r.removed, providerRevocation: r.providerRevocation });
   });
 }
 

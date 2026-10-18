@@ -3,7 +3,7 @@
 //
 // Regra geral: tudo que é OBRIGATÓRIO e não pôde ser verificado (UNKNOWN) bloqueia.
 //  - Restrição obrigatória / alergia: só PASS é elegível.
-//  - Alergia: a classificação do iFood cobre o item-base, não as opções ⇒ configuração com opções bloqueia.
+//  - Alergia: nunca PASS (só FAIL/UNKNOWN) ⇒ sempre bloqueia; não há dado do iFood que comprove segurança.
 //  - Orçamento informado é teto obrigatório: só PASS (faixa inteira abaixo do teto) é elegível.
 //  - Preferência: nunca bloqueia; vira aviso (insumo para o ranking).
 // Função pura.
@@ -158,7 +158,8 @@ export function evaluateCandidate(input: CandidateInput, constraints: UserConstr
     if (input.selection && configuration.status !== 'INVALID') {
       selected = computePrice({ detail, listing, selection: input.selection, quantity, kind: 'SELECTED' });
     }
-    // Alergia: classificação cobre só o item-base; nenhuma opção é verificada.
+    // Defesa em profundidade: alergia hoje nunca resulta PASS (constraints.ts, issue #3); se um dia resultar,
+    // a classificação cobriria só o item-base e nenhuma opção seria verificada.
     if (selection.options.length) {
       for (const c of restrictions) {
         if (c.restriction.kind === 'ALLERGY' && c.status === 'PASS') {

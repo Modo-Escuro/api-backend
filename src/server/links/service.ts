@@ -170,6 +170,8 @@ export class IfoodLinkService {
   private readonly store: LinkStore;
   private readonly sessionFactory: SessionFactory;
   private ready: Promise<void> | null = null;
+  /** Fila por organizador: connect/confirm/cancel/disconnect nunca se intercalam. */
+  private locks = new Map<string, Promise<void>>();
 
   constructor(opts: LinkServiceOptions) {
     this.cfg = opts.cfg;
@@ -189,6 +191,21 @@ export class IfoodLinkService {
       }
     })();
     return this.ready;
+  }
+
+  private async withLock<T>(organizerId: string, fn: () => Promise<T>): Promise<T> {
+    const prev = this.locks.get(organizerId) ?? Promise.resolve();
+    let release!: () => void;
+    const mine = new Promise<void>((r) => (release = r));
+    const tail = prev.then(() => mine);
+    this.locks.set(organizerId, tail);
+    await prev;
+    try {
+      return await fn();
+    } finally {
+      release();
+      if (this.locks.get(organizerId) === tail) this.locks.delete(organizerId);
+    }
   }
 
   private runtimeFor(record: LinkRecord): LinkRuntime {
@@ -240,6 +257,10 @@ export class IfoodLinkService {
   /** Cria tentativa (substitui a anterior do mesmo organizador). */
   async connect(organizerId: string): Promise<{ status: LinkStatus; authorizationUrl: string; attemptId: string; expiresAt: string }> {
     await this.init();
+    return this.withLock(organizerId, () => this.connectLocked(organizerId));
+  }
+
+  private async connectLocked(organizerId: string): Promise<{ status: LinkStatus; authorizationUrl: string; attemptId: string; expiresAt: string }> {
     this.gc();
     if (!this.cfg.clientId || !this.cfg.clientSecret) throw new LinkError('IFOOD_CLIENT_NOT_CONFIGURED', 'Credenciais OAuth do iFood não configuradas no backend', 503);
     const prev = this.activeAttempt(organizerId);
@@ -372,6 +393,13 @@ export class IfoodLinkService {
   /** Organizador toca em "Confirmar conexão" no Telegram (bot envia o confirmationId recebido no status). */
   async confirm(organizerId: string, confirmationId: string): Promise<{ status: LinkStatus; previousLinkId: string | null }> {
     await this.init();
+    const { rt, previousLinkId } = await this.withLock(organizerId, () => this.installLink(organizerId, confirmationId));
+    // Verificação fora da fila (chamada de rede); ignorada se o vínculo for removido/substituído nesse meio-tempo.
+    await this.verifyRuntime(rt);
+    return { status: await this.status(organizerId), previousLinkId };
+  }
+
+  private async installLink(organizerId: string, confirmationId: string): Promise<{ rt: LinkRuntime; previousLinkId: string | null }> {
     this.gc();
     const id = this.byConfirmation.get(confirmationId);
     const a = id ? this.attempts.get(id) : undefined;
@@ -381,13 +409,15 @@ export class IfoodLinkService {
     if (a.status === 'CONFIRMED' || a.status === 'CONFIRMING') {
       throw new LinkError('ALREADY_CONFIRMED', 'Esta conexão já foi confirmada', 410, (await this.status(organizerId)).state);
     }
-    if (a.status !== 'PENDING_CONFIRMATION') throw new LinkError('CONFIRMATION_INVALID', 'Tentativa substituída ou cancelada — gere um novo link', 410);
+    if (a.status !== 'PENDING_CONFIRMATION' || !a.tokens) {
+      throw new LinkError('CONFIRMATION_INVALID', 'Tentativa substituída ou cancelada — gere um novo link', 410);
+    }
     if (a.confirmationExpiresAt && this.now() > a.confirmationExpiresAt) {
       this.endAttempt(a, 'EXPIRED', 'CONFIRMATION_EXPIRED');
       throw new LinkError('CONFIRMATION_EXPIRED', 'Confirmação expirada — gere um novo link', 410);
     }
-    a.status = 'CONFIRMING'; // confirmações concorrentes/repetidas param aqui
-    const tokens = a.tokens!;
+    a.status = 'CONFIRMING'; // cliques repetidos param aqui
+    const tokens = a.tokens;
     const linkId = randomToken(18);
     const record: LinkRecord = {
       linkId,
@@ -399,6 +429,11 @@ export class IfoodLinkService {
     };
     const rt = this.runtimeFor(record);
     await rt.auth.setTokens(tokens);
+    // Defesa em profundidade: se algo encerrou a tentativa durante a gravação, desfaz e não instala.
+    if (a.status !== 'CONFIRMING' || this.current.get(organizerId) !== a.attemptId) {
+      await rt.auth.logout();
+      throw new LinkError('CONFIRMATION_INVALID', 'Tentativa encerrada durante a confirmação — gere um novo link', 410);
+    }
     // Troca de conta/reconexão: encerra o vínculo anterior (tokens, sessão e cache).
     const previous = this.links.get(organizerId) ?? null;
     if (previous) await this.closeRuntime(previous);
@@ -407,8 +442,20 @@ export class IfoodLinkService {
     await this.store.save(this.records);
     this.endAttempt(a, 'CONFIRMED', 'CONFIRMED');
     this.lastEnd.delete(organizerId);
-    await this.verifyRuntime(rt);
-    return { status: await this.status(organizerId), previousLinkId: previous?.record.linkId ?? null };
+    return { rt, previousLinkId: previous?.record.linkId ?? null };
+  }
+
+  /** Cancela SÓ a tentativa pendente (link/confirmação). Não mexe em vínculo já confirmado. */
+  async cancelAttempt(organizerId: string): Promise<{ status: LinkStatus; cancelled: boolean }> {
+    await this.init();
+    const cancelled = await this.withLock(organizerId, async () => {
+      this.gc();
+      const a = this.activeAttempt(organizerId);
+      if (!a) return false;
+      this.endAttempt(a, 'CANCELLED', 'ATTEMPT_CANCELLED');
+      return true;
+    });
+    return { status: await this.status(organizerId), cancelled };
   }
 
   private async closeRuntime(rt: LinkRuntime): Promise<void> {
@@ -418,26 +465,32 @@ export class IfoodLinkService {
     await rt.auth.logout(); // apaga o arquivo de tokens local
   }
 
-  /** Remove o vínculo e encerra a sessão local. Não revoga no provedor (sem suporte verificado). */
-  async disconnect(organizerId: string): Promise<{ status: LinkStatus; providerRevocation: 'NOT_ATTEMPTED' }> {
+  /**
+   * Remove SÓ o vínculo confirmado e encerra a sessão local (tokens, sessão MCP, cache). Tentativa pendente não é
+   * afetada — use cancelAttempt. Não revoga no provedor (sem suporte verificado).
+   */
+  async disconnect(organizerId: string): Promise<{ status: LinkStatus; providerRevocation: 'NOT_ATTEMPTED'; removed: boolean }> {
     await this.init();
-    const a = this.activeAttempt(organizerId);
-    if (a) this.endAttempt(a, 'CANCELLED', 'DISCONNECTED_BY_USER');
-    const rt = this.links.get(organizerId);
-    if (rt) {
-      await this.closeRuntime(rt);
+    const removed = await this.withLock(organizerId, async () => {
+      const rt = this.links.get(organizerId);
+      if (!rt) return false;
       this.links.delete(organizerId);
       delete this.records[organizerId];
+      await this.closeRuntime(rt);
       await this.store.save(this.records);
-    }
-    this.lastEnd.set(organizerId, 'DISCONNECTED_BY_USER');
-    return { status: await this.status(organizerId), providerRevocation: 'NOT_ATTEMPTED' };
+      this.lastEnd.set(organizerId, 'DISCONNECTED_BY_USER');
+      return true;
+    });
+    return { status: await this.status(organizerId), providerRevocation: 'NOT_ATTEMPTED', removed };
   }
 
   // ---------------- verificação operacional ----------------
 
   /** Leitura autenticada real (listAddresses). Resultado não é devolvido, só usado para o estado. */
   private verifyRuntime(rt: LinkRuntime): Promise<CheckResult> {
+    if (this.links.get(rt.record.organizerId) !== rt) {
+      return Promise.resolve({ at: this.now(), outcome: 'RECONNECT', reason: 'LINK_REMOVED', addressCount: null });
+    }
     rt.verifying ??= (async () => {
       let result: CheckResult;
       try {

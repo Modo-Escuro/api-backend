@@ -73,7 +73,12 @@ Corpo de status (todas as rotas de vínculo devolvem este objeto; nunca há toke
 | `POST /api/bot/ifood/connect` | — | 201 status + `authorizationUrl`, `attemptExpiresAt` | 503 `IFOOD_CLIENT_NOT_CONFIGURED` |
 | `POST /api/bot/ifood/confirm` | `{ "confirmationId": "<de attempt.confirmationId>" }` | 200 status + `previousLinkId` | 400 `VALIDATION`; 404 `CONFIRMATION_NOT_FOUND` (inexistente **ou de outro organizador**); 410 `CONFIRMATION_EXPIRED`, `ALREADY_CONFIRMED` (traz `state`), `CONFIRMATION_INVALID` (tentativa substituída/cancelada) |
 | `POST /api/bot/ifood/verify` | — | 200 status (leitura autenticada real; renova token se preciso) | 409 `IFOOD_LINK_REQUIRED` |
-| `DELETE /api/bot/ifood/link` | — | 200 status + `providerRevocation: "NOT_ATTEMPTED"` | — |
+| `POST /api/bot/ifood/cancel` | — | 200 status + `cancelled: true\|false` — cancela **só** a tentativa pendente (link/confirmação); vínculo confirmado continua; idempotente | — |
+| `DELETE /api/bot/ifood/link` | — | 200 status + `removed: true\|false`, `providerRevocation: "NOT_ATTEMPTED"` — remove **só** o vínculo confirmado (tokens, sessão, cache); tentativa pendente continua; idempotente | — |
+
+`connect`, `confirm`, `cancel` e `DELETE /link` do mesmo organizador são **serializados** no backend: uma confirmação em
+andamento termina antes de um cancelamento/desconexão começar, e uma confirmação de tentativa já cancelada ou substituída
+devolve 410 `CONFIRMATION_INVALID` sem instalar vínculo.
 
 Operações de conta (mesma autenticação; exigem vínculo confirmado **e** operacional):
 
@@ -104,8 +109,8 @@ Operações de conta (mesma autenticação; exigem vínculo confirmado **e** ope
    - 410 ALREADY_CONFIRMED (clique duplicado) → apenas mostrar o status atual; NÃO tratar como nova conexão.
    - 410 CONFIRMATION_EXPIRED / CONFIRMATION_INVALID, 404 → "Confirmação inválida/expirada; gere um novo link".
    Responder answerCallbackQuery sempre; remover o teclado da mensagem após uso.
-5. "ifx" (Cancelar) → DELETE /link (cancela a tentativa pendente; se havia vínculo confirmado, ele também é removido —
-   para cancelar só a tentativa, basta ignorar: ela expira em 10 min).
+5. "ifx" (Cancelar) → POST /cancel. Cancela só a tentativa; um vínculo já confirmado (reconexão) continua ativo.
+   "Desconectar" (comando/botão separado) → DELETE /link. Para sair de tudo: POST /cancel e DELETE /link.
 6. Antes de qualquer operação de conta: status.allowedOperations deve conter a operação; se a rota devolver
    409/503, mostrar a ação correspondente (Conectar / Verificar).
 ```
@@ -130,7 +135,16 @@ Identidade da conta: `getUser` com `includeProfileData=false` (contrato observad
 `readOnlyHint=true`, escopo `mcp.user.basic.read`). Só saem do backend nome mascarado ("Maria S.") e e-mail mascarado
 ("m***@example.com"); telefone nunca. Falha do `getUser` não bloqueia, mas é explicitada.
 
-## 6. Dinheiro em centavos (`/api/evaluate` no contrato do bot)
+## 6. Alergias (política do backend)
+
+- Alergia (`kind: "ALLERGY"`) é sempre obrigatória e **nunca resulta PASS**: o iFood não fornece ingredientes/alérgenos
+  e a classificação do catálogo (ex.: `GLUTEN_FREE`) não informa contaminação cruzada nem cobre opções.
+- `ALLERGY:GLUTEN` envia `GLUTEN_FREE` ao iFood **só para estreitar a busca**; cada item volta com
+  `status: "UNKNOWN"`, `source: "SERVER_FILTER_INSUFFICIENT"`, `eligible: false`, bloqueio `ALLERGY_UNVERIFIED`.
+- Termo do alérgeno no nome do item ⇒ `FAIL` (heurística). Em todos os casos, o bot deve explicar que é preciso
+  confirmação da loja. Restrições alimentares (`kind: "DIETARY"`, ex.: `GLUTEN_FREE` como dieta) continuam aceitando o filtro.
+
+## 7. Dinheiro em centavos (`/api/evaluate` no contrato do bot)
 
 - Entrada: `budget.maxItemPriceCents`, `budget.maxOrderTotalCents`, `refinements.maxDeliveryFeeCents` — inteiros.
   Campos decimais antigos (`maxItemPrice` etc.) são rejeitados com 400.
@@ -142,20 +156,20 @@ Identidade da conta: `getUser` com `includeProfileData=false` (contrato observad
 - Mensagens (`blockers[].message`, `notes`) continuam em texto "R$ x.yz" para leitura humana.
 - Internamente o domínio usa BRL decimal; a conversão é feita só na borda (`src/server/services/cents.ts`).
 
-## 7. Callback localhost
+## 8. Callback localhost
 
 Redirect registrado: **`http://localhost:8000`** (exato). Para a demo: Telegram Desktop e navegador **no computador do backend**.
 Abrir pelo celular não funciona (e é bloqueado). Para uso pelo celular seria preciso outro redirect cadastrado no iFood e
 `PUBLIC_BASE_URL` público — e então a proteção "mesma máquina" deixa de existir (restam navegador vinculado + confirmação).
 
-## 8. Recorte da demo (não é isolamento multiusuário completo)
+## 9. Recorte da demo (não é isolamento multiusuário completo)
 
 - Um organizador em `ALLOWED_ORGANIZER_IDS`, uma conta iFood dedicada de teste.
 - Sem banco de dados, sem criptografia dos tokens em repouso (arquivos modo 600 em `IFOOD_LINKS_DIR`, fora do Git), sem rate
   limiting, sem auditoria, sem revogação no provedor, um único processo (tentativas pendentes ficam em memória).
 - Sessão global antiga (`/api/auth/*`) desligada por padrão e nunca importada como vínculo.
 
-## 9. Configuração
+## 10. Configuração
 
 ```bash
 # api-backend (.env)

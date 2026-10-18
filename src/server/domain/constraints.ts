@@ -9,6 +9,7 @@
 //
 // Política:
 //  - Restrição OBRIGATÓRIA (MANDATORY; alergias sempre são): só PASS é elegível — FAIL e UNKNOWN bloqueiam.
+//  - Alergia NUNCA resulta PASS (nem com filtro do iFood): desfechos possíveis são FAIL ou UNKNOWN.
 //  - PREFERÊNCIA (PREFERENCE; só restrições alimentares): nunca bloqueia; FAIL/UNKNOWN viram aviso.
 //  - Heurística textual nunca comprova segurança (nunca gera PASS).
 //  - Conflito entre o filtro do iFood e o texto do item ⇒ UNKNOWN (não concluir).
@@ -39,7 +40,14 @@ export function requirementOf(r: RestrictionKey): Requirement {
   return r.requirement ?? 'MANDATORY';
 }
 export type TriState = 'PASS' | 'FAIL' | 'UNKNOWN';
-export type EvidenceSource = 'SERVER_FILTER' | 'SERVER_FILTER_IMPLIED' | 'HEURISTIC' | 'CONFLICT' | 'NO_DATA';
+export type EvidenceSource =
+  | 'SERVER_FILTER'
+  | 'SERVER_FILTER_IMPLIED'
+  /** Alergia: o item veio do filtro do iFood, mas isso não comprova segurança (nunca gera PASS). */
+  | 'SERVER_FILTER_INSUFFICIENT'
+  | 'HEURISTIC'
+  | 'CONFLICT'
+  | 'NO_DATA';
 
 export interface KeywordHit {
   term: string;
@@ -84,7 +92,11 @@ const DIETARY_IMPLIED_BY: Partial<Record<Dietary, ItemRestriction[]>> = {
   NO_PORK: ['VEGAN', 'VEGETARIAN'],
 };
 
-/** Alergia só aceita evidência direta. LAC_FREE NÃO cobre alergia à proteína do leite. */
+/**
+ * Filtro do iFood usado só para ESTREITAR a busca em caso de alergia. Nunca comprova segurança: a classificação
+ * do catálogo não informa contaminação cruzada nem cobre opções ⇒ alergia nunca resulta PASS (issue #3).
+ * LAC_FREE NÃO cobre alergia à proteína do leite, por isso nem é usado para MILK.
+ */
 const ALLERGY_TO_SERVER: Partial<Record<Allergen, ItemRestriction>> = { GLUTEN: 'GLUTEN_FREE' };
 
 /** Filtros server-side a enviar em searchOffers.refinements.itemRestrictions para as restrições pedidas. */
@@ -251,7 +263,28 @@ export function evaluateRestriction(r: RestrictionKey, input: EvaluationInput): 
 
   let status: TriState;
   let source: EvidenceSource;
-  if (strongHit) {
+  if (r.kind === 'ALLERGY') {
+    // Alergia: só há dois desfechos possíveis — FAIL (heurística encontrou o alérgeno) ou UNKNOWN. Nunca PASS.
+    if (strongHit) {
+      if (nameHits.length) reasons.push(`nome do item menciona: ${termsOf(nameHits)} (heurística)`);
+      if (impossibleGroups.length) reasons.push(`grupo obrigatório sem opção compatível: ${impossibleGroups.join(', ')} (heurística)`);
+      status = 'FAIL';
+      source = 'HEURISTIC';
+    } else {
+      status = 'UNKNOWN';
+      if (evidence) {
+        source = 'SERVER_FILTER_INSUFFICIENT';
+        reasons.push(
+          'o item aparece no filtro do iFood, mas essa classificação não comprova segurança para alergia ' +
+            '(contaminação cruzada e opções não são informadas) — confirme com a loja',
+        );
+      } else {
+        source = 'NO_DATA';
+        reasons.push('informação indisponível — verifique com a loja');
+      }
+      if (descHits.length) reasons.push(`descrição menciona: ${termsOf(descHits)} (heurística)`);
+    }
+  } else if (strongHit) {
     if (nameHits.length) reasons.push(`nome do item menciona: ${termsOf(nameHits)} (heurística)`);
     if (impossibleGroups.length) reasons.push(`grupo obrigatório sem opção compatível: ${impossibleGroups.join(', ')} (heurística)`);
     if (evidence) {
@@ -275,7 +308,6 @@ export function evaluateRestriction(r: RestrictionKey, input: EvaluationInput): 
           ? 'classificação do catálogo iFood (filtro de busca) para o item-base'
           : 'implicado pela classificação do catálogo iFood (ex.: vegano ⇒ vegetariano)',
       );
-      if (r.kind === 'ALLERGY') reasons.push('contaminação cruzada não é informada pelo iFood');
     }
   } else {
     status = 'UNKNOWN';

@@ -86,6 +86,7 @@ export class FakeMcp {
   searchPages: unknown[] = [{ ...fx('searchOffers-pizza.json'), hasMore: false, nextPageToken: undefined }];
   sessions = 0;
   closed = 0;
+  searchArgs: SearchOffersArgs[] = [];
   /** Resposta SINTÉTICA de getUser (formato observado: { success, data: { fullName, email, phone } }). */
   user: unknown = { success: true, data: { fullName: 'Maria Clara Souza', email: 'maria.souza@example.com', phone: '+5516999990000' } };
   userFailure: McpFailure = 'none';
@@ -107,8 +108,9 @@ export class FakeMcp {
         await this.gate(auth, 'listAddresses');
         return { results: structuredClone(this.addresses) as never };
       },
-      searchOffers: async (_args: SearchOffersArgs) => {
+      searchOffers: async (args: SearchOffersArgs) => {
         await this.gate(auth, 'searchOffers');
+        this.searchArgs.push(structuredClone(args));
         const p = this.searchPages[Math.min(page++, this.searchPages.length - 1)];
         return structuredClone(p);
       },
