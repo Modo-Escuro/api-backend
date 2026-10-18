@@ -56,11 +56,14 @@ function planText(title: string, plan: PlanEvaluation, state: PurchaseState, com
     const n = plan.coverage.filter((c) => c.status === 'COVERED').length;
     return clip(`${title}: ${plan.proposal.lines.length} item(ns); ${delivery}.${floor} Atendidos: ${n} de ${plan.coverage.length}.`, 300);
   }
-  const lines = plan.proposal.lines.map((l) => `${l.name} (${l.consumerIds.map(who).join(', ')}): ${formatCents(l.unitMinCents)}${l.unitMaxCents === l.unitMinCents ? '' : l.unitMaxCents === null ? '+' : `–${formatCents(l.unitMaxCents)}`}`);
-  const delivery = plan.proposal.deliveryFeeCents === null ? 'entrega não informada' : `entrega ${formatCents(plan.proposal.deliveryFeeCents)}`;
-  const floor = plan.lowerBoundCents === null ? '' : ` Soma dos preços observados: ${formatCents(plan.lowerBoundCents)} — não é o total (sem taxa de serviço; descontos não visíveis podem mudar o valor).`;
+  // Uma linha por informação, com emoji, para separar bem as propostas no Telegram (o bot põe preços em negrito).
+  const single = state.participants.length === 1;
+  const lines = plan.proposal.lines.map((l) => `• ${l.name}${single ? '' : ` (${l.consumerIds.map(who).join(', ')})`}: ${formatCents(l.unitMinCents)}${l.unitMaxCents === l.unitMinCents ? '' : l.unitMaxCents === null ? '+' : `–${formatCents(l.unitMaxCents)}`}`);
+  const delivery = plan.proposal.deliveryFeeCents === null ? '🛵 Entrega: não informada' : `🛵 Entrega: ${formatCents(plan.proposal.deliveryFeeCents)}`;
+  const floor = plan.lowerBoundCents === null ? [] : [`💰 Soma dos preços observados: ${formatCents(plan.lowerBoundCents)} (não é o total: sem taxa de serviço; descontos não visíveis podem mudar o valor)`];
   const out = plan.coverage.filter((c) => c.status !== 'COVERED').map((c) => who(c.participantId));
-  return clip(`${title}: ${lines.join('; ')}; ${delivery}.${floor}${out.length ? ` Sem atendimento: ${out.join(', ')}.` : ''}`, 1500);
+  const icon = title.startsWith('Proposta') ? '🍽️' : '🛒';
+  return clip([`${icon} ${title}`, ...lines, delivery, ...floor, ...(out.length ? [`⚠️ Sem atendimento: ${out.join(', ')}`] : [])].join('\n'), 1500);
 }
 
 export interface PlanViews { proposals: PlanEvaluation[]; bag: PlanEvaluation | null }
