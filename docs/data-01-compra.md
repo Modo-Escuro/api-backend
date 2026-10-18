@@ -56,6 +56,7 @@ operação, nada gravado).
 | `SET_PRIORITY { value: ECONOMY \| SPEED }` | D9 |
 | `SET_MERCHANT { merchantId }` / `SET_ADDRESS { addressId }` | ID precisa vir de resposta MCP (o processador valida) |
 | `END { reason: CLOSED \| CANCELLED }` | Exige compra ativa antes do patch; encerra e dispara a exclusão D7 na mesma transação |
+| `SET_PROPOSALS { proposals }` / `SELECT_PROPOSAL { proposalId }` / `CLEAR_BAG` | GRP-01: propostas (apagadas por qualquer outra alteração) e sacola simulada; ver [grp-01-propostas](grp-01-propostas.md) |
 
 `humanConfirmed` só pode ser preenchido pelo processador quando o organizador declarou a mudança explicitamente.
 

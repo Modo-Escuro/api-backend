@@ -26,7 +26,7 @@ const restriction = z.discriminatedUnion('kind', [
 const limitTarget = z.union([z.literal('GROUP'), ParticipantSelectorSchema]);
 const cents = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
 
-/** Vocabulário fechado de ações. Não há ação de loja/endereço/item, de aprovação nem de confirmação humana. */
+/** Vocabulário fechado de ações. Não há ação com ID de loja/endereço/item, de aprovação nem de confirmação humana. */
 export const AgentActionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('ADD_PARTICIPANT'), name: shortText(80) }).strict(),
   z.object({ action: z.literal('RENAME_PARTICIPANT'), participant: ParticipantSelectorSchema, name: shortText(80) }).strict(),
@@ -52,6 +52,11 @@ export const AgentActionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('REQUEST_ORDER') }).strict(),
   /** Encerrar/cancelar apaga dados (D7): exige confirmação humana, que este canal ainda não oferece. */
   z.object({ action: z.literal('CLOSE_PURCHASE'), reason: z.enum(['CLOSED', 'CANCELLED']) }).strict(),
+  /** GRP-01: buscar e compor propostas (só leitura no MCP). `query` é termo de busca, nunca ID. */
+  z.object({ action: z.literal('SUGGEST_PROPOSALS'), query: shortText(80) }).strict(),
+  /** Escolher uma das propostas exibidas pela POSIÇÃO (1–4); o servidor resolve o ID. */
+  z.object({ action: z.literal('SELECT_PROPOSAL'), position: z.number().int().min(1).max(4) }).strict(),
+  z.object({ action: z.literal('CLEAR_BAG') }).strict(),
 ]);
 export type AgentAction = z.infer<typeof AgentActionSchema>;
 
