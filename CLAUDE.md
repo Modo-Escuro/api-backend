@@ -12,7 +12,7 @@ Localhost abaixo é configuração de desenvolvimento. O login online foi ensaia
 MVP de recomendação com contexto: restrições do usuário → busca real no iFood (MCP) → detalhamento de itens → validação de restrições → cálculo honesto de preço → ranking → recomendação com explicação. **Sem checkout automático.**
 
 ## Stack
-- Node 22 + TypeScript (strict)
+- Node 22.13+ + TypeScript (strict)
 - Backend: Hono na porta 8000 (compatível com `redirectUri: http://localhost:8000`)
 - Frontend: React + Vite (dev em proxy para o backend)
 - Cliente MCP: `@modelcontextprotocol/sdk` (Streamable HTTP + OAuth)
@@ -88,6 +88,8 @@ fixtures/             # respostas reais salvas p/ testes offline
 ```
 
 ## Convenções
+
+- RUN-01: infraestrutura de conversa em `src/server/turns/`, guia em `docs/runtime-turnos.md`. Flag desligada por padrão; `index.ts` ainda não instala processador DATA/IA. Não confundir SQLite/snapshot técnico com DATA-01 concluída ou volume operacional verificado. Nunca conectar JSON bruto do modelo ao commit. Conforme DEC-01 D8, a barreira de escrita do runtime sempre rejeita; aprovação fictícia não usa `/purchase-approvals`. Exclusão D7 ainda precisa da integração DATA-01 antes de ativar com dados reais.
 - Dinheiro: number decimal BRL (ex.: `32.9`) no domínio; **contrato do bot em centavos inteiros** (campos `*Cents`,
   conversão só na borda em `services/cents.ts`). Enums `SCREAMING_SNAKE_CASE`; JSON `lowerCamelCase`.
 - IDs sempre UUID vindos do MCP; em testes, fixtures de respostas reais — nunca IDs fabricados em produção.

@@ -23,6 +23,8 @@ export interface AppConfig {
   devGlobalSession: boolean;
   /** Habilitar só após validar saída MCP e integrar correções #2/#3. Nunca habilita checkout. */
   cartEnabled: boolean;
+  /** Opt-in da infraestrutura RUN-01; não instala processador de IA/domínio. */
+  conversationRuntime?: { dbFile: string; botId: string };
 }
 
 import { isAbsolute, resolve } from 'node:path';
@@ -33,6 +35,14 @@ export const PROJECT_ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const fromRoot = (p: string) => (isAbsolute(p) ? p : resolve(PROJECT_ROOT, p));
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
+  let conversationRuntime: AppConfig['conversationRuntime'];
+  if (env.CONVERSATION_RUNTIME_ENABLED === 'true') {
+    const botId = env.BOT_TELEGRAM_ID ?? '';
+    if (!/^[1-9][0-9]{0,19}$/.test(botId) || botId.trim() !== botId || !env.CONVERSATION_DB_FILE?.trim()) {
+      throw new Error('RUN-01 exige BOT_TELEGRAM_ID válido e CONVERSATION_DB_FILE explícito.');
+    }
+    conversationRuntime = { dbFile: fromRoot(env.CONVERSATION_DB_FILE), botId };
+  }
   return {
     mcpUrl: env.IFOOD_MCP_URL || 'https://consumer-mcp.ifood.com.br/marketplace',
     clientId: env.IFOOD_CLIENT_ID || undefined,
@@ -53,6 +63,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     publicBaseUrl: (env.PUBLIC_BASE_URL || `http://localhost:${Number(env.PORT || 8000)}`).replace(/\/$/, ''),
     devGlobalSession: env.DEV_GLOBAL_SESSION === 'true',
     cartEnabled: env.IFOOD_CART_ENABLED === 'true',
+    conversationRuntime,
   };
 }
 

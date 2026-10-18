@@ -1,6 +1,6 @@
 # Contrato de conversa HTTP/JSON v1.0 — API-01
 
-Especificação e conformidade offline em 18/10/2026. **As rotas abaixo são propostas, não estão registradas no aplicativo.** Os schemas, validadores e mocks estão implementados; processamento durável é RUN-01, estado/patches são DATA-01, ações de carrinho são CART-01 e autorização/envio são BUY-01/02. Este contrato permite preparar AI-01 sem escolher políticas de DEC-01.
+Especificação e conformidade offline em 18/10/2026. Os schemas, validadores e mocks estão implementados. A [RUN-01](runtime-turnos.md) acrescenta as rotas e a infraestrutura durável em SQLite, com ativação explícita; **o processo padrão ainda não instala o processador DATA/IA e rejeita novos eventos com UNAVAILABLE**. Estado/patches são DATA-01, ações de carrinho são CART-01 e autorização/envio são BUY-01/02. Este contrato permite preparar AI-01 sem escolher políticas de DEC-01. A rota de aprovação permanece indisponível para execução de compra.
 
 Issue: [API-01 #12](https://github.com/Modo-Escuro/api-backend/issues/12). Base de implementação: `main@686300d`. A [proposta v0 do bot](https://github.com/Modo-Escuro/telegram-bot/blob/codex/plano-conversacional/docs/contrato-conversa-proposto.md) é a origem; este documento fixa nomes e formatos para a v1.0. O [contrato de vínculo existente](bot-api.md) continua válido e independente. Nenhum OAuth novo foi criado.
 
