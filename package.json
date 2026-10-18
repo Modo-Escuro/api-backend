@@ -16,6 +16,9 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "ai:manifest": "tsx scripts/evaluate-ai.ts --manifest",
+    "ai:eval:offline": "tsx scripts/evaluate-ai.ts --offline",
+    "ai:eval:live": "tsx scripts/evaluate-ai.ts --live",
     "contract:generate": "tsx scripts/export-conversation-contract.ts && tsx scripts/conversation-examples.ts",
     "test:contract": "vitest run test/contracts/conversation.test.ts",
     "setup:env": "node scripts/setup-env-from-opencode.mjs",
@@ -24,8 +27,11 @@
     "links": "tsx --env-file-if-exists=.env scripts/links-admin.ts"
   },
   "dependencies": {
+    "@ai-sdk/google": "4.0.99",
+    "@ai-sdk/groq": "4.0.63",
     "@hono/node-server": "^2.1.5",
     "@modelcontextprotocol/sdk": "^1.32.1",
+    "ai": "7.0.143",
     "hono": "^4.13.13",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",

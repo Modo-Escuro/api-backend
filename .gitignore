@@ -4,6 +4,7 @@ node_modules/
 .venv-contract/
 __pycache__/
 .contract-test-results.json
+.ai-eval/
 dist/
 .env
 .env.*
