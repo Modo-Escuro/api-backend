@@ -5,6 +5,9 @@ import { CancelSchema, EventSchema } from '../contracts/conversation.js';
 import { contractErrorResponse } from '../contracts/errors.js';
 import { ContractError, type AdapterPrincipal } from '../contracts/guards.js';
 import type { TurnRuntime } from '../turns/runtime.js';
+import type { DeliveryAddresses } from '../services/delivery-addresses.js';
+import { addressFailure } from '../services/delivery-addresses.js';
+import { z } from 'zod';
 
 const prefix = '/api/bot/v1/conversations/:conversationId';
 const numericId = (s: string) => /^[1-9][0-9]{0,19}$/.test(s) && s.trim() === s;
@@ -49,6 +52,7 @@ async function body(c: Context): Promise<unknown> {
 
 export function registerConversationRoutes(
   app: Hono, runtime: TurnRuntime | undefined, botId: string | undefined, rollout: readonly string[] = [],
+  addresses?: DeliveryAddresses,
 ) {
   const principal = (c: Context): AdapterPrincipal => {
     if (!runtime || !botId || !numericId(botId)) throw new ContractError('UNAVAILABLE');
@@ -93,5 +97,17 @@ export function registerConversationRoutes(
     principal(c);
     // BUY-01/02 não implementadas: schema disponível jamais habilita escrita.
     throw new ContractError('ACTION_UNAVAILABLE');
+  }));
+  app.get(`${prefix}/addresses`, safe(async c => {
+    const p = principal(c);
+    if (!addresses) throw new ContractError('UNAVAILABLE');
+    try { return c.json(await addresses.review(p)); } catch (e) { addressFailure(e); }
+  }));
+  app.post(`${prefix}/addresses/select`, safe(async c => {
+    const p = principal(c);
+    if (!addresses) throw new ContractError('UNAVAILABLE');
+    const parsed = z.object({ source: z.literal('TELEGRAM_CALLBACK'), choiceRef: z.string().regex(/^[A-Za-z0-9_-]{32}$/) }).strict().safeParse(await body(c));
+    if (!parsed.success) throw new ContractError('INVALID_REQUEST');
+    try { return c.json(await addresses.select(p, parsed.data.choiceRef)); } catch (e) { addressFailure(e); }
   }));
 }

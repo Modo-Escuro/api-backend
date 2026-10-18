@@ -170,6 +170,11 @@ describe('montagem do entrypoint AI-01 (rede sintética)', () => {
     };
     try {
       expect(await send(1, 'Somos Ana, sem restrições', 0)).toMatchObject({ status: 'SUCCEEDED', resultVersion: 1 });
+      const choices = await (await app.request(`${base}/addresses`, { headers })).json();
+      const selected = await app.request(`${base}/addresses/select`, { method: 'POST', headers,
+        body: JSON.stringify({ source: 'TELEGRAM_CALLBACK', choiceRef: choices.options[0].choiceRef }) });
+      expect(selected.status).toBe(200);
+      expect(transport).toHaveBeenCalledTimes(1); // consulta e seleção não chamam Gemini.
       const sug = await send(2, 'Sugere pizza', 1);
       expect(sug).toMatchObject({ status: 'SUCCEEDED', snapshot: { phase: 'PROPOSALS_READY', humanApproval: null } });
       expect(sug.snapshot.blocks.some((b: { kind: string }) => b.kind === 'PROPOSAL')).toBe(true);

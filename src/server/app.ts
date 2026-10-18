@@ -22,6 +22,7 @@ import { errorFields, log, newCorrelationId, routeTemplateLabel } from './ops/lo
 import { metrics, statusClass } from './ops/metrics.js';
 import { checkPrivatePath } from './ops/storage-check.js';
 import type { SpendBudget } from './ops/budget.js';
+import { DeliveryAddresses } from './services/delivery-addresses.js';
 
 type ErrStatus = 400 | 401 | 403 | 404 | 409 | 410 | 423 | 500 | 502 | 503;
 
@@ -112,7 +113,8 @@ export function createApp(auth: IfoodAuth = defaultAuth, opts: AppOptions = {}) 
   app.use('/api/evaluate', requireBot);
   registerBotRoutes(app as unknown as Hono, links);
   registerCartRoutes(app, carts);
-  registerConversationRoutes(app as unknown as Hono, opts.conversations, cfg.conversationRuntime?.botId, cfg.conversationOrganizerIds);
+  registerConversationRoutes(app as unknown as Hono, opts.conversations, cfg.conversationRuntime?.botId, cfg.conversationOrganizerIds,
+    opts.conversations ? new DeliveryAddresses(opts.conversations.store, links) : undefined);
 
   // ---------- OPS-02: status operacional (autenticado; só contagens, sem caminhos/identidades) ----------
   // Separa: saúde HTTP ≠ armazenamento ≠ sessão iFood operacional ≠ conversa ≠ capacidade de compra.

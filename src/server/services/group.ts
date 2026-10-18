@@ -44,10 +44,18 @@ export async function generateProposals(
  */
 export function linkedProposalProvider(
   links: { withOperational: <T>(organizerId: string, op: 'OFFERS_EVALUATE', fn: (ctx: { linkId: string; deps: EvaluateDeps; cache: ItemCache }) => Promise<T>) => Promise<T> },
-  opts: { ranker?: PlanRanker; groupLimits?: Partial<GroupLimits>; evaluateLimits?: Partial<EvaluateLimits> } = {},
+  opts: { ranker?: PlanRanker; groupLimits?: Partial<GroupLimits>; evaluateLimits?: Partial<EvaluateLimits>;
+    addressFor?: (organizerId: string, ctx: { linkId: string; deps: EvaluateDeps; cache: ItemCache }) => Promise<string> } = {},
 ) {
   // Devolve o linkId realmente usado: o processador descarta o resultado se o vínculo mudou durante a busca.
   return (organizerId: string, state: PurchaseState, query: string, signal?: AbortSignal): Promise<GroupResult & { linkId: string }> =>
-    links.withOperational(organizerId, 'OFFERS_EVALUATE', async (ctx) =>
-      ({ ...(await generateProposals(state, { query }, ctx.deps, { seed: organizerId, cache: ctx.cache, ...opts, ...(signal ? { signal } : {}) })).result, linkId: ctx.linkId }));
+    links.withOperational(organizerId, 'OFFERS_EVALUATE', async (ctx) => {
+      const addressId = opts.addressFor ? await opts.addressFor(organizerId, ctx) : undefined;
+      const addressed = addressId ? { ...state, address: { state: 'DECLARED' as const, value: { addressId }, origin: { eventId: 'human-address-selection' } } } : state;
+      const outcome = await generateProposals(addressed, { query }, ctx.deps, { seed: organizerId, cache: ctx.cache, ...opts, ...(signal ? { signal } : {}) });
+      if (opts.addressFor && await opts.addressFor(organizerId, ctx) !== addressId)
+        throw new Error('Endereço autorizado mudou durante a busca.');
+      return { ...outcome.result,
+        linkId: ctx.linkId, ...(addressId ? { addressId } : {}) };
+    });
 }
