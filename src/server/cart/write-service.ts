@@ -78,7 +78,8 @@ export class ConfirmedCartService {
       throw new CartError('CART_BAG_UNVERIFIED', 'Selecione uma proposta atual com loja, endereço e vínculo verificados.');
     const coverage = planCoverage(state, bag), evaluated = evaluatePlan(state, bag, coverage);
     if (!evaluated.valid || coverage.some(c => c.status !== 'COVERED') || state.clarifications.length ||
-      [state.groupLimit, ...state.participants.map(x => x.limit)].some(l => l.state === 'UNCLEAR' || l.state === 'NOT_ASKED'))
+      // O bot pergunta só o orçamento do grupo: teto individual nunca perguntado = sem teto individual. Ambíguo bloqueia.
+      state.groupLimit.state === 'UNCLEAR' || state.groupLimit.state === 'NOT_ASKED' || state.participants.some(x => x.limit.state === 'UNCLEAR'))
       throw new CartError('CART_GROUP_BLOCKED', 'Cobertura, restrições ou limites do grupo não estão verificados.');
     id.parse(bag.merchantId); id.parse(bag.addressId);
     const addresses = parseAddressList(await ctx.deps.listAddresses());
