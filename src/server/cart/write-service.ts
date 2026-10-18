@@ -10,6 +10,7 @@ import type { IfoodLinkService, OperationalContext, Operation } from '../links/s
 import { CartError, assertMutationConfirmation, confirmedTotals, id, parseCreatedCart, parseItem, parseSnapshot, payload, type CartGateway, type Snapshot } from './contracts.js';
 import type { CartContractGate } from './write-contract.js';
 import { CartWriteStore, type Head, type HumanCartCommand, type Intent, type WritePlan, type WriteStep } from './write-store.js';
+import { assertSelectedAddress, parseAddressList } from '../services/address-reference.js';
 
 type Item = { itemId: string; quantity: number; options: { optionId: string; quantity: 1 }[] };
 const itemKey = (i: { itemId: string; options: { optionId: string; quantity: number }[] }) =>
@@ -22,6 +23,11 @@ const composition = (items: Snapshot['items'] | Item[]) => items.map(i => ({
 export class ConfirmedCartService {
   constructor(readonly store: CartWriteStore, private readonly links: Pick<IfoodLinkService, 'withOperational' | 'status'>,
     private readonly contract: CartContractGate) {}
+
+  private assertAddress(p: AdapterPrincipal, linkId: string, address: unknown) {
+    try { assertSelectedAddress(this.store.db, p, linkId, address, this.store.now()); }
+    catch { throw new CartError('CART_ADDRESS_CONFIRMATION_REQUIRED', 'Confirme o endereço atual da conta antes de preparar o carrinho.'); }
+  }
 
   private async current(p: AdapterPrincipal, linkId: string, write = true) {
     const status = await this.links.status(p.organizerId);
@@ -62,8 +68,9 @@ export class ConfirmedCartService {
       [state.groupLimit, ...state.participants.map(x => x.limit)].some(l => l.state === 'UNCLEAR' || l.state === 'NOT_ASKED'))
       throw new CartError('CART_GROUP_BLOCKED', 'Cobertura, restrições ou limites do grupo não estão verificados.');
     id.parse(bag.merchantId); id.parse(bag.addressId);
-    const addresses = await ctx.deps.listAddresses();
-    const address = addresses.results.find(a => a.addressId === bag.addressId);
+    const addresses = parseAddressList(await ctx.deps.listAddresses());
+    const address = addresses.find(a => a.addressId === bag.addressId);
+    this.assertAddress(p, ctx.linkId, address);
     const location = z.object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) }).parse(address?.coordinates);
     const checks: unknown[] = [], items = new Map<string, Item>();
     for (const line of bag.lines) {
@@ -99,7 +106,7 @@ export class ConfirmedCartService {
     }
     if (!items.size || items.size > 20) throw new CartError('CART_QUANTITY_UNSUPPORTED', 'Quantidade de linhas fora do contrato.');
     await this.current(p, ctx.linkId); this.store.assertUnchanged(p, purchaseHash);
-    return { state, purchaseHash, validationHash: contentHash([location, checks]), items: [...items.values()], evaluated };
+    return { state, address, purchaseHash, validationHash: contentHash([location, checks]), items: [...items.values()], evaluated };
   }
   private steps(items: Item[], head: Head | null): WriteStep[] {
     if (!head) return [{ tool: 'createCart', args: { items } }];
@@ -128,6 +135,7 @@ export class ConfirmedCartService {
       if (steps[0]!.tool === 'createCart') Object.assign(steps[0]!.args, { merchantId: state.bag!.merchantId, addressId: state.bag!.addressId });
       await this.contract.verify(gateway, steps.map(s => s.tool), steps.map(s => ({...s,args:{...s.args,...(head ? {cartId:head.cartId} : {})}})));
       await this.current(p, ctx.linkId);
+      this.assertAddress(p, ctx.linkId, check.address);
       const plan: WritePlan = { purpose: 'PREPARE_CART', purchaseId: state.purchaseId, version: state.version, linkId: ctx.linkId,
         merchantId: state.bag!.merchantId, addressId: state.bag!.addressId!, purchaseHash: check.purchaseHash,
         validationHash: check.validationHash, remoteHash: head?.fingerprint ?? null, steps,
@@ -174,7 +182,7 @@ export class ConfirmedCartService {
           else if (step.tool === 'updateCartItem') expected = head!.snapshot!.items.map(i => i.cartItemId === step.args['cartItemId'] ? step.args as unknown as Item : i) as Item[];
           else expected.push(step.args as unknown as Item);
           const previousTotals = head?.snapshot?.totals;
-          this.store.beforeCall(p, intent.id, plan.purchaseHash); sent = true;
+          this.store.beforeCall(p, intent.id, plan.purchaseHash, () => this.assertAddress(p, plan.linkId, fresh.address)); sent = true;
           const response = await gateway.writeConfirmed!(step.tool, { ...step.args, ...(cartId ? { cartId } : {}) });
           if (step.tool === 'createCart') cartId = parseCreatedCart(response).cartId;
           else assertMutationConfirmation(response);

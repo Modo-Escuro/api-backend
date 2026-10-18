@@ -48,6 +48,10 @@ Na consulta anterior à publicação não havia branch/PR de código CART-01 con
 
 ## Continuação após #43/#45
 
+Continuação de endereços: depende do [PR #47](https://github.com/Modo-Escuro/api-backend/pull/47) para obter a referência autorizada. CART-01 relê listAddresses e confere escopo, vínculo, validade, addressId e hash do endereço selecionado antes de preparar e antes de cada escrita. Sem seleção, com outra conta/endereço, expirada ou alterada, bloqueia. O contrato compartilhado é idêntico ao do #47. Não ativa cart ao integrar #47.
+
+Reauditoria dessa guarda reproduziu duas falhas e confirmou as correções: seleção que expirava durante getItem agora é revalidada na mesma transação de `beforeCall`, sem await até despacho; IDs de endereço duplicados agora são rejeitados por `parseAddressList` antes da revisão. Regressores independentes: **55/55 CART aprovados**. Checks finais desse delta: typecheck/lint/build/diff aprovados e **994 aprovados, 2 ignorados, 996 no total**. Sem chamadas de negócio reais.
+
 Base remota atualizada: `main@8a6dadc82ff8c7e952b665dedad6876677fade6b`. O #46 existente foi reaproveitado; não se abriu API concorrente. A conciliação preserva Gemini/OPS-02 e a conclusão do vínculo no navegador, que não confirma carrinho.
 
 Novo `GET /requests/:requestId` permite ao bot recuperar uma confirmação cuja resposta foi perdida sem persistir referência ou reenviar POST. O principal precisa ser o mesmo; testes cobrem 400/404/isolamento e escrita única. Produto com mesmo ID/preço e nome visivelmente diferente bloqueia a revisão antiga; a canonicalização é a mesma da GRP-01. A auditoria de privacidade dos logs valida o formato e desconsidera apenas o `cid` aleatório no teste de conteúdo, evitando colisão acidental com nomes sintéticos.

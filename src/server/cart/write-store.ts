@@ -123,12 +123,13 @@ export class CartWriteStore {
     if (!row) throw new CartError('CART_INTENT_NOT_FOUND', 'Intenção não encontrada.', 404);
     return row as unknown as Intent;
   }
-  beforeCall(p: AdapterPrincipal, id: string, expectedHash: string) {
+  beforeCall(p: AdapterPrincipal, id: string, expectedHash: string, addressCheck?: () => void) {
     this.transaction(() => {
       this.assertUnchanged(p, expectedHash);
       const intent = this.intent(p, id);
       if (intent.state !== 'PENDING' || intent.lease_until <= this.now()) throw new CartError('RESULT_UNKNOWN', 'Escrita não pode ser retomada automaticamente.');
       if ((JSON.parse(intent.plan) as WritePlan).expiresAt <= this.now()) throw new CartError('CART_CONFIRMATION_EXPIRED', 'Confirmação expirou antes da escrita; revise novamente.');
+      addressCheck?.(); // Mesma transação do marcador, sem await entre guarda e despacho.
       this.db.prepare('UPDATE cart_write_intents SET sent=1 WHERE id=?').run(id);
     });
   }

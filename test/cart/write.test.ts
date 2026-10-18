@@ -20,6 +20,7 @@ import { candidate } from '../group/catalog';
 import { event as turnEvent, result as turnResult } from '../turns/helpers';
 import { ORG_A, connectAndConfirm, setup as setupLinks } from '../helpers/fakes';
 import { McpToolError } from '../../src/server/mcp/errors';
+import { addressSchema, linkFingerprint } from '../../src/server/services/address-reference';
 
 const M = '11111111-1111-4111-8111-111111111111', I = '22222222-2222-4222-8222-222222222222';
 const A = '33333333-3333-4333-8333-333333333333', L = 'link-sintetico-0001';
@@ -33,6 +34,10 @@ function setup() {
   let time = 1_800_000_000_000;
   const now = () => time;
   const turns = new TurnStore(path, {}, now); stores.push(turns);
+  // Referência de endereço explicitamente autorizada: origem humana simulada, sem MCP real.
+  turns.db.exec('CREATE TABLE delivery_address_selected(scope TEXT PRIMARY KEY,link_hash TEXT,address_id TEXT,address_hash TEXT,expires INTEGER,choice_hash TEXT)');
+  turns.db.prepare('INSERT INTO delivery_address_selected VALUES(?,?,?,?,?,?)').run(scopeKey(principal), linkFingerprint(L), A,
+    contentHash(addressSchema.parse({ addressId: A, coordinates: { latitude: -1, longitude: -2 } })), now() + 86_400_000, contentHash('synthetic-human-address-reference'));
   let s = applyPatch(null, [{ op: 'ADD_PARTICIPANT', displayName: 'Pessoa sintética' }], { seed: 'synthetic', eventId: 'e1' }).state;
   s = applyPatch(s, [{ op: 'SET_RESTRICTIONS', participantId: s.participants[0]!.participantId, value: 'NONE' },
     { op: 'SET_LIMIT', target: s.participants[0]!.participantId, value: 'NONE' }, { op: 'SET_LIMIT', target: 'GROUP', value: 'NONE' },
@@ -100,6 +105,42 @@ function setup() {
 }
 
 describe('CART-01: confirmação humana, persistência e reconciliação (MCP mockado)', () => {
+  it('ID de endereço duplicado na lista remota é ambíguo e nunca permite preparar', async () => {
+    const f = setup();
+    vi.mocked(f.ctx.deps.listAddresses).mockResolvedValueOnce({ results: [
+      { addressId: A, coordinates: { latitude: -1, longitude: -2 } },
+      { addressId: A, coordinates: { latitude: -3, longitude: -4 } },
+    ] });
+    await expect(f.service.prepare(principal)).rejects.toThrow();
+    expect(f.write).not.toHaveBeenCalled();
+  });
+  it.each(['expires', 'replaced'])('seleção %s durante o último getItem bloqueia o despacho imediatamente anterior à escrita', async mode => {
+    const f = setup(), review = await f.service.prepare(principal);
+    f.turns.db.prepare('UPDATE delivery_address_selected SET expires=?').run(f.now() + 1000);
+    const original = vi.mocked(f.ctx.deps.getItem).getMockImplementation()!;
+    let calls = 0;
+    vi.spyOn(f.ctx.deps, 'getItem').mockImplementation(async (...args) => {
+      const result = await original(...args);
+      if (++calls === 2) {
+        if (mode === 'expires') f.advance(1001);
+        else f.turns.db.prepare('UPDATE delivery_address_selected SET address_hash=?').run('0'.repeat(64));
+      }
+      return result;
+    });
+    const result = await f.service.confirm(principal, f.command(review.confirmationRef));
+    expect(result).toMatchObject({ state: 'FAILED', code: 'CART_ADDRESS_CONFIRMATION_REQUIRED' });
+    expect(f.write).not.toHaveBeenCalled();
+  });
+  it.each(['missing', 'expired', 'other-link', 'other-address', 'changed-address'])('endereço %s bloqueia preparação antes de qualquer escrita', async mode => {
+    const f = setup();
+    if (mode === 'missing') f.turns.db.prepare('DELETE FROM delivery_address_selected').run();
+    if (mode === 'expired') f.turns.db.prepare('UPDATE delivery_address_selected SET expires=?').run(f.now() - 1);
+    if (mode === 'other-link') f.turns.db.prepare('UPDATE delivery_address_selected SET link_hash=?').run(linkFingerprint('outro-vinculo'));
+    if (mode === 'other-address') f.turns.db.prepare('UPDATE delivery_address_selected SET address_id=?').run(randomUUID());
+    if (mode === 'changed-address') vi.mocked(f.ctx.deps.listAddresses).mockResolvedValueOnce({ results: [{ addressId: A, coordinates: { latitude: -3, longitude: -4 } }] });
+    await expect(f.service.prepare(principal)).rejects.toMatchObject({ code: 'CART_ADDRESS_CONFIRMATION_REQUIRED' });
+    expect(f.write).not.toHaveBeenCalled();
+  });
   it('mesmo ID e preço com nome atual diferente bloqueiam revisão antiga e escrita', async () => {
     const f = setup();
     const original = vi.mocked(f.ctx.deps.getItem).getMockImplementation()!;
