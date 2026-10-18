@@ -105,8 +105,8 @@ intacto na saída.
 | `src/server/routes/evaluate.ts` | zod `preferences` (strict, `priority` enum) — passa em `toDomainRequest` |
 | `docs/bot-api.md` | §8 contrato + exemplo; §7 referência de centavos |
 
-Não alterados (por decisão): `domain/constraints.ts`, `domain/eligibility.ts`, `domain/normalize.ts`,
-`domain/pricing.ts` — a elegibilidade continua sendo decidida só ali.
+A elegibilidade continua sendo decidida em `domain/constraints.ts` e `domain/eligibility.ts`, antes da
+pontuação. Configuração e composição monetária permanecem funções puras de domínio.
 
 ## 7. Correção encontrada durante os testes
 
@@ -135,3 +135,38 @@ Verificação: `npm run typecheck && npm run lint && npm test` — limpo (16 arq
 - Sem checkout (regra de ouro do MVP): preço é estimativa; total confirmado só no carrinho do iFood.
 - Ordenação alternativa por `refinements.sort` (ordenação do iFood) continua existindo **antes** do ranking;
   o ranking reordena apenas os candidatos ELEGIBLE desta consulta.
+
+## 10. Correção de orçamento e alternativas — substituição do PR #28
+
+Relacionada às issues #8 (RANK-01) e #9 (RANK-02).
+
+- `minimumConfigurable` mantém o menor preço sob condições **obrigatórias**. Preferências só desempatam
+  preços iguais nesse cálculo. Uma configuração preferida mais cara é avaliada separadamente: exige
+  configuração `VALID` e `PASS` para cada teto informado (por unidade e pedido com quantidade + entrega).
+- Quando adotada, a seleção tem `source: "PREFERENCE"` e seu preço fica em `pricing.selected`;
+  `pricing.minimumConfigurable` continua representando o mínimo obrigatório. Seleção, evidências textuais
+  e preço do ranking referem-se à configuração adotada. Seleções explícitas do usuário não são trocadas.
+- Se a configuração preferida falha ou tem orçamento `UNKNOWN`, mantém-se o mínimo obrigatório.
+  Opção incompatível com preferência gera `PREFERENCE_NOT_MET`, sem novo bloqueio. O orçamento original,
+  restrições `MANDATORY` e alergias continuam valendo, sem relaxamento.
+- Exemplo sintético: base 20 + escolha obrigatória bacon 3 ou vegetal 10. Com teto 25 e `VEGAN/PREFERENCE`,
+  mantém-se 23 com aviso; com teto 30, escolhe-se vegetal por 30, preservando mínimo 23.
+- `proposeAlternative` é uma sugestão explícita no resultado do domínio; não muda a seleção original nem
+  ganha bônus na pontuação original. Reutiliza a quantidade do preço avaliado, recalcula o total incluindo
+  entrega e exige `PASS` em **todos** os tetos fornecidos. `FAIL` e `UNKNOWN` impedem a proposta validada.
+- Sem teto, preço incerto da proposta continua em faixa (ex.: `R$ 29.90–? (preço incerto)`), com escalares
+  `unitTotal`, `itemsSubtotal` e `estimatedTotal` nulos. Ausência/null de `additionalPrice` não viram zero;
+  zero informado é um preço conhecido. Os estados dos campos normalizados são preservados.
+- Exemplo com fixture e frete sintético zero: duas unidades de Maria salada Veg custam 59,80; com bacon
+  vegano de 4 por unidade, a alternativa custa 67,80. Teto 65 impede a sugestão, teto 68 permite.
+
+Regressões offline em `test/domain/ranking-budget-regressions.test.ts`: preferência cara ou viável,
+ausência de opção preferida, preço desconhecido, mínimo separado do selecionado, coerência de evidência/preço,
+quantidade em seleção automática e explícita, entrega, orçamento `UNKNOWN`, preço zero, faixa aberta sem teto,
+preservação da seleção original e bloqueios obrigatórios/alergia. Fixtures reais combinadas com dados
+sintéticos identificados, sem chamadas ao iFood.
+
+Validação desta correção (2026-10-18, Linux, Node v24.14.1, npm 11.11.0):
+`npm run typecheck`, `npm run lint` e `npm test` passaram; 550 testes em 34 arquivos, incluindo
+14 novas regressões. O Node emite aviso de SQLite experimental. As falhas de permissões POSIX relatadas
+anteriormente no Windows não ocorreram neste ambiente; nenhum teste foi removido ou enfraquecido.

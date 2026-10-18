@@ -347,6 +347,8 @@ function proposeAlternative(
 ): AlternativeConfiguration | null {
   const d = c.detail;
   if (!d || d.optionGroups.state !== 'PRESENT') return null;
+  const quantity = (c.evaluation.pricing.selected ?? c.evaluation.pricing.minimumConfigurable)?.quantity;
+  if (quantity === undefined) return null;
   const chosen = c.evaluation.selection?.options ?? [];
   const chosenIds = new Set(chosen.map((o) => o.optionId));
   const blocked = blockedOptions(c.evaluation.restrictions);
@@ -367,16 +369,25 @@ function proposeAlternative(
       const selection: OptionSelection[] = [...chosen, { optionId: o.optionId, quantity: 1 }];
       const configuration = validateSelection(d, selection, blocked, avoided);
       if (configuration.status !== 'VALID') continue;
-      const pricing = computePrice({ detail: d, listing: c.listing, selection, quantity: 1, kind: 'SELECTED' });
+      const pricing = computePrice({ detail: d, listing: c.listing, selection, quantity, kind: 'SELECTED' });
+      // A proposta expõe faixas, nunca um escalar derivado de preço incerto.
+      if (pricing.status !== 'ESTIMATED') {
+        pricing.unitTotal = null;
+        pricing.itemsSubtotal = null;
+        pricing.estimatedTotal = null;
+      }
       const budget = { itemPrice: null as TriState | null, orderTotal: null as TriState | null };
       const cap = constraints?.budget;
       if (cap?.maxItemPrice !== undefined) budget.itemPrice = checkCap(pricing.unitTotalRange, cap.maxItemPrice);
       if (cap?.maxOrderTotal !== undefined) budget.orderTotal = checkCap(pricing.estimatedTotalRange, cap.maxOrderTotal);
-      if (budget.itemPrice === 'FAIL' || budget.orderTotal === 'FAIL') continue;
-      const total = pricing.unitTotalRange.max ?? pricing.unitTotalRange.min;
+      if (cap?.maxItemPrice !== undefined && budget.itemPrice !== 'PASS') continue;
+      if (cap?.maxOrderTotal !== undefined && budget.orderTotal !== 'PASS') continue;
+      const range = pricing.unitTotalRange;
+      const total = range.min !== null && range.min === range.max ? brl(range.min)
+        : `${range.min === null ? '?' : brl(range.min)}–${range.max === null ? '?' : brl(range.max)} (preço incerto)`;
       const reason =
         `configuração alternativa revalidada (não aplicada — sugestão): adicionar "${val(o.name) ?? o.optionId}" atenderia a "${term}"; ` +
-        `preço recalculado ${total !== null ? brl(total) : 'indisponível'}; a configuração avaliada e o preço permanecem os mesmos`;
+        `preço recalculado por unidade ${total}; a configuração avaliada e o preço permanecem os mesmos`;
       return {
         forPreference: term,
         selection,

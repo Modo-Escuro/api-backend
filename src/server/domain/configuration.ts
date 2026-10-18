@@ -156,14 +156,31 @@ export interface MinimalSelectionResult {
 /**
  * Configuração mínima mais barata: em cada grupo obrigatório escolhe `minSelections` opções distintas,
  * não bloqueadas, de menor additionalPrice (opções sem preço só entram se não houver alternativa).
- * `avoided` (PREFERENCE) nunca exclui opção: só desemprega — se houver opções compatíveis suficientes,
- * escolhe-se preferencialmente entre elas; senão mantém-se a configuração válida mais barata e registra-se o gap.
+ * `avoided` (PREFERENCE) nunca exclui opção: só desempata preços iguais.
  * Grupos opcionais ficam vazios.
  */
 export function cheapestRequiredSelection(
   detail: NormalizedItemDetail,
   blocked: ReadonlySet<string> = new Set(),
   avoided: ReadonlySet<string> = new Set(),
+): MinimalSelectionResult {
+  return requiredSelection(detail, blocked, avoided, false);
+}
+
+/** Candidata preferida; o chamador deve validar configuração e orçamento antes de adotá-la. */
+export function preferredRequiredSelection(
+  detail: NormalizedItemDetail,
+  blocked: ReadonlySet<string>,
+  avoided: ReadonlySet<string>,
+): MinimalSelectionResult {
+  return requiredSelection(detail, blocked, avoided, true);
+}
+
+function requiredSelection(
+  detail: NormalizedItemDetail,
+  blocked: ReadonlySet<string>,
+  avoided: ReadonlySet<string>,
+  preferenceFirst: boolean,
 ): MinimalSelectionResult {
   if (detail.optionGroups.state !== 'PRESENT') {
     return { selection: null, problems: ['optionGroups não informado pelo getItem'], preferenceGaps: [] };
@@ -181,11 +198,13 @@ export function cheapestRequiredSelection(
     if (min < 1) continue;
     const allowed = g.options.filter((o) => !blocked.has(o.optionId));
     const priceKey = (o: NormalizedOption) => val(o.additionalPrice) ?? Number.POSITIVE_INFINITY;
-    // Preferência opcional só desemprega: compatíveis primeiro (mais baratos entre eles), depois os demais.
+    // O mínimo real ordena por preço; a candidata preferida é validada separadamente.
     const rank = (o: NormalizedOption) => (avoided.has(o.optionId) ? 1 : 0);
     const sorted = allowed
       .map((o, i) => ({ o, i }))
-      .sort((a, b) => rank(a.o) - rank(b.o) || priceKey(a.o) - priceKey(b.o) || a.i - b.i);
+      .sort((a, b) => (preferenceFirst
+        ? rank(a.o) - rank(b.o) || priceKey(a.o) - priceKey(b.o)
+        : priceKey(a.o) - priceKey(b.o) || rank(a.o) - rank(b.o)) || a.i - b.i);
     if (sorted.length < min) {
       problems.push(`grupo obrigatório "${name}": ${sorted.length} opção(ões) compatível(is), mínimo ${min}`);
       continue;
@@ -193,7 +212,7 @@ export function cheapestRequiredSelection(
     const chosen = sorted.slice(0, min);
     if (chosen.some(({ o }) => avoided.has(o.optionId))) {
       preferenceGaps.push(
-        `grupo obrigatório "${name}": nenhuma opção compatível com a preferência — mantida a configuração obrigatoriamente válida mais barata`,
+        `grupo obrigatório "${name}": preferência não atendida na configuração escolhida — mantida uma configuração obrigatoriamente válida`,
       );
     }
     for (const { o } of chosen) selection.push({ optionId: o.optionId, quantity: 1 });

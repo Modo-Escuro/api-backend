@@ -82,7 +82,8 @@ describe('issue #8 — preferência opcional nunca bloqueia', () => {
     const pref = evaluate(d, l, [VEGAN_PREF]);
     expect(pref.eligible).toBe(true);
     expect(pref.selection!.options.map((o) => o.optionId)).toEqual([veg.optionId]); // prefere vegetal
-    expect(pref.pricing.minimumConfigurable!.unitTotal).toBeCloseTo(base + 5, 6);
+    expect(pref.pricing.selected!.unitTotal).toBeCloseTo(base + 5, 6);
+    expect(pref.pricing.minimumConfigurable!.unitTotal).toBeCloseTo(base + 3, 6);
     expect(pref.configuration!.status).toBe('VALID');
     expect(codes(pref.blockers)).not.toContain('CONFIG_PREFERENCE_OPTION');
 

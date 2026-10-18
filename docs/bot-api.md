@@ -187,6 +187,14 @@ Detalhe da implementação (pesos, critérios, política de dado ausente, testes
   inventada**; `score: null` só quando nenhum critério pôde ser avaliado.
 - O `ranking` do topo traz `weights`, `priority`, `maxRecommendations`, `eligibleConsidered`, `eligibleScored` e
   `notes` (inclusive "Nenhuma opção pôde ser confirmada como compatível…" quando `recommendations` for `[]`).
+- Preferência opcional não exclui uma configuração obrigatoriamente viável: a configuração preferida só é
+  adotada com configuração válida e `PASS` em todos os tetos informados. Caso contrário, mantém-se o mínimo
+  obrigatório e informa-se `PREFERENCE_NOT_MET`. Quando adotada, `configuration.source` é `PREFERENCE` e
+  `pricing.selected` traz seu preço; `minimumConfigurable` preserva o menor preço sob condições obrigatórias.
+  Seleções explícitas do usuário são preservadas. Valores monetários da API continuam em centavos inteiros.
+- Sugestões alternativas do domínio mantêm a quantidade original e reavaliam entrega + orçamento; `FAIL`
+  ou `UNKNOWN` em qualquer teto impede a sugestão validada. Sem teto, preço aberto continua explicitamente
+  incerto. Detalhes e regressões: `docs/ranking.md`, seção 10.
 - Garantias: restrição obrigatória vence qualquer pontuação (preço/promoção/avaliação preferência não compensam
   bloqueio); empate é determinístico (score desc → ordem da busca → `itemId`); os textos de `ranking` não têm
   dinheiro e passam intactos na saída em centavos (seção 7).

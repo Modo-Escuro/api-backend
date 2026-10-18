@@ -319,7 +319,8 @@ export function computePrice({ detail, listing, selection = [], quantity = 1, ki
   };
 }
 
-/** Preço mínimo configurável: opções obrigatórias mais baratas (respeitando bloqueios), sem adicionais. */
+/** Preço mínimo sob condições obrigatórias, sem adicionais. Preferências só desempatam preços iguais;
+ * uma configuração preferida mais cara deve ser precificada separadamente como SELECTED. */
 export function computeMinimumConfigurablePrice(
   detail: NormalizedItemDetail,
   listing: NormalizedListingItem | null | undefined,
