@@ -5,7 +5,7 @@
 // (CONVERSATION_MODEL_*), com tetos de segurança — nada de teto fixo que trave a demo depois de N mensagens. São
 // contadores locais do processo: reinício zera (OPS-02 decide persistência/alertas). Não substituem o limite de
 // cobrança no console do provedor.
-import { generateText, Output, jsonSchema } from 'ai';
+import { generateText, JSONParseError, NoObjectGeneratedError, Output, jsonSchema, type LanguageModelUsage } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { z } from 'zod';
 import { AgentProposalSchema, type AgentProposal, type ConversationModel, type ModelRequest } from './model.js';
@@ -17,8 +17,11 @@ const PRICE_MICRO_USD_PER_TOKEN = { input: 0.75, output: 3.75 };
 
 /** Tetos de segurança aceitos pela configuração (o valor efetivo vem do ambiente). */
 export const GEMINI_BOUNDS = Object.freeze({
-  timeoutMs: { min: 1_000, max: 20_000, default: 8_000 },
-  maxOutputTokens: { min: 256, max: 2_048, default: 800 },
+  // O raciocínio do Gemini conta no teto de saída e é bimodal: ~0 ou ~700–1.500 tokens no ensaio de 18/10/2026
+  // (thinkingLevel `minimal` é recusado e `thinkingBudget` é ignorado neste modelo). Com 800, ~1/3 das mensagens de
+  // coleta truncavam (FINISH_LENGTH). Latência observada até ~10 s (e >12 s em 2 de 13 chamadas encadeadas).
+  timeoutMs: { min: 1_000, max: 20_000, default: 15_000 },
+  maxOutputTokens: { min: 256, max: 4_096, default: 2_048 },
   maxRequests: { min: 1, max: 100_000 },
   maxRequestsPerConversation: { min: 1, max: 1_000, default: 200 },
   budgetMicroUsd: { min: 1, max: 50_000_000, default: 2_000_000 },
@@ -51,7 +54,7 @@ export const MODEL_PROMPT = `Você interpreta mensagens em português para uma c
 Retorne apenas ações do schema, nunca um estado completo. Use somente allowedActions. O servidor valida tudo e gera a resposta ao usuário.
 Extraia TODAS as informações explícitas, sem perguntar de novo o que já foi informado. Crie participantes quando o usuário os identificar (ex.: "somos P1 e P2"). Para participantes novos, use seletor name nas demais ações; para existentes, prefira ref do contexto.
 Registre alergias novas imediatamente com ADD_RESTRICTION/ALLERGY/MANDATORY, preservando as existentes. Sem restrições explícito = SET_NO_RESTRICTIONS apenas se não remover restrição obrigatória existente. Falta de informação não significa ausência de restrições.
-Dinheiro em centavos inteiros: "até/no máximo/teto" = MANDATORY; "prefiro" = PREFERENCE. Atualize só o alvo explicitamente identificado e preserve todo o restante por omissão de ações. "uns/aproximadamente/talvez" sem natureza clara exige ASK_CLARIFICATION/LIMIT. Teto coletivo se a mensagem disser grupo/coletivo; não invente o alvo de "dele". Em ambiguidade de pessoa, pergunte para GROUP, nunca escolha um participante.
+Dinheiro em centavos inteiros: "até/no máximo/teto" = MANDATORY; "prefiro" = PREFERENCE. Atualize só o alvo explicitamente identificado e preserve todo o restante por omissão de ações. "uns/aproximadamente/talvez" sem natureza clara exige ASK_CLARIFICATION/LIMIT. Teto sem pessoa identificada ("teto de R$ X", "no máximo R$ X") é do GROUP; teto de uma pessoa só quando ela for nomeada; não invente o alvo de "dele". Em ambiguidade de pessoa, pergunte para GROUP, nunca escolha um participante.
 Preferência de prioridade: economia/mais barato = ECONOMY, rapidez = SPEED. Não invente dados, nomes, valores ou restrições. Restrição não suportada exige esclarecimento, nunca SET_NO_RESTRICTIONS.
 Remover/rebaixar alergia, restrição obrigatória ou teto rígido requer confirmação humana separada, indisponível neste canal: ASK_CLARIFICATION preservando tudo; não proponha remoção/rebaixamento. Reduzir um teto explícito continua permitido.
 Pedido de sugestões ("sugere pizza", "procura sushi") = SUGGEST_PROPOSALS com o termo de busca curto. Escolha de proposta ("quero a proposta 2") = SELECT_PROPOSAL com a posição; nunca invente IDs. "Esvazia a sacola" = CLEAR_BAG.
@@ -77,7 +80,12 @@ export type GeminiFailureCode = 'KEY_MISSING' | 'BUDGET' | 'INPUT_LIMIT' | 'TIME
 export class GeminiFailure extends Error {
   constructor(readonly code: GeminiFailureCode, readonly detail?: string) { super(code); }
 }
-export interface GeminiUsage { inputTokens: number | null; outputTokens: number | null; chargedMicroUsd: number }
+export interface GeminiUsage {
+  inputTokens: number | null; outputTokens: number | null; chargedMicroUsd: number;
+  /** `modelVersion` devolvido pelo provedor (o ID configurado é alias). Só formato seguro; senão null. */
+  modelVersion: string | null;
+}
+const SAFE_MODEL_VERSION = /^[a-z0-9][a-z0-9.-]{0,63}$/;
 export interface GeminiOptions {
   apiKey: string;
   /** Chamadas por processo (obrigatório; sem default para não esconder o limite). */
@@ -121,6 +129,7 @@ export function createGeminiModel(options: GeminiOptions): ConversationModel {
     if (!Number.isSafeInteger(maxOutputTokens) || maxOutputTokens < 1) throw new GeminiFailure('CONFIGURATION');
     let reserve = 0;
     let fetched = false;
+    let modelVersion: string | null = null;
     const guardedFetch: typeof fetch = async (url, init) => {
       const target = new URL(url instanceof Request ? url.url : String(url));
       if (target.origin !== ENDPOINT.origin || target.pathname !== ENDPOINT.path || target.search || init?.method !== 'POST' || typeof init.body !== 'string') {
@@ -146,6 +155,12 @@ export function createGeminiModel(options: GeminiOptions): ConversationModel {
       if (response.status === 429) throw new GeminiFailure('QUOTA');
       if ([401, 403].includes(response.status)) throw new GeminiFailure('AUTH');
       if (response.status >= 500) throw new GeminiFailure('UNAVAILABLE');
+      if (response.ok) {
+        try {
+          const v = (await response.clone().json() as { modelVersion?: unknown }).modelVersion;
+          modelVersion = typeof v === 'string' && SAFE_MODEL_VERSION.test(v) ? v : null;
+        } catch { /* corpo inválido: o SDK reporta INVALID_OUTPUT */ }
+      }
       if (!response.ok) {
         const message = (await response.text()).toLowerCase();
         const terms = ['billing', 'model', 'schema', 'thinking', 'enum', 'additionalproperties', 'required', 'anyof', 'oneof', 'unsupported',
@@ -154,6 +169,16 @@ export function createGeminiModel(options: GeminiOptions): ConversationModel {
       }
       return response;
     };
+    // Troca a reserva pelo custo dos tokens reportados (uma vez por chamada, também quando a saída é inválida).
+    let settled = false;
+    const settle = (usage: LanguageModelUsage | undefined) => {
+      if (settled || !fetched) return;
+      settled = true;
+      const known = !!usage && Number.isSafeInteger(usage.inputTokens) && Number.isSafeInteger(usage.outputTokens) && usage.inputTokens! >= 0 && usage.outputTokens! >= 0;
+      if (known) charged += Math.ceil(usage.inputTokens! * PRICE_MICRO_USD_PER_TOKEN.input + usage.outputTokens! * PRICE_MICRO_USD_PER_TOKEN.output) - reserve;
+      options.onUsage?.({ inputTokens: known ? usage.inputTokens! : null, outputTokens: known ? usage.outputTokens! : null, chargedMicroUsd: charged, modelVersion });
+    };
+    const finish = (reason: unknown) => `FINISH_${String(reason).toUpperCase().replace(/[^A-Z_]/g, '_').slice(0, 24)}`;
     try {
       const model = createGoogleGenerativeAI({ apiKey: options.apiKey, fetch: guardedFetch })(GEMINI_MODEL);
       const result = await generateText({ model,
@@ -163,15 +188,18 @@ export function createGeminiModel(options: GeminiOptions): ConversationModel {
         telemetry: { isEnabled: false, recordInputs: false, recordOutputs: false },
         providerOptions: { google: { thinkingConfig: { thinkingLevel: 'low', includeThoughts: false } } },
       });
-      const usage = result.totalUsage;
-      const known = Number.isSafeInteger(usage.inputTokens) && Number.isSafeInteger(usage.outputTokens) && usage.inputTokens! >= 0 && usage.outputTokens! >= 0;
-      if (known) charged += Math.ceil(usage.inputTokens! * PRICE_MICRO_USD_PER_TOKEN.input + usage.outputTokens! * PRICE_MICRO_USD_PER_TOKEN.output) - reserve;
-      options.onUsage?.({ inputTokens: known ? usage.inputTokens! : null, outputTokens: known ? usage.outputTokens! : null, chargedMicroUsd: charged });
-      if (result.finishReason !== 'stop') throw new GeminiFailure('INVALID_OUTPUT', `FINISH_${String(result.finishReason).toUpperCase().replace(/[^A-Z_]/g, '_')}`);
+      settle(result.totalUsage);
+      if (result.finishReason !== 'stop') throw new GeminiFailure('INVALID_OUTPUT', finish(result.finishReason));
       const proposal = AgentProposalSchema.parse(result.output);
       if (proposal.actions.some((a) => !input.allowedActions.includes(a.action))) throw new GeminiFailure('INVALID_OUTPUT');
       return proposal;
     } catch (error) {
+      if (NoObjectGeneratedError.isInstance(error)) {
+        // Resposta recebida mas sem objeto válido: só o motivo de término e PARSE/SCHEMA, nunca o texto gerado.
+        settle(error.usage);
+        throw new GeminiFailure('INVALID_OUTPUT', `${finish(error.finishReason)}:${JSONParseError.isInstance(error.cause) ? 'PARSE' : 'SCHEMA'}`);
+      }
+      settle(undefined);
       let cause: unknown = error;
       for (let n = 0; cause && typeof cause === 'object' && n < 8; n++) {
         if (cause instanceof GeminiFailure) throw cause;

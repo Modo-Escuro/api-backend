@@ -33,6 +33,12 @@ const UNCLEAR_NOTE = 'Não entendi um ponto da sua mensagem. Pode reformular?';
  */
 export const EXPLICIT_NO_LIMIT = /\bsem (?:teto|limite|orcamento|restricao de (?:valor|preco|orcamento))\b|\bnao (?:tem|ha|existe|temos|precisa de) (?:teto|limite|orcamento)\b|\bqualquer valor\b|\bpode gastar o que (?:for preciso|quiser)\b/;
 export const hasExplicitNoLimit = (message: string) => EXPLICIT_NO_LIMIT.test(fold(message));
+/**
+ * "Sem restrições" só vale se a PRÓPRIA mensagem humana disser isso. Sem a expressão, o servidor pergunta (MARK_UNCLEAR
+ * preserva o valor declarado) em vez de liberar a pessoa: restrição desconhecida continua bloqueando.
+ */
+export const EXPLICIT_NO_RESTRICTIONS = /\bsem (?:nenhuma |qualquer )?(?:restric|alergi)|\bnao (?:tem|tenho|temos|tenhem|possui|possuem|ha)(?: nenhuma| qualquer)? (?:restric|alergi)|\bnenhuma (?:restricao|alergia)\b|\bcome(?:m|mos)? de tudo\b/;
+export const hasExplicitNoRestrictions = (message: string) => EXPLICIT_NO_RESTRICTIONS.test(fold(message));
 
 /** Perguntas geradas pelo servidor (nunca o texto do modelo). */
 function question(field: 'RESTRICTIONS' | 'LIMIT' | 'PRIORITY', who: string | null): string {
@@ -178,7 +184,14 @@ export function planActions(
       }
       case 'SET_NO_RESTRICTIONS': {
         const p = resolve(a.participant);
-        if (p) tryApply([{ op: 'SET_RESTRICTIONS', participantId: p.participantId, value: 'NONE' }], `${p.displayName} não tem restrições.`, `Remover as restrições de ${p.displayName}`);
+        if (!p) break;
+        if (!hasExplicitNoRestrictions(message)) {
+          // Proposta do modelo sozinha não libera ninguém (nem apaga pergunta pendente): vira pergunta.
+          tryApply([{ op: 'MARK_UNCLEAR', target: p.participantId, field: 'RESTRICTIONS', question: question('RESTRICTIONS', p.displayName) }],
+            `Não registrei "sem restrições" para ${p.displayName}: preciso que você confirme.`, `Registrar a pergunta sobre restrições de ${p.displayName}`);
+          break;
+        }
+        tryApply([{ op: 'SET_RESTRICTIONS', participantId: p.participantId, value: 'NONE' }], `${p.displayName} não tem restrições.`, `Remover as restrições de ${p.displayName}`);
         break;
       }
       case 'REMOVE_RESTRICTION': {

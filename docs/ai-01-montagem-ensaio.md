@@ -35,8 +35,8 @@ Não existe fallback de regras em produção.
 | `CONVERSATION_MODEL_PROVIDER` | `google` (único suportado) |
 | `CONVERSATION_MODEL` | `gemini-3.8-flash` (único avaliado); obrigatório, sem fallback |
 | `GEMINI_API_KEY` | Só no ambiente secreto da API; não no bot, Git, comandos compartilhados ou chat |
-| `CONVERSATION_MODEL_TIMEOUT_MS` | Padrão 8000; faixa 1000–20000 ms (o turno ganha +2 s para o vínculo) |
-| `CONVERSATION_MODEL_MAX_OUTPUT_TOKENS` | Padrão 800 (inclui raciocínio contabilizado); faixa 256–2048 |
+| `CONVERSATION_MODEL_TIMEOUT_MS` | Padrão 15000; faixa 1000–20000 ms (o turno ganha +2 s para o vínculo) |
+| `CONVERSATION_MODEL_MAX_OUTPUT_TOKENS` | Padrão 2048 (inclui raciocínio contabilizado); faixa 256–4096 |
 | `CONVERSATION_MODEL_MAX_REQUESTS` | Obrigatório; 1–100000 chamadas por processo, inclusive falhas |
 | `CONVERSATION_MODEL_MAX_REQUESTS_PER_CONVERSATION` | Padrão 200; faixa 1–1000 |
 | `CONVERSATION_MODEL_BUDGET_MICRO_USD` | Padrão 2000000 (US$ 2); faixa até US$ 50; reserva local conservadora |
@@ -50,7 +50,7 @@ turno falha com `UNAVAILABLE` sem alterar o estado; não há retry interno.
 
 **Riscos conhecidos dos contadores:** não têm janela de tempo e contam falhas. Uma conversa trava ao atingir o limite
 por conversa (padrão 200) e o processo ao atingir `CONVERSATION_MODEL_MAX_REQUESTS`, até reiniciar; com erros 5xx,
-cada chamada reserva cerca de US$ 0,013, então US$ 2 cobrem cerca de 150 falhas. O usuário vê `UNAVAILABLE`
+cada chamada reserva cerca de US$ 0,018, então US$ 2 cobrem cerca de 110 falhas. O usuário vê `UNAVAILABLE`
 genérico. Dimensionar para a demo e acompanhar; janela/alerta ficam para a OPS-02.
 
 Falha HTTP, rede, timeout, resposta truncada (`MAX_TOKENS`), corpo de resposta acima de 64 KB (lido com teto, sem
@@ -121,5 +121,27 @@ Ambiente: Linux, worktree de integração sobre o #36 + `main@8191a0f` (GRP-01) 
 - **Avaliação ao vivo não executada nesta consolidação:** nenhuma chave exclusiva de teste disponível no ambiente.
   A evidência real continua sendo a rodada do #35 ([resultado](ai-01-result.md)); repetir com
   `AI_EVAL_GEMINI_API_KEY` antes de ativar.
+
+## Validação com Gemini real (18/10/2026, segunda rodada)
+
+Chave de teste local (sem Railway), só dados sintéticos; `modelVersion` reportado pelo provedor: `gemini-3.8-flash`.
+
+- **Bug encontrado:** com 800 tokens de saída, ~1/3 das mensagens de coleta (inclusive a frase do roteiro BOT-02) truncavam
+  (`FINISH_LENGTH`): o raciocínio interno (736–767 tokens) consumia o teto. `thinkingLevel: minimal` é recusado (HTTP 400) e
+  `thinkingBudget`/temperatura 0 não reduzem a variância. A regra "teto coletivo só se disser grupo" fazia o modelo hesitar
+  em "Teto de R$ 180" (pergunta em vez de registrar). Correções: padrões 2048 tokens / 15 s; prompt explicita que teto sem
+  pessoa identificada é do grupo; falha inválida agora informa `FINISH_<motivo>:PARSE|SCHEMA` e cobra os tokens reportados
+  (antes mantinha a reserva inteira); `modelVersion` registrado no uso. **O hash do prompt mudou em relação ao #35.**
+- Após a correção: `ai:demo:gemini` 18/18 (críticos 13/13, schema 18/18, p95 3,4 s, ~US$ 0,017);
+  `eval:agent --live` 8/8 em duas rodadas (p95 3,7 s e 4,8 s); bateria local de 13 conversas PT-BR 13/13 (p95 5,1 s,
+  máx. 8,7 s); E2E pelas rotas autenticadas (Gemini real, OAuth/MCP falsos com fixtures reais) aprovado duas vezes.
+- **Auditoria adversarial (F1, corrigido):** o modelo sozinho podia trocar restrição `UNCLEAR` (com pergunta pendente) por
+  `NONE`, liberando a pessoa. Agora `SET_NO_RESTRICTIONS` exige frase explícita do usuário ("sem restrições", "não tem
+  alergia"...), como `SET_NO_LIMIT`; senão vira pergunta e preserva o estado. Pendentes, não bloqueiam a demo simulada:
+  aumento de teto rígido sem confirmação (F2); prompt acima de 8 KB em grupos grandes trava a conversa em `UNAVAILABLE`
+  (F3); nome proposto pelo modelo ecoado em pendências (F4); `CONVERSATION_MODEL_ENABLED=""` desliga sem motivo (N1);
+  dieta sem `requirement` vira obrigatória (N2).
+- Antes da correção, encadeado: 7/8, 5/8, 7/8, 6/8 (falhas de truncamento/timeout/teto ambíguo; nenhuma removeu alergia,
+  aprovou compra ou seguiu injeção). Amostras pequenas: não comprovam D10 nem estabilidade estatística.
 
 CI e revisão do PR são verificações separadas; o resultado local não afirma execução em outras plataformas.

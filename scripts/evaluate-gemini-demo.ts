@@ -56,7 +56,8 @@ async function main() {
   const metrics = { completed: rows.length, criticalCompleted: critical.length, taskPassed: rows.filter((r) => r.taskPassed).length,
     criticalPassed: critical.filter((r) => r.taskPassed).length, schemaValid: rows.filter((r) => r.schemaValid).length,
     p95Ms: p95(rows.map((r) => r.latencyMs)), inputTokens: rows.reduce((n, r) => n + (r.usage?.inputTokens ?? 0), 0),
-    outputTokens: rows.reduce((n, r) => n + (r.usage?.outputTokens ?? 0), 0), chargedMicroUsd: rows.at(-1)?.usage?.chargedMicroUsd ?? null };
+    outputTokens: rows.reduce((n, r) => n + (r.usage?.outputTokens ?? 0), 0), chargedMicroUsd: rows.findLast((r) => r.usage)?.usage?.chargedMicroUsd ?? null,
+    modelVersions: [...new Set(rows.flatMap((r) => r.usage?.modelVersion ? [r.usage.modelVersion] : []))] };
   const complete = rows.length === DEMO_CORPUS.length && stopReason === null;
   const quantitativeGate = live && complete && metrics.criticalPassed === critical.length && metrics.taskPassed / rows.length >= 0.9
     && metrics.schemaValid === rows.length && (metrics.p95Ms ?? Infinity) <= 8000;
