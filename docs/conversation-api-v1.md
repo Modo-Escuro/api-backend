@@ -23,7 +23,7 @@ Reutilizar `Authorization: Bearer <BOT_API_TOKEN>` e `X-Telegram-User-Id` do [bo
 
 IDs de eventos e origem são metadados, não autorização. Operações, referências e snapshots só são acessíveis no escopo `(canal, bot, organizador, conversa)`. Outro organizador/conversa/recurso retorna 404 sem revelar existência; origem de outro bot/chat dentro da requisição autenticada retorna 400 `INVALID_SOURCE`. Referências de conta também são vinculadas ao `linkId` atual.
 
-## Rotas propostas
+## Rotas v1 e disponibilidade
 
 Prefixo `/api/bot/v1`. Todas exigem o canal autenticado e `Cache-Control: no-store`. Corpos JSON são estritos; não aceitar `organizerId`, `userId`, `userConsent`, preços ou autorização do modelo. Usar `Content-Type: application/json`. Erros de autenticação já existentes conservam o envelope de `bot-api.md`; depois da autenticação, os erros usam `error.schema.json`.
 

@@ -102,4 +102,6 @@ npm run build
 
 CI adicionada para Windows/Ubuntu e Node 22.13/24. Os testes específicos usam SQLite em disco e processos filhos que terminam sem encerramento limpo, com falhas injetadas no aceite/commit, replay, origem, concorrência, token antigo, limites, cancelamento, prazo e efeito desconhecido. Os processadores e autorizações dos testes são sintéticos: nenhuma chamada de negócio ao iFood ou instância real do bot é iniciada.
 
+Validação local em 18/10/2026, Windows/Node 24.13, após incorporar `main@cd22b9f`: **404 testes TypeScript passaram**, incluindo 34 da RUN-01; typecheck, lint e build passaram. Os seis testes Python de conformidade da API-01 também passaram. O resultado da matriz de CI deve ser conferido na PR. Não houve merge, deploy, mudança de variáveis Railway nem ensaio com conta real.
+
 Para entrega operacional completa: integrar DATA-01 na persistência/validação de domínio e exclusão D7, instalar o processador AI-01, concluir OPS-01 com volume/recuperação verificados e ensaiar o bot via RUN-01. Manter zero escrita MCP, conforme DEC-01. Aprovação simulada exige ajuste explícito do contrato e suas tarefas; escrita real está fora dessa demo. Esses trabalhos não são marcados como concluídos pelos testes da infraestrutura.
