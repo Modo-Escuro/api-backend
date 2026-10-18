@@ -54,6 +54,8 @@ Depois do marcador, uma falha é conservadoramente desconhecida mesmo se o proce
 
 O abort é cooperativo. Processador que ignora o sinal não libera slots para criar execuções ilimitadas; após a tolerância técnica, o runtime fecha a admissão com `UNAVAILABLE`. A manutenção de prazos continua; resultados tardios são rejeitados. O operador deve corrigir/reiniciar esse processador. `stop()` aborta e fecha o banco sem esperar indefinidamente; o próximo processo respeita o lease persistido antes de retomar.
 
+No mesmo processo, uma operação com lease perdido não é retomada enquanto sua promise anterior ainda ocupa um slot, mesmo depois de abortada. A limpeza do slot também confere o token da execução: uma finalização antiga não pode remover o acompanhamento de uma tentativa mais nova. O teste de regressão combina lease perdido, conclusão atrasada e fila adicional para verificar o limite real de concorrência.
+
 ## Limites técnicos iniciais
 
 São proteções configuráveis por `TurnLimits`/`RuntimeOptions`, não metas de experiência ou políticas de produto aprovadas em DEC-01/OPS-02.
@@ -102,6 +104,6 @@ npm run build
 
 CI adicionada para Windows/Ubuntu e Node 22.13/24. Os testes específicos usam SQLite em disco e processos filhos que terminam sem encerramento limpo, com falhas injetadas no aceite/commit, replay, origem, concorrência, token antigo, limites, cancelamento, prazo e efeito desconhecido. Os processadores e autorizações dos testes são sintéticos: nenhuma chamada de negócio ao iFood ou instância real do bot é iniciada.
 
-Validação local em 18/10/2026, Windows/Node 24.13, após incorporar `main@9aa02f2`: **439 testes TypeScript passaram**, incluindo 34 da RUN-01; dois testes POSIX de permissões da OPS-01 foram omitidos no Windows, conforme a condição já existente nessa base. Typecheck, lint e build passaram. Os seis testes Python de conformidade da API-01 também passaram. O resultado da matriz de CI deve ser conferido na PR. Não houve merge na main, deploy, mudança de variáveis Railway nem ensaio com conta real.
+Validação local em 18/10/2026, Windows/Node 24.13, após incorporar `main@9aa02f2`: **440 testes TypeScript passaram**, incluindo 35 da RUN-01; dois testes POSIX de permissões da OPS-01 foram omitidos no Windows, conforme a condição já existente nessa base. Typecheck, lint e build passaram. Os seis testes Python de conformidade da API-01 também passaram. O resultado da matriz de CI deve ser conferido na PR. Não houve merge na main, deploy, mudança de variáveis Railway nem ensaio com conta real.
 
 Para entrega operacional completa: integrar DATA-01 na persistência/validação de domínio e exclusão D7, instalar o processador AI-01, concluir OPS-01 com volume/recuperação verificados e ensaiar o bot via RUN-01. Manter zero escrita MCP, conforme DEC-01. Aprovação simulada exige ajuste explícito do contrato e suas tarefas; escrita real está fora dessa demo. Esses trabalhos não são marcados como concluídos pelos testes da infraestrutura.

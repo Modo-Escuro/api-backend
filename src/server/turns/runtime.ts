@@ -70,7 +70,7 @@ export class TurnRuntime {
       }
       if (!this.options.processor || !this.healthy) return;
       while (this.active.size < this.concurrency) {
-        const job = this.store.claim(this.owner);
+        const job = this.store.claim(this.owner, [...this.active.keys()]);
         if (!job) break;
         const controller = new AbortController();
         this.active.set(job.operation.operationId, { job, controller });
@@ -98,7 +98,9 @@ export class TurnRuntime {
         catch { this.healthy = false; }
       }
     } finally {
-      this.active.delete(job.operation.operationId);
+      if (this.active.get(job.operation.operationId)?.job.token === job.token) {
+        this.active.delete(job.operation.operationId);
+      }
     }
   }
   /** Não espera indefinidamente processador não cooperativo; lease permitirá recuperação. */

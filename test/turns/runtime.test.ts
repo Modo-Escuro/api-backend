@@ -85,6 +85,40 @@ describe('RUN-01 worker limitado e abort', () => {
     pending.resolve(result(context)); await flush();
   });
 
+  it('lease perdido não sobrepõe tentativas nem deixa finally antigo remover outro slot', async () => {
+    const pending: { context: TurnContext; work: ReturnType<typeof deferred<TurnResult>> }[] = [];
+    let executing = 0, maximum = 0;
+    const processor: TurnProcessor = context => {
+      executing++;
+      maximum = Math.max(maximum, executing);
+      const work = deferred<TurnResult>();
+      pending.push({ context, work });
+      return work.promise.finally(() => executing--);
+    };
+    const { runtime, store } = setup(processor);
+    const first = runtime.accept(principal, event()).operation;
+    runtime.tick();
+    now += store.limits.leaseMs + 1;
+    runtime.tick();
+    expect(pending).toHaveLength(1);
+    expect(pending[0]!.context.signal.aborted).toBe(true);
+    expect(store.operation(principal, first.operationId).status).toBe('ACCEPTED');
+
+    pending[0]!.work.resolve(result(pending[0]!.context));
+    await flush();
+    runtime.accept(principal, event(2));
+    runtime.accept(principal, event(3));
+    runtime.tick();
+    expect(pending).toHaveLength(3); // retomada + segundo evento; terceiro continua na fila
+    expect(executing).toBe(2);
+    expect(maximum).toBe(2);
+    expect(pending[1]!.context.event.eventId).toBe(first.eventId);
+    expect(store.operation(principal, first.operationId).status).toBe('RUNNING');
+    pending[1]!.work.resolve(result(pending[1]!.context));
+    pending[2]!.work.resolve(result(pending[2]!.context));
+    await flush();
+  });
+
   it('escrita externa permanece proibida sem autorização humana injetada pelo servidor', async () => {
     const remote = vi.fn();
     const { runtime, store } = setup(async context => {

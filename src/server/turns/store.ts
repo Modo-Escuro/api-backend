@@ -251,9 +251,12 @@ export class TurnStore {
     });
   }
 
-  claim(owner: string): Job | undefined {
+  claim(owner: string, activeIds: readonly string[] = []): Job | undefined {
     return this.transaction(() => {
-      const saved = row(this.db.prepare("SELECT * FROM operations WHERE status='ACCEPTED' ORDER BY seq LIMIT 1").get());
+      // Perder lease não encerra a promise antiga. Não retomar no mesmo processo
+      // enquanto aquela execução ainda ocupa um slot, mesmo após abort.
+      const exclude = activeIds.length ? ` AND id NOT IN (${activeIds.map(() => '?').join(',')})` : '';
+      const saved = row(this.db.prepare(`SELECT * FROM operations WHERE status='ACCEPTED'${exclude} ORDER BY seq LIMIT 1`).get(...activeIds));
       if (!saved) return undefined;
       const op = JSON.parse(saved.operation) as Operation, snapshot = this.current(saved.scope)!;
       if (Date.parse(op.deadlineAt) <= this.now()) { this.failure(saved, 'DEADLINE_EXCEEDED'); return undefined; }
