@@ -1,0 +1,557 @@
+% =====================================================================
+%  Compra com Contexto — Entregáveis do Hackathon SEMCOMP × iFood 2026
+%  Equipe Modo Escuro
+%
+%  SELEÇÃO DO CENÁRIO
+%  - Overleaf: escolha como documento principal (Menu > Main document)
+%      entregaveis-A.tex  -> cenário A (inclui preparação do carrinho real)
+%      entregaveis-B.tex  -> cenário B (MVP de leitura, desafios e aprendizados)
+%  - Ou edite a linha \providecommand{\cenario}{B} abaixo para A ou B.
+%  O PDF não exibe o nome do cenário.
+%
+%  CAPTURAS: coloque os arquivos em imagens/ com os nomes indicados em
+%  imagens/LEIAME.md. Sem o arquivo, o PDF mostra um quadro de captura pendente.
+%  DADOS A CONFIRMAR: aparecem em vermelho via \preencher{...}. Nenhum deve
+%  restar no PDF submetido.
+% =====================================================================
+\providecommand{\cenario}{B}
+
+\documentclass[11pt,a4paper]{article}
+
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[utf8]{inputenc}
+  \usepackage[T1]{fontenc}
+  \usepackage{lmodern}
+\else
+  \usepackage{fontspec}
+\fi
+\usepackage[brazil]{babel}
+\usepackage[a4paper,margin=2.3cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage[table]{xcolor}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{xstring}
+\usepackage{xurl}
+\usepackage[hidelinks]{hyperref}
+
+\setlist{itemsep=2pt,topsep=4pt}
+\setlength{\parskip}{5pt}
+\setlength{\parindent}{0pt}
+\setlength{\emergencystretch}{3em}
+\renewcommand{\arraystretch}{1.25}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+% ---------- cenário ----------
+\newif\ifcenarioA
+\IfStrEq{\cenario}{A}{\cenarioAtrue}{\cenarioAfalse}
+
+% ---------- cores e marcadores ----------
+\definecolor{destaque}{HTML}{EA1D2C}
+\definecolor{cinza}{HTML}{5F6368}
+\definecolor{fundo}{HTML}{F5F5F5}
+\newcommand{\preencher}[1]{\textcolor{destaque}{\textbf{[A PREENCHER: #1]}}}
+\newcommand{\estado}[1]{\textsf{\small #1}}
+
+% ---------- capturas com placeholder ----------
+% \captura{arquivo.png}{legenda}{instrução para obter a captura}
+\newcommand{\captura}[3]{%
+  \begin{figure}[H]\centering
+  \IfFileExists{imagens/#1}{%
+    \includegraphics[width=0.42\linewidth,keepaspectratio,height=9cm]{imagens/#1}%
+  }{%
+    \fcolorbox{destaque}{fundo}{\parbox{0.8\linewidth}{\centering\vspace{6pt}
+      \textcolor{destaque}{\textbf{CAPTURA PENDENTE}}\\[3pt]
+      \texttt{imagens/#1}\\[4pt]
+      \small #3\vspace{6pt}}}%
+  }
+  \caption{#2}
+  \end{figure}}
+
+\captionsetup{font=small,labelfont=bf}
+
+\hypersetup{pdftitle={Compra com Contexto — Entregáveis},pdfauthor={Equipe Modo Escuro}}
+
+\begin{document}
+
+% =====================================================================
+\begin{titlepage}
+\centering
+\vspace*{3cm}
+{\Huge\bfseries Compra com Contexto\par}
+\vspace{0.6cm}
+{\Large Organização de compras em grupo no iFood, respeitando\\ as restrições e o orçamento de cada pessoa\par}
+\vspace{1.5cm}
+{\large Hackathon SEMCOMP $\times$ iFood 2026\par}
+\vspace{0.3cm}
+{\large Equipe Modo Escuro\par}
+\vspace{0.3cm}
+{\normalsize \preencher{nomes dos integrantes}\par}
+\vfill
+{\small Repositórios: \url{https://github.com/Modo-Escuro/api-backend} \textperiodcentered{} \url{https://github.com/Modo-Escuro/telegram-bot}\par}
+\vspace{0.3cm}
+{\small Outubro de 2026\par}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% =====================================================================
+\section*{Resumo}
+\addcontentsline{toc}{section}{Resumo}
+
+O \textbf{Compra com Contexto} é um assistente no Telegram, o \textbf{Ailo}, que organiza um pedido de comida em grupo no iFood. O organizador descreve o grupo numa conversa comum (quem vai comer, quem tem alergia, quanto cada um pode gastar) e o assistente busca ofertas reais no iFood, monta propostas e mostra, pessoa por pessoa, quem está atendido e o que não pôde ser confirmado.
+\ifcenarioA
+Depois que o organizador revisa e confirma, o sistema prepara o carrinho real no iFood. Nenhum pedido é enviado nem pago automaticamente.
+\else
+A decisão final é sempre do organizador: nenhum pedido é enviado nem pago automaticamente.
+\fi
+
+Para não exagerar resultados, este documento usa quatro níveis de evidência:
+
+\begin{center}
+\begin{tabularx}{\linewidth}{lY}
+\toprule
+\textbf{Nível} & \textbf{Significado} \\
+\midrule
+\estado{Implementado} & Código integrado nos repositórios. \\
+\estado{Testado} & Coberto por testes automatizados (com respostas reais salvas ou simuladas, como indicado). \\
+\estado{Implantado} & Ativo no serviço em nuvem, com registro de versão. \\
+\estado{Demonstrado} & Usado por uma pessoa no serviço real, com registro ou captura. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\textbf{Principais resultados} (detalhes no Anexo~\ref{anx:evidencias}):
+\begin{itemize}
+  \item Login real da conta iFood pelo Telegram, com sessão reconhecida pelo serviço \estado{(demonstrado em 17/10/2026)}.
+  \item Compreensão do grupo pela IA (Gemini) dentro de regras fixas: 16 de 16 tarefas e 12 de 12 casos críticos em teste com o modelo real e dados fictícios \estado{(testado)}.
+  \item Bot e servidor ativados na nuvem com a conversa e a IA ligadas \estado{(implantado em 18/10/2026)}.
+  \item Regras de alergia, orçamento e divisão da conta protegidas por 941 testes automatizados do servidor \estado{(testado)}.
+\ifcenarioA
+  \item Preparação do carrinho real após confirmação humana \estado{(demonstrado: \preencher{data, versão e registro do ensaio})}.
+\fi
+\end{itemize}
+
+% =====================================================================
+\section{Proposta de negócio}
+
+\subsection{O problema}
+Quem organiza a comida de um grupo (o time, a república, um evento) precisa descobrir quem vai comer, lembrar quem tem alergia ou dieta, respeitar quanto cada um pode gastar, achar uma loja que atenda todos e depois dividir a conta. Isso acontece em conversas espalhadas e na memória de uma pessoa. Os erros mais graves são silenciosos: uma alergia esquecida, alguém que ficou sem opção sem ninguém perceber, um total que estoura porque uma taxa só aparece no fim.
+
+\textbf{Exemplo.} Ana é alérgica a amendoim; Bia não tem restrições; o grupo tem R\$~150. A pizzaria mais barata serve para a Bia, mas o cardápio não informa se o molho leva amendoim. Para a Bia é uma boa opção; para a Ana, um risco que ninguém consegue confirmar. Num chat comum esse detalhe se perde.
+
+\subsection{Público-alvo}
+\begin{itemize}
+  \item Quem costuma organizar pedidos coletivos (trabalho, estudo, família, eventos).
+  \item Grupos com restrições alimentares variadas, em que errar afeta a saúde de alguém.
+  \item Grupos com orçamento definido, total ou por pessoa.
+\end{itemize}
+
+\subsection{Proposta de valor}
+\begin{quote}
+O organizador descreve o grupo numa conversa. O assistente lembra de cada pessoa, busca no iFood, monta propostas que respeitam as restrições de todos e diz com clareza o que não conseguiu confirmar. A decisão é sempre de uma pessoa.
+\end{quote}
+
+\subsection{Diferenciais e benefícios}
+\begin{center}
+\begin{tabularx}{\linewidth}{>{\bfseries\raggedright\arraybackslash}p{4.2cm}Y}
+\toprule
+Diferencial & Benefício para quem organiza \\
+\midrule
+Cada pessoa avaliada separadamente & A alergia da Ana não elimina as opções da Bia; quem não é atendido aparece com o motivo, ninguém é excluído em silêncio. \\
+Alergia é sempre obrigatória & Uma alergia nunca vira ``preferência''; tirar uma restrição exige confirmação explícita do organizador. \\
+O que não se sabe é mostrado & Sem informação sobre ingredientes, o item fica ``a verificar com a loja'' para quem tem a alergia, nunca ``não contém''. Taxa desconhecida nunca vira zero. \\
+Conta dividida com exatidão & Valores em centavos, entrega dividida só entre quem consome e regra fixa para os centavos que sobram. \\
+Correções sem recomeçar & ``Na verdade, no máximo R\$~150'' muda o orçamento e preserva participantes e alergias. \\
+Pessoa no controle & A IA sugere; as regras do servidor decidem; nada é comprado sem confirmação. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Viabilidade}
+\begin{itemize}
+  \item \textbf{Técnica:} a integração de identidade com o iFood funciona ponta a ponta, e a leitura de ofertas usa as ferramentas oficiais do MCP.
+  \item \textbf{Operacional:} bot e servidor rodam na nuvem, com limites de gasto da IA e armazenamento persistente.
+  \item \textbf{Comercial (hipótese):} pedidos em grupo tendem a ter valor maior; reduzir a coordenação pode transformar vários pedidos individuais, ou um pedido adiado, em um só. \emph{Não medimos conversão nem ticket médio.}
+\end{itemize}
+
+% =====================================================================
+\section{Desenho da solução}
+
+\subsection{Fluxo de uso}
+\begin{enumerate}
+  \item \textbf{Conectar a conta iFood.} O organizador toca em ``Conectar iFood'', autoriza no navegador pelo login oficial e volta ao Telegram com a conta conectada.
+  \item \textbf{Descrever o grupo.} Ex.: ``Somos Ana e Bia. Ana é alérgica a amendoim. Bia não tem restrições. Teto do grupo de R\$~180. Preferimos o mais barato.''
+  \item \textbf{Corrigir quando quiser.} ``Na verdade, no máximo R\$~150'' muda o orçamento; a alergia continua registrada.
+  \item \textbf{Esclarecer o que falta.} Valor vago (``uns R\$~150'') ou prioridade ausente geram uma pergunta antes de seguir.
+  \item \textbf{Pedir sugestões.} ``Sugere pizza'': o sistema busca ofertas reais no iFood, detalha cada item e monta até quatro propostas, cada uma de uma loja, mostrando quem está atendido.
+  \item \textbf{Revisar.} ``Quero a proposta 2'': aparece a revisão com itens, quem consome cada um, entrega, soma observada e tudo o que ainda falta confirmar.
+\ifcenarioA
+  \item \textbf{Confirmar e preparar o carrinho.} O organizador confirma aquela revisão específica; só então o sistema prepara o carrinho real no iFood. A confirmação vale uma única vez e perde a validade se qualquer item mudar.
+  \item \textbf{Pedido e pagamento} continuam fora do sistema nesta etapa: o organizador finaliza no iFood se quiser.
+\else
+  \item \textbf{Decidir.} A revisão termina sem enviar nada ao iFood. A preparação do carrinho real com confirmação humana é o próximo passo do produto (Seção~\ref{sec:tecnico}).
+\fi
+\end{enumerate}
+
+\subsection{Como as partes conversam}
+
+\begin{figure}[H]\centering
+\begin{tikzpicture}[
+  node distance=0.9cm and 1.3cm,
+  caixa/.style={draw, rounded corners, align=center, minimum height=1.1cm, text width=2.7cm, font=\small, fill=fundo},
+  ext/.style={caixa, fill=white, dashed},
+  seta/.style={-{Latex[length=2mm]}, thick}]
+  \node[caixa] (org) {Organizador};
+  \node[caixa, right=of org] (tg) {Telegram\\(assistente Ailo)};
+  \node[caixa, right=of tg, fill=destaque!12] (srv) {Nosso servidor\\regras de alergia,\\orçamento e divisão};
+  \node[ext, above right=0.4cm and 1.1cm of srv] (ia) {IA Gemini\\entende e sugere};
+  \node[ext, below right=0.4cm and 1.1cm of srv] (ifood) {iFood (MCP)\\ofertas e itens};
+  \draw[seta] (org) -- node[above, font=\scriptsize]{conversa} (tg);
+  \draw[seta] (tg) -- (srv);
+  \draw[seta] (srv.north east) -- (ia);
+  \draw[seta] (srv.south east) -- node[below left, font=\scriptsize, align=center]{\ifcenarioA leitura; carrinho\\só após confirmação\else somente leitura\fi} (ifood);
+  \draw[seta, dashed] (org) to[bend right=35] node[below, font=\scriptsize]{decide sempre} (srv);
+\end{tikzpicture}
+\caption{Visão geral. A IA interpreta a mensagem e propõe ações; quem aplica e decide são as regras do servidor.}
+\end{figure}
+
+\subsection{Organização dos participantes}
+O organizador é o único usuário real da compra; os participantes são pessoas declaradas por ele, sem conta própria. Cada participante tem restrições e teto próprios, com estados distintos para ``não informado'', ``a confirmar'', ``nenhum'' e ``declarado''. Uma compra ativa usa uma loja e um endereço.
+
+\subsection{Separação entre login, confirmação e pedido}
+\begin{center}
+\begin{tabularx}{\linewidth}{>{\bfseries\raggedright\arraybackslash}p{4.3cm}Y}
+\toprule
+Ação & O que autoriza \\
+\midrule
+Login no iFood & Apenas identifica a conta. Não aprova compra. \\
+Confirmação de mudança rígida & Remover alergia, aumentar teto obrigatório ou encerrar a compra. A IA nunca confirma sozinha. \\
+\ifcenarioA
+Confirmação da revisão & Preparar o carrinho real com exatamente aquela composição. Uso único, com prazo. \\
+\else
+Confirmação da revisão & Próximo passo do produto: preparar o carrinho real com exatamente aquela composição. Ainda não disponível. \\
+\fi
+Envio do pedido e pagamento & Fora do sistema nesta etapa. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+% =====================================================================
+\section{Racional da experiência}
+
+\begin{description}[style=nextline,leftmargin=0.5cm]
+  \item[Por que conversa, e por que no Telegram] As informações de um pedido em grupo chegam aos poucos e fora de ordem. Uma conversa aceita frases naturais e correções a qualquer momento, sem exigir que o organizador tenha tudo pronto. O Telegram é onde grupos já combinam pedidos e permite botões para as confirmações humanas.
+  \item[Menos coisa para lembrar] Várias informações numa mesma mensagem são registradas de uma vez; o assistente pergunta só o que falta. O grupo fica salvo e é retomado depois do login, sem repetir mensagens.
+  \item[Ambiguidade vira pergunta] ``Uns R\$~150'', nomes desconhecidos ou prioridade não declarada geram uma pergunta. ``Sem restrições'' só vale se o próprio organizador disser isso.
+  \item[Restrições por pessoa] O filtro de dieta do iFood (ex.: vegano) vale só para aquela dieta e nunca comprova ausência de alérgeno. Uma descrição que cita o ingrediente pode reprovar um item, mas nunca aprová-lo.
+  \item[Transparência financeira] O catálogo não informa a taxa de serviço; por isso a proposta mostra ``soma dos preços observados, não é o total''. Quando a regra de preço de um item é ambígua, o valor aparece como faixa.
+  \item[Controle humano] A IA trabalha com uma lista fechada de ações e não tem ação de aprovar, confirmar, comprar ou pagar. Pedidos como ``pode pedir'' recebem explicação, não execução.
+  \item[Clareza e erros] Mensagens curtas em português, geradas pelo servidor a partir de fatos gravados. Indisponibilidade do iFood não desconecta a conta; um erro da IA não altera o que já foi registrado, basta reenviar. O assistente mostra ``digitando'' enquanto processa. \emph{Não realizamos teste formal de acessibilidade.}
+\end{description}
+
+\textbf{Sobre segurança alimentar.} O produto ajuda a não esquecer restrições e a não recomendar o que o cardápio indica como incompatível. Ele não garante ausência de alérgenos: depende do que o restaurante informa e do preparo. Em caso de alergia grave, a orientação é sempre confirmar com a loja.
+
+% =====================================================================
+\section{Interface visual}\label{sec:interface}
+
+A interface é a conversa com o assistente Ailo no Telegram. Todas as telas abaixo são capturas reais do bot, com dados fictícios (Ana e Bia) e dados da conta ocultados. A mesma sequência de capturas é usada na demonstração do pitch.
+
+\captura{01-conexao-ifood.png}
+  {Conexão com o iFood: login oficial no navegador e confirmação de conta conectada no Telegram.}
+  {Tocar em ``Conectar iFood'', autorizar a conta de teste no navegador e capturar a mensagem ``Pronto, sua conta iFood está conectada!''. Ocultar a conta.}
+
+\captura{02-grupo-restricoes.png}
+  {Grupo registrado a partir de uma única mensagem: participantes, alergia obrigatória e orçamento.}
+  {Enviar ``Somos Ana e Bia. Ana é alérgica a amendoim. Bia não tem restrições. Teto do grupo de R\$~180. Preferimos o mais barato.'' e capturar a resposta ``Certo! Seu grupo ficou assim:''.}
+
+\captura{03-correcao-orcamento.png}
+  {Correção do orçamento preservando a alergia registrada.}
+  {Enviar ``Na verdade, o teto do grupo é no máximo R\$~150.'' e capturar o grupo atualizado.}
+
+\captura{04-propostas.png}
+  {Propostas com ofertas reais do iFood, mostrando quem é atendido e que a soma observada não é o total.}
+  {Enviar ``Sugere pizza'' e capturar ao menos uma ``Proposta informativa''.\ifcenarioA\else{} Se a busca não trouxer propostas, capturar a resposta real exibida pelo bot e ajustar esta legenda.\fi}
+
+\captura{05-revisao.png}
+  {Revisão da proposta escolhida, com as pendências visíveis.}
+  {Enviar ``Quero a proposta 2'' e capturar a ``Revisão informativa'' com as pendências.}
+
+\ifcenarioA
+\captura{06-confirmacao-humana.png}
+  {Confirmação humana da revisão, de uso único, antes de qualquer escrita no iFood.}
+  {Capturar o botão de confirmação da revisão e a resposta após o toque. Somente se a funcionalidade estiver implantada e ensaiada.}
+
+\captura{07-carrinho-real.png}
+  {Carrinho preparado no iFood com a composição confirmada. Nenhum pedido enviado.}
+  {Capturar o carrinho no app ou site do iFood com a conta de teste. \textbf{Somente se a preparação real tiver sido comprovada}; ocultar endereço e dados pessoais.}
+\else
+\captura{06-limites-pode-pedir.png}
+  {Resposta a ``Pode pedir'': o assistente explica que a decisão e o pedido continuam com o organizador.}
+  {Enviar ``Pode pedir'' após a revisão e capturar a explicação do bot.}
+\fi
+
+% =====================================================================
+\section{Documento técnico resumido}\label{sec:tecnico}
+
+\subsection{Arquitetura}
+Dois serviços na nuvem (Railway):
+\begin{itemize}
+  \item \textbf{Bot Telegram} (Python 3.12): recebe as mensagens, guarda cada uma numa fila persistente antes de enviar ao servidor e mostra as respostas e os botões. Não conhece regras de compra nem credenciais do iFood.
+  \item \textbf{Servidor} (Node.js, TypeScript, Hono, SQLite): login OAuth com o iFood, agente de IA, regras de restrição e orçamento, propostas em grupo, persistência e acesso ao MCP do iFood.
+\end{itemize}
+A IA (Gemini 3.8 Flash) recebe só o contexto mínimo e devolve ações de uma lista fechada (ex.: registrar alergia, mudar orçamento, sugerir propostas). O servidor valida cada ação contra o estado gravado e aplica apenas o que as regras permitem. A IA não recebe credenciais, endereço nem identidade, e não tem ação de aprovação ou compra.
+
+\subsection{Ferramentas do MCP do iFood}
+\begin{center}
+\begin{tabularx}{\linewidth}{lY}
+\toprule
+\textbf{Ferramenta} & \textbf{Uso} \\
+\midrule
+\texttt{listAddresses} & Endereço do organizador e verificação da sessão \\
+\texttt{searchOffers} & Busca de candidatos (termo descritivo separado de filtros) \\
+\texttt{getItem} & Detalhe obrigatório antes de recomendar: opções, limites, preço, pedido mínimo \\
+\texttt{getUser} & Apenas identidade mascarada na conexão da conta \\
+\ifcenarioA
+\texttt{createCart}, \texttt{addItemToCart} & Somente após a confirmação humana da revisão \\
+\fi
+\texttt{submitOrder}, pagamento & Não utilizados; bloqueados no servidor \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Principais decisões}
+\begin{itemize}
+  \item \textbf{Regras no servidor, não na IA:} limita o efeito de um erro do modelo ou de texto malicioso vindo do cardápio.
+  \item \textbf{Desconhecido é um valor:} alergia sem dado bloqueia o item para quem a tem; taxa ausente deixa o total ``desconhecido''.
+  \item \textbf{Dinheiro em centavos inteiros:} divisão exata, sem erro de arredondamento.
+  \item \textbf{Ordenação por prioridade declarada} (economia ou rapidez), com dados ausentes sempre depois dos conhecidos.
+  \item \textbf{Escrita no iFood só com confirmação humana específica}, de uso único; resultado desconhecido bloqueia nova tentativa. Envio de pedido e pagamento proibidos nesta etapa.
+  \item \textbf{Dados reais em vez de simulados:} a mentoria indicou que APIs simuladas ou complementares seriam aceitas; a equipe priorizou dados reais do MCP para não mostrar uma segurança alimentar que nenhuma fonte confirmou.
+\end{itemize}
+
+\subsection{Como desenvolvemos}
+A equipe usou \textbf{Claude Code} e \textbf{Codex} como ferramentas auxiliares de desenvolvimento, revisão de código e escrita de testes, conforme permitido pelo hackathon. O uso fica rastreável no repositório: commits com coautoria registrada do Claude e branches de trabalho com prefixo \texttt{codex/}.
+\begin{itemize}
+  \item \textbf{Equipe:} escopo e decisões de produto (como carrinho só com confirmação humana e alergia sempre obrigatória), revisão e aprovação de cada mudança, autorização de deploy, uso da conta de teste e ensaios no serviço real.
+  \item \textbf{Ferramentas de IA de desenvolvimento:} implementação assistida, auditorias de código, testes de regressão e documentação, sempre revisados pela equipe.
+  \item \textbf{IA do produto:} apenas o Gemini, que interpreta as mensagens do organizador em tempo de uso. Claude Code e Codex não fazem parte do produto em execução.
+\end{itemize}
+
+\subsection{Estado das funcionalidades}
+\begin{center}
+\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{4.2cm}*{4}{>{\centering\arraybackslash}X}}
+\toprule
+\textbf{Funcionalidade} & \textbf{Impl.} & \textbf{Testado} & \textbf{Implantado} & \textbf{Demonstrado} \\
+\midrule
+Login iFood pelo Telegram & sim & sim & sim & sim (17/10) \\
+Conversa, grupo e correções & sim & sim & sim (18/10) & \preencher{sim/não} \\
+Propostas com ofertas reais & sim & sim\textsuperscript{1} & sim (18/10) & \preencher{sim/não} \\
+Revisão da proposta escolhida & sim & sim & sim (18/10) & \preencher{sim/não} \\
+\ifcenarioA
+Confirmação e carrinho real & sim & \preencher{sim/não} & \preencher{versão} & \preencher{data} \\
+\else
+Confirmação e carrinho real & em revisão & simulado\textsuperscript{2} & não & não \\
+\fi
+Envio de pedido e pagamento & não & --- & --- & --- \\
+\bottomrule
+\end{tabularx}
+\end{center}
+{\footnotesize \textsuperscript{1} Com respostas reais do iFood salvas e com a IA real em dados fictícios.\ifcenarioA\else{} \textsuperscript{2} Testes com respostas simuladas não validam o contrato real do carrinho.\fi}
+
+\subsection{Limitações}
+\begin{itemize}
+  \item O total exato do pedido é sempre desconhecido: o catálogo não informa a taxa de serviço.
+  \item Alergias quase sempre ficam ``a verificar'': o catálogo não informa ingredientes nem alérgenos.
+  \item Parte dos preços tem regra ambígua e aparece como faixa.
+  \item Tempo de resposta ponta a ponta não foi medido; a etapa da IA levou cerca de 3 a 5\,s nos testes.
+  \item Grupos de até 20 pessoas por compra.
+\end{itemize}
+Detalhes técnicos, segurança e operação estão no Anexo~\ref{anx:tecnico}.
+
+% =====================================================================
+\section{Feedback sobre o MCP do iFood}\label{sec:feedback}
+
+Cada ponto indica se foi \emph{confirmado} em respostas reais ou \emph{inferido}. Ausência de dado é diferente de erro do serviço. A lista completa, com 14 itens, está no Anexo~\ref{anx:feedback}.
+
+\begin{center}
+\small
+\begin{tabularx}{\linewidth}{>{\raggedright}p{3.6cm}YY}
+\toprule
+\textbf{Observado} & \textbf{Impacto no produto} & \textbf{Sugestão} \\
+\midrule
+Sem ingredientes e alérgenos nos itens \emph{(confirmado)} & Pessoas com alergia quase sempre ficam sem opção confirmada & API padronizada de ingredientes e alérgenos (abaixo) \\
+Taxa de serviço ausente no catálogo \emph{(confirmado)} & Total do pedido sempre desconhecido & Informar a taxa ou oferecer cotação sem criar carrinho \\
+Regra de preço ambígua em 11 de 38 itens \emph{(dado confirmado, semântica inferida)} & Preço exibido como faixa & Campo explícito com o modelo de preço do item \\
+Ferramentas sem formato de resposta publicado e sem chave contra duplicidade \emph{(confirmado)} & Escrita no carrinho exige cautela extra & Publicar \texttt{outputSchema} e aceitar chave de idempotência \\
+Mensagens de erro com orientação útil \emph{(confirmado, ponto positivo)} & Facilitou corrigir chamadas & Padronizar o formato de erro entre domínios \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Proposta: API padronizada de ingredientes e alérgenos}
+\emph{Proposta da equipe ao iFood. Não existe e não foi implementada nem simulada neste projeto.}
+
+\textbf{Problema.} As respostas reais trazem nome, descrição, preço e opções, mas nenhum campo de ingredientes ou alérgenos, e não há como perguntar ao restaurante. Isso impediu confirmar se alguns produtos eram adequados para pessoas com alergia.
+
+\textbf{Campos sugeridos} (por item \emph{e} por opção, porque um adicional pode mudar o alérgeno):
+\begin{itemize}
+  \item \texttt{allergens}: para cada alérgeno de uma lista padrão, \texttt{CONTAINS}, \texttt{MAY\_CONTAIN}, \texttt{NOT\_PRESENT\_DECLARED} ou \texttt{NOT\_INFORMED};
+  \item \texttt{ingredients}: lista declarada, quando houver;
+  \item \texttt{crossContamination}: risco de contaminação cruzada declarado;
+  \item \texttt{source} e \texttt{updatedAt}: quem declarou e quando.
+\end{itemize}
+
+\textbf{Uso pelo assistente.} ``Contém'' e ``pode conter'' bloqueiam o item para a pessoa; ``não informado'' continua ``a verificar''; ``não contém'' só libera o item com a frase ``segundo declaração de \emph{fonte} em \emph{data}'', nunca ``seguro''. Nenhuma API elimina o risco: o produto mostra o que foi declarado, por quem e quando, e mantém a orientação de confirmar com a loja.
+
+% =====================================================================
+\ifcenarioA\else
+\section{Desafios e aprendizados}\label{sec:aprendizados}
+
+\begin{center}
+\small
+\begin{tabularx}{\linewidth}{>{\raggedright}p{3.2cm}Y>{\raggedright\arraybackslash}p{3.6cm}}
+\toprule
+\textbf{Desafio} & \textbf{O que aconteceu} & \textbf{Como tratamos} \\
+\midrule
+Dados alimentares & O catálogo não informa alérgenos (ausência de dado, não erro do serviço) & Bloqueio ``a verificar''; proposta de API \\
+Carrinho real & Ferramentas sem formato de resposta e sem proteção contra duplicidade & Escrita só com confirmação; ainda em revisão, fora da demonstração \\
+Respostas da IA & Erro nosso: um limite de texto baixo cortava cerca de 1 em cada 3 respostas, e uma regra deixava ``a confirmar'' virar ``sem restrições'' & Limite ajustado; regra exige frase explícita do usuário \\
+Regras de preço e ranking & Erro nosso: uma preferência bloqueava opções válidas; uma alternativa calculava só uma unidade & Corrigido com testes de regressão \\
+Persistência na nuvem & Um novo deploy apagaria as contas conectadas & Volume persistente e backup antes de cada deploy \\
+Disponibilidade & Uma indisponibilidade pontual do serviço do iFood (17/10) & Aviso ao usuário sem desconectar a conta \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\textbf{Aprendizados.}
+\begin{itemize}
+  \item Com sistemas externos, ausência de campo não é ``não''. Um bom assistente precisa saber dizer ``não sei''.
+  \item A IA é ótima para entender a conversa e ruim como autoridade: a decisão precisa ficar em regras verificáveis.
+  \item Em alergia, bloquear sem dado é a escolha certa, mesmo que deixe a demonstração menos impressionante.
+  \item Testes escritos antes da correção revelaram erros nossos que pareciam funcionar.
+  \item Separar ``decidido'', ``implementado'', ``implantado'' e ``demonstrado'' evitou prometer o que não estava pronto.
+\end{itemize}
+
+\textbf{Próximos passos.} Concluir e validar a preparação do carrinho real com confirmação humana; medir o tempo de resposta ponta a ponta; testar com grupos reais; e, com o iFood, avançar em alérgenos, taxa de serviço e cotação sem carrinho.
+\fi
+
+% =====================================================================
+\newpage
+\appendix
+\section{Evidências e verificações}\label{anx:evidencias}
+
+\begin{center}
+\small
+\begin{tabularx}{\linewidth}{>{\raggedright}p{4.2cm}Y>{\raggedright\arraybackslash}p{3.4cm}}
+\toprule
+\textbf{Evidência} & \textbf{Resultado} & \textbf{Fonte} \\
+\midrule
+Login iFood pelo Telegram (17/10/2026) & Conta conectada, sessão operacional, verificação OK & \nolinkurl{telegram-bot: docs/estado-atual.md} \\
+Lista de ferramentas do MCP, consulta autenticada (18/10/2026) & 15 de 15 ferramentas coincidem com a captura anterior & \nolinkurl{api-backend: docs/int-01-audit.md} \\
+Escolha do modelo (18/10/2026) & Gemini 3.8 Flash: 16/16 tarefas, 12/12 críticas, 16/16 saídas válidas; p95 de inferência 3,2\,s; custo estimado US\$~0,015 na rodada; dados fictícios & \nolinkurl{docs/ai-01-result.md} \\
+Segunda rodada com o modelo real & 18/18 casos isolados; 8/8 conversas encadeadas; p95 entre 3,4 e 5,1\,s; máximo 8,7\,s & \nolinkurl{docs/ai-01-montagem-ensaio.md} \\
+Ativação na nuvem (18/10/2026, 06:49) & Bot e servidor com conversa e IA ativas; reserva de gasto US\$~0,50; backups antes do deploy & \nolinkurl{telegram-bot: docs/ensaio-bot02-operacional.md} \\
+Testes automatizados do servidor & 941 testes aprovados em 56 arquivos; verificação de tipos e lint aprovados (18/10/2026) & Execução local na \texttt{main} \\
+Versões implantadas no dia da apresentação & \preencher{commits do bot e do servidor} & Registro do ensaio \\
+Ensaio humano da jornada & \preencher{data, resultado e itens aprovados} & Registro do ensaio \\
+\ifcenarioA
+Preparação do carrinho real & \preencher{data, versão, resultado e validação das respostas reais} & \preencher{registro} \\
+\fi
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Os testes com o modelo usaram apenas dados fictícios e são amostras pequenas: não medem a estabilidade estatística nem substituem o uso real.
+
+% ---------------------------------------------------------------------
+\section{Detalhes técnicos}\label{anx:tecnico}
+
+\subsection*{Componentes do servidor}
+\begin{center}
+\small
+\begin{tabularx}{\linewidth}{lY}
+\toprule
+\textbf{Componente} & \textbf{Responsabilidade} \\
+\midrule
+Turnos duráveis & Cada mensagem é aceita uma única vez, processada em fila e recuperada após queda do processo \\
+Compra e participantes & Estado da compra no SQLite, alterado só por operações validadas; exclusão ao encerrar ou após 24\,h sem uso \\
+Dinheiro e limites & Conversão exata para centavos; tetos individuais e do grupo; divisão determinística \\
+Ranking & Somente itens elegíveis; economia ou rapidez; desconhecidos depois dos conhecidos \\
+Agente & Lista fechada de 15 ações; perguntas e respostas geradas pelo servidor \\
+Propostas em grupo & Avaliação por pessoa, uma loja por proposta, até quatro propostas, cobertura explícita \\
+Operação & Registros sem dados pessoais, métricas, limites de gasto da IA, painel de status \\
+Contas conectadas & Tokens por conta, gravação atômica, volume persistente, backup e restauração \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection*{Bot Telegram}
+Python 3.12; fila persistente (mensagem gravada antes de qualquer envio); até 10 mensagens pendentes por conversa; acesso à demonstração por senha, com conversa e conta separadas por usuário; nenhuma credencial do iFood no bot. Mensagens de voz estão implementadas e \emph{desligadas} por padrão.
+
+\subsection*{Segurança e privacidade}
+\begin{itemize}
+  \item Credenciais do iFood ficam só no servidor; nunca vão para o bot, a IA ou os registros.
+  \item Registros técnicos sem nomes, alergias, endereço ou valores por pessoa.
+  \item Texto do cardápio e mensagens de erro externas são tratados como dados, nunca como instruções.
+  \item Repetição de uma mensagem não cria nova operação; resultado remoto desconhecido bloqueia nova tentativa.
+\end{itemize}
+
+% ---------------------------------------------------------------------
+\section{Feedback completo sobre o MCP}\label{anx:feedback}
+
+\begin{center}
+\footnotesize
+\begin{tabularx}{\linewidth}{>{\raggedright}p{0.4cm}>{\raggedright}p{4.3cm}>{\raggedright}p{1.9cm}Y}
+\toprule
+\textbf{\#} & \textbf{Observado} & \textbf{Evidência} & \textbf{Sugestão} \\
+\midrule
+1 & Sem ingredientes e alérgenos & Confirmado & API padronizada (Seção~\ref{sec:feedback}) \\
+2 & Taxa de serviço ausente & Confirmado & Informar taxa ou cotação sem carrinho \\
+3 & Regra de preço ambígua (11 de 38 itens) & Dado confirmado; semântica inferida & Campo explícito de modelo de preço \\
+4 & Garantia do filtro de dieta não documentada & Inferido & Documentar origem e garantia do filtro \\
+5 & Nenhuma ferramenta publica formato de resposta & Confirmado & Publicar \texttt{outputSchema} \\
+6 & Indicadores de leitura/escrita incoerentes, inclusive em consultas & Confirmado & Corrigir os indicadores \\
+7 & Sem chave contra duplicidade; pedido só consultável com ID já conhecido & Confirmado no que investigamos & Chave de idempotência e consulta por requisição \\
+8 & Campos obrigatórios formais diferentes das descrições & Confirmado & Alinhar o schema às descrições \\
+9 & Pagamento descrito como PIX/cartão, mas o campo exige UUID & Confirmado & Corrigir descrição ou documentar mapeamento \\
+10 & Formatos de erro diferentes entre domínios & Confirmado & Envelope de erro único \\
+11 & Indisponibilidade pontual (17/10, \textasciitilde23h UTC) & Confirmado & Página de status \\
+12 & Documentação do portal difícil de ler por ferramentas & Confirmado no nosso ambiente & Versão estática e versionada \\
+13 & Totais confirmados só existem com carrinho criado & Confirmado & Cotação somente leitura \\
+14 & Não há como perguntar ao restaurante sobre ingredientes & Confirmado & Canal estruturado de pergunta ao restaurante \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\textbf{O que funcionou bem:} login OAuth com PKCE e PAR; mensagens de erro com orientação útil; lista de ferramentas estável; identidade mascarada sem expor dados pessoais.
+
+% ---------------------------------------------------------------------
+\ifcenarioA
+\section{Desafios e aprendizados}\label{anx:aprendizados}
+\begin{itemize}
+  \item \textbf{Dados alimentares:} o catálogo não informa alérgenos (ausência de dado, não erro do serviço); tratamos com bloqueio ``a verificar'' e a proposta de API.
+  \item \textbf{Carrinho real:} sem formato de resposta nem chave contra duplicidade, a escrita exigiu confirmação de uso único e bloqueio de resultado desconhecido.
+  \item \textbf{Erros nossos corrigidos:} limite de texto da IA que cortava respostas; regra que deixava ``a confirmar'' virar ``sem restrições''; ranking que bloqueava opções válidas; código antigo de carrinho que marcava escrita como concluída sem confirmação.
+  \item \textbf{Aprendizado central:} a IA entende a conversa, mas a decisão precisa ficar em regras verificáveis; e um bom assistente precisa saber dizer ``não sei''.
+\end{itemize}
+\fi
+
+% ---------------------------------------------------------------------
+\section{Fontes}\label{anx:fontes}
+Documentação técnica completa nos repositórios:
+\begin{itemize}
+  \item \url{https://github.com/Modo-Escuro/api-backend} --- \texttt{README.md} e \texttt{docs/}: decisões (\nolinkurl{decisoes-conversacionais.md}), estado das versões (\nolinkurl{estado-remoto-local.md}), agente (\nolinkurl{ai-02-agente.md}), modelo (\nolinkurl{ai-01-result.md}), propostas (\nolinkurl{grp-01-propostas.md}), centavos e limites (\nolinkurl{dom-01-centavos-limites.md}), auditoria de preço (\nolinkurl{pricing-audit.md}), auditoria do contrato do carrinho (\nolinkurl{int-01-audit.md}), operação (\nolinkurl{ops-01-persistencia.md}, \nolinkurl{ops-02-operacao.md}).
+  \item \url{https://github.com/Modo-Escuro/telegram-bot} --- \texttt{README.md} e \texttt{docs/}: estado e evidências (\nolinkurl{estado-atual.md}), arquitetura, login, fila de conversa, retomada, acesso por senha, assistente Ailo e voz, ensaio operacional, especificação de requisitos (\nolinkurl{baseline/stakeholder-requirements-specification.md}).
+\end{itemize}
+
+\end{document}

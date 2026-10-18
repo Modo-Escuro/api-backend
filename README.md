@@ -11,8 +11,8 @@ O produto é formado por dois repositórios que funcionam juntos:
 
 > **Fronteira atual.** Decisão vigente ([DEC-01 D8](docs/decisoes-conversacionais.md)): carrinho real **somente após confirmação humana específica** do organizador; envio de pedido e pagamento proibidos. Código na `main`: o MCP é usado **somente para leitura** e a composição escolhida é uma **sacola simulada** — a preparação do carrinho real está no PR rascunho [#46](https://github.com/Modo-Escuro/api-backend/pull/46), desligada por padrão. Login não aprova compra. Detalhes em [estado remoto/local](docs/estado-remoto-local.md).
 
-- **Entregáveis do hackathon:** [docs/entrega-hackathon.md](docs/entrega-hackathon.md)
-- **Roteiro do pitch:** [docs/pitch-hackathon.md](docs/pitch-hackathon.md)
+- **Entregáveis do hackathon:** [entrega/entregaveis.tex](entrega/entregaveis.tex) (LaTeX/Overleaf; [instruções](entrega/README.md))
+- **Roteiro do pitch:** [entrega/pitch.md](entrega/pitch.md)
 - **Índice técnico:** [docs/README.md](docs/README.md) · [Plano vigente](docs/plano-conversacional.md) · [Estado remoto/local](docs/estado-remoto-local.md) · [Decisões vigentes](docs/decisoes-conversacionais.md)
 
 ## Problema e proposta de valor
@@ -182,7 +182,7 @@ Limitações conhecidas:
 
 | Tema | Documento |
 | --- | --- |
-| Entregáveis e pitch | [entrega-hackathon](docs/entrega-hackathon.md) · [pitch-hackathon](docs/pitch-hackathon.md) |
+| Entregáveis e pitch | [entrega/](entrega/README.md): [entregaveis.tex](entrega/entregaveis.tex) · [pitch.md](entrega/pitch.md) |
 | Decisões da demo (D1–D10) | [decisoes-conversacionais](docs/decisoes-conversacionais.md) |
 | Plano e estado das tarefas | [plano-conversacional](docs/plano-conversacional.md) · [épico integrado](https://github.com/Modo-Escuro/telegram-bot/issues/6) · [revisão da branchBruna](docs/reviews/branchBruna-8393615.md) |
 | Contratos | [bot-api](docs/bot-api.md) · [conversa v1.0](docs/conversation-api-v1.md) · [avaliação 2.0](docs/rank-03-contrato-v2.md) |

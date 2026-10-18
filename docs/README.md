@@ -1,6 +1,6 @@
 # Documentação da API
 
-**Hackathon:** [entrega dos seis entregáveis](entrega-hackathon.md) · [roteiro do pitch](pitch-hackathon.md).
+**Hackathon:** [entrega/](../entrega/README.md): entregáveis em LaTeX, pitch e instruções.
 
 Esta revisão altera somente documentação. A implementação CART-01 local, suas rotas e resultados de testes não fazem parte das mains remotas conferidas.
 
