@@ -14,7 +14,10 @@ describe('INT-01: consulta manual pelo Console, sem SSH nem mutações', () => {
     const js = ts.transpileModule(readFileSync('scripts/int01-console-probe.ts', 'utf8'), {
       compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.ESNext },
     }).outputText;
-    expect(readFileSync('docs/int-01-console-command.sh', 'utf8')).toContain(js);
+    const command = readFileSync('docs/int-01-console-command.sh', 'utf8');
+    expect(command).toContain(js);
+    expect(command).toContain("import { config } from './src/server/config.ts'");
+    expect(command).toContain('IFOOD_LINKS_DIR: config.linksDir');
   });
   it('lê somente o token do vínculo confirmado, sem sessão global', async () => {
     const read = vi.fn(readText);

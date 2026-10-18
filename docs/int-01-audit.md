@@ -100,6 +100,10 @@ Fonte: `scripts/int01-console-probe.ts`; gerar o comando com `node --import tsx 
 
 O usuário executou posteriormente o comando no Console e compartilhou `BLOCKED / PROBE_FAILED_NO_PRIVATE_DETAILS`, com `businessToolsCalled:false`. Esse resultado não distingue falha de leitura local, conexão ou tools/list; não comprova ausência do vínculo nem rejeição da sessão. O probe foi corrigido para retornar a etapa (`READ_CONFIRMED_LINK`, `CONNECT_MCP` ou `LIST_TOOLS`) e razões estáticas para arquivo ausente, leitura recusada, JSON inválido ou formato desconhecido. Caminhos, conteúdo dos arquivos e mensagens de exceção continuam privados. A nova execução no Console permanece pendente; não recriar vínculo nem alterar storage com base apenas no erro genérico.
 
+Na execução seguinte, o usuário informou `READ_CONFIRMED_LINK / LINKS_FILE_MISSING`. Ao atualizar as referências, foi identificada a OPS-01 já integrada em `main@9aa02f2`: seu caminho padrão usa o volume Railway, enquanto o comando antigo resolvia `.ifood-links` pelo diretório atual. O comando passa a carregar `config.linksDir` do código efetivamente instalado no serviço, sem procurar sessões alternativas ou alterar storage. A diferença pode explicar o arquivo não encontrado; a presença do vínculo no caminho efetivo ainda depende da próxima execução. Se continuar ausente, verificar o fluxo humano Conectar → Confirmar no bot e a persistência OPS-01 antes de prosseguir.
+
+**Atualização de escopo:** DEC-01 foi integrada via PR #25 e adota sacola simulada, com MCP somente leitura e zero chamadas de escrita. Ela substitui o plano condicional de preparação de carrinho acima: não executar createCart, alterações de carrinho, pagamento ou submitOrder. O inventário de F7 permanece histórico; não exigir mutações reais para validar a demo agora aprovada. As amostras autenticadas autorizadas devem se limitar às leituras necessárias à demo.
+
 ## Reuso e dependências de integração
 
 - Reaproveitar gateway exclusivo, catálogo/getItem, validação de configuração, referências opacas, projeção e validação de totais e invalidação de revisão. Manter regressões F7.

@@ -1,5 +1,6 @@
 # Executar na pasta da API pelo Console autenticado da Railway. Não imprime credenciais.
-node --input-type=module <<'INT01_PROBE'
+node --import tsx --input-type=module <<'INT01_PROBE'
+import { config } from './src/server/config.ts';
 // Consulta de metadados para execução manual no Console autenticado da Railway.
 // Não refresca tokens, não grava storage, não chama tools/call e não devolve dados da conta.
 import { readFile } from 'node:fs/promises';
@@ -142,5 +143,5 @@ export async function runConsoleProbe(options = {}) {
     }
 }
 
-console.log(JSON.stringify(await runConsoleProbe()));
+console.log(JSON.stringify(await runConsoleProbe({ env: { ...process.env, IFOOD_LINKS_DIR: config.linksDir } })));
 INT01_PROBE
