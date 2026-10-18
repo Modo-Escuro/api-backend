@@ -3,7 +3,9 @@ import { randomUUID } from 'node:crypto';
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { describe, expect, it, vi } from 'vitest';
 import { cartGateway } from '../../src/server/mcp/cart';
-import { parseSnapshot } from '../../src/server/cart/contracts';
+import { WRITES, parseSnapshot } from '../../src/server/cart/contracts';
+import { callReadTool } from '../../src/server/mcp/tools';
+import { loadConfig } from '../../src/server/config';
 import { ORG_A, connectAndConfirm } from '../helpers/fakes';
 import { ADDRESS_ID, cartSetup, chosenItem } from './fakes';
 
@@ -17,6 +19,30 @@ async function ready() {
   const cart = await f.carts.createCart(ORG_A, input);
   return { ...f, linkId, item, input, cart };
 }
+
+describe('INT-01 integrada à main: fronteira de leitura da DEC-01', () => {
+  it('configuração padrão e rota F7 desativada não iniciam criação remota', async () => {
+    expect(loadConfig({}).cartEnabled).toBe(false);
+    const f = cartSetup(false);
+    const response = await f.call('POST', '/api/bot/cart', {
+      linkId: 'synthetic-link-reference', requestId: randomUUID(),
+      items: [chosenItem('synthetic-item-reference')],
+    });
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ error: { kind: 'CART_FEATURE_DISABLED' }, purchaseAuthorized: false });
+    expect(f.fake.call).not.toHaveBeenCalled();
+  });
+
+  it('pipeline de leitura rejeita todas as mutações F7 e envio antes de obter resposta do MCP', async () => {
+    const callTool = vi.fn();
+    const client = { callTool } as unknown as Client;
+    // eslint-disable-next-line no-restricted-syntax -- Nome adversarial: verificar rejeição, nunca executar envio.
+    for (const tool of [...WRITES, 'submitOrder']) {
+      await expect(callReadTool(tool, {}, client)).rejects.toThrow(/não permitida/);
+    }
+    expect(callTool).not.toHaveBeenCalled();
+  });
+});
 
 describe('INT-01: saída desconhecida não confirma escrita', () => {
   it.each([undefined, null, {}, 'OK', { queued: true }, { success: 'true' },

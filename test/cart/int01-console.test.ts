@@ -14,8 +14,9 @@ describe('INT-01: consulta manual pelo Console, sem SSH nem mutações', () => {
     const js = ts.transpileModule(readFileSync('scripts/int01-console-probe.ts', 'utf8'), {
       compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.ESNext },
     }).outputText;
-    const command = readFileSync('docs/int-01-console-command.sh', 'utf8');
-    expect(command).toContain(js);
+    // O checkout Windows pode converter LF para CRLF; a comparação é do código gerado.
+    const command = readFileSync('docs/int-01-console-command.sh', 'utf8').replace(/\r\n/g, '\n');
+    expect(command).toContain(js.replace(/\r\n/g, '\n'));
     expect(command).toContain("import { config } from './src/server/config.ts'");
     expect(command).toContain('IFOOD_LINKS_DIR: config.linksDir');
   });
@@ -80,5 +81,21 @@ describe('INT-01: consulta manual pelo Console, sem SSH nem mutações', () => {
     const result = await runConsoleProbe({ env, readText, now: () => now, connect: async () => client });
     expect(result).toMatchObject({ stage: 'LIST_TOOLS', reason: 'PROBE_FAILED_NO_PRIVATE_DETAILS' });
     expect(JSON.stringify(result)).not.toMatch(/private-provider-response|secret-cursor/);
+  });
+
+  it('metadados que anunciam mutações não autorizam tools/call', async () => {
+    const client = {
+      // eslint-disable-next-line no-restricted-syntax -- Metadados sintéticos; tools/call deve permanecer sem chamadas.
+      listTools: vi.fn().mockResolvedValue({ tools: ['createCart', 'setCartPayment', 'submitOrder'].map((name) => ({
+        name, inputSchema: { properties: {} }, annotations: { readOnlyHint: false },
+      })) }),
+      callTool: vi.fn(), close: vi.fn().mockResolvedValue(undefined),
+    };
+    const result = await runConsoleProbe({ env, readText, now: () => now, connect: async () => client });
+    expect(result).toMatchObject({ status: 'OBSERVED_METADATA', businessToolsCalled: false, outputResponsesCaptured: false });
+    // eslint-disable-next-line no-restricted-syntax -- Apenas conferir os nomes listados, sem executá-los.
+    expect(result.tools?.map((tool) => tool.name)).toEqual(['createCart', 'setCartPayment', 'submitOrder']);
+    expect(client.callTool).not.toHaveBeenCalled();
+    expect(client.close).toHaveBeenCalledOnce();
   });
 });

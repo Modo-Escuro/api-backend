@@ -1,8 +1,10 @@
 # INT-01 — Auditoria F7 e contrato externo
 
-Conferência em **18/10/2026**. Base auditada: `feat/f7-cart-checkout@b08957d`, PR [#4](https://github.com/Modo-Escuro/api-backend/pull/4), incluindo `33f591e`/`main@686300d`. Este incremento reaproveita F7 e corrige a confirmação de respostas desconhecidas; não incorpora F7 à main nem habilita carrinho, aprovação ou envio.
+Conferência em **18/10/2026**. Base original auditada: `feat/f7-cart-checkout@b08957d`, PR [#4](https://github.com/Modo-Escuro/api-backend/pull/4), incluindo `33f591e`/`main@686300d`. A F7 já foi incorporada à main. O PR [#24](https://github.com/Modo-Escuro/api-backend/pull/24) incorpora agora `main@30a650d` (incluindo API-01, OPS-01, DEC-01 e a infraestrutura RUN-01), preservando os commits da auditoria. Corrige a confirmação de respostas desconhecidas sem habilitar carrinho, aprovação ou envio reais.
 
-**Estado da tarefa: auditoria offline entregue; validação autenticada de saídas e definição do ambiente/fechamento pendentes. Não encerrar INT-01 como integração validada.** DEC-01 [#5](https://github.com/Modo-Escuro/api-backend/issues/5) continuava aberta na consulta desta sessão, sem decisões novas registradas no corpo/comentários consultados. O usuário informou que a API está online; isso não define operações de preparação autorizadas nem fornece uma sessão iFood para este checkout.
+**Estado da tarefa: auditoria offline entregue; integração externa não validada. Não encerrar INT-01 por este merge.** A [DEC-01](decisoes-conversacionais.md), adotada em 18/10/2026, define sacola simulada, aprovação fictícia e MCP somente leitura. `IFOOD_CART_ENABLED=false` deve ser preservado: não executar `createCart`, mutações de carrinho, pagamento ou envio para obter evidência. A demo termina em **SACOLA SIMULADA APROVADA — PEDIDO NÃO ENVIADO**, com aprovação presa à versão e ao hash; esse fluxo ainda depende da implementação de domínio e aprovação simulada.
+
+As saídas reais de F7 e sua reconciliação continuam lacunas registradas para uma evolução futura. Não são uma exigência de executar escritas na demo. O campo `f7GatewayAllowed` do inventário descreve a capacidade do adaptador legado, **não autorização de uso na demo**. O probe manual só inicializa o protocolo e consulta `tools/list`; não chama ferramentas de negócio, mesmo quando lista nomes de escrita.
 
 ## Fontes e níveis de evidência
 
@@ -66,20 +68,20 @@ A correção valida a confirmação antes de DONE no serviço e no gateway, exig
 | Mutação com confirmação reconhecida, getCart seguinte falha | F7 guarda DONE antes da leitura e replay só consulta | Preservar a intenção e recuperar leitura; não repetir escrita; aceitação do formato depende de validação real |
 | Mutação sem confirmação | Nem snapshot posterior nem retryable provam que não haverá efeito tardio | Manter RESULT_UNKNOWN, bloquear novas escritas e reconciliar por mecanismo verificado |
 | Submissão sem orderId/resposta | getOrder/trackOrder precisam de ID já conhecido; captura não expõe busca por requestId/intenção | BUY-02 permanece bloqueada sem correlação/idempotência/consulta confiáveis ou procedimento humano rastreável definido com provedor |
-| Submissão com orderId e status verificáveis | Ainda faltam output/status reais e decisão DA10 | Só afirmar estágio comprovado por fonte confiável; não tratar pedido criado como pagamento |
+| Submissão com orderId e status verificáveis | Faltam output/status reais; envio está fora da DEC-01 vigente | Só afirmar estágio comprovado por fonte confiável numa evolução autorizada; não tratar pedido criado como pagamento |
 
 O universo investigado foi a captura de 23 tools, o documento local e o código/testes F7. **Não encontrar mecanismo nesse universo não prova ausência na plataforma.** Perguntar ao provedor sobre chave de idempotência, retenção, conteúdo conflitante, status por chave de requisição, consulta de criação/submissão sem ID, garantias de consistência/efeito tardio e procedimento de reconciliação.
 
-DA10 deve nomear o estágio final e sua evidência: se sacola, cartId + estado/totais observados; se pedido, orderId + estado aceito verificado; se pagamento, evidência específica de pagamento. São critérios condicionais para validação, não decisões aprovadas nem contrato externo observado. INT-01 nunca chama submit para produzir essa evidência. Em BUY-02/QA-01, ensaio de envio exige revisão humana específica e ambiente autorizado.
+A DEC-01 D8 resolve DA10 para o evento: o fechamento é uma sacola **simulada**, aprovada pelo organizador na versão e no hash atuais, sem `cartId` remoto ou pagamento real. Mudança invalida a aprovação. QA-01 deve comprovar esse resultado e zero chamadas MCP de escrita (D10). A aprovação fictícia não pode usar `/purchase-approvals`, cujo contrato exige total remoto confirmado. Cartão, carrinho e envio reais exigiriam nova decisão de escopo, contratos observados, persistência de intenções, aprovação humana específica e reconciliação; não estão autorizados por este relatório.
 
-## Próximo ensaio autenticado (pendente)
+## Próximo ensaio autenticado de metadados/leitura (pendente)
 
-1. Confirmar ambiente/organizador/limites em DEC-01 e preservar vínculo antes de qualquer redeploy (OPS-01). O checkout de auditoria não possui configuração de sessão iFood/BOT_API_TOKEN; não copiar segredos para o chat/Git.
+1. Aplicar os limites já adotados na DEC-01 e preservar vínculo antes de qualquer redeploy (OPS-01). Este checkout de auditoria não possui sessão iFood/BOT_API_TOKEN; não copiar segredos para o chat/Git. Não habilitar F7.
 2. Usar a sessão do vínculo correto, sem fallback OAuth global. Revalidar tools/list com paginação e comparar nomes/inputs/outputs com o inventário. Metadados não são execução.
-3. Apenas leituras autorizadas e com IDs já conhecidos: obter contrato observado do getCart e listas necessárias. Se ainda não existe cartId, solicitar autorização explícita da preparação mínima antes de criar carrinho; não fabricar IDs nem ativar F7 em produção para contornar falta de contrato.
-4. Para obter amostra de criação/seleção, executar apenas a operação de preparação nomeada e permitida pelo ambiente. Conferir getItem/configuração e listagens anteriores. Sem setPayment/cupom por suposição e sem submitOrder nesta tarefa.
+3. Numa validação separada do probe, limitar chamadas de negócio às leituras do catálogo necessárias à demo e permitidas pelo pipeline existente. Preservar `listAddresses` antes da entrega e `getItem` antes de recomendar; o probe não faz essas chamadas. Não consultar carrinho/pagamento/pedido como forma de descobrir IDs.
+4. Não criar nem alterar carrinho para gerar amostras. As saídas F7 da matriz continuam `NOT_CAPTURED`, e as lacunas de reconciliação continuam abertas. Uma futura integração real requer nova decisão e ensaio próprio; não ampliar este ensaio por causa de metadados ou escopos disponíveis.
 5. Inspecionar outputs no canal privado e produzir fixture sanitizada com transformação registrada: remover credenciais/PAN/CVV/documentos, endereço, conta, notas e dados pessoais; substituir IDs por UUIDs sintéticos consistentes quando necessário. Registrar tipos, unidades, enums não privados, sucesso/erro e origem da transformação, preservando distinção entre captura sanitizada e fixture inventada. Não publicar saída privada bruta.
-6. Ajustar parsers somente com essa evidência, rodar fixtures reais sanitizadas e regressões e atualizar a coluna O. Confirmar mecanismo de reconciliação e resposta do provedor para lacunas. Se insuficiente, manter bloqueio e a tarefa pendente.
+6. Ajustar parsers somente com evidência correspondente à operação observada e rodar fixtures sanitizadas e regressões. Não promover saída sintética nem metadados a resposta de negócio. Registrar o mecanismo de reconciliação quando houver resposta verificável do provedor; até lá, manter o bloqueio e a lacuna explícita.
 
 O usuário prefere operar o navegador: login e inspeção do painel ficam com ele. O healthcheck público foi a única chamada à API de aplicação nesta auditoria; não houve leitura de endereço, pagamento, pedido ou token iFood, nem chamada real de carrinho/MCP. A atualização de acesso Railway está registrada abaixo.
 
@@ -108,12 +110,28 @@ Com o comando que carrega a configuração do serviço, o usuário voltou a info
 
 ## Reuso e dependências de integração
 
-- Reaproveitar gateway exclusivo, catálogo/getItem, validação de configuração, referências opacas, projeção e validação de totais e invalidação de revisão. Manter regressões F7.
-- OPS-01 preserva vínculo; DATA-01/RUN-01/CART-01 persistem intents, carrinhos, estado desconhecido, referências, versões e evidência. GRP-01 fornece elegibilidade por pessoa/configuração. Referência de catálogo não a substitui.
-- Adaptar endpoints/revisões F7 ao [contrato API-01 v1](https://github.com/Modo-Escuro/api-backend/blob/6ce3d99/docs/conversation-api-v1.md) na integração. Esta branch de auditoria parte de F7, não incorpora o commit da API-01. Não confundir revisão informativa antiga com referência humana de uso único.
-- BUY-01 autoriza por callback autenticado + revisão/conta/total/validade, atomicamente com intenção; BUY-02 depende de contrato externo e reconciliação. Sem evidência para recuperação sem ID, envio continua bloqueado. QA-01 verifica o estágio final escolhido em DA10.
+- Reaproveitar catálogo/getItem, validação de configuração e origem de referências na demo, preservando elegibilidade por pessoa. Manter regressões do gateway e serviço F7 offline, sem conectá-los à sacola simulada.
+- OPS-01 tem código de persistência de vínculos; RUN-01 tem infraestrutura de turnos duráveis, ainda sem processador DATA/IA instalado. Não comprovam persistência de carrinhos, modelo de grupo, retenção D7 ou recuperação externa. DATA-01 e GRP-01 continuam responsáveis pelo estado/elegibilidade por pessoa da demo. Referência de catálogo não comprova segurança alimentar.
+- A branch incorpora agora o [contrato API-01 v1](conversation-api-v1.md). Revisão informativa F7 não é aprovação humana de uso único. A simulação exige contrato explícito de revisão/aprovação simulada conforme D8; não reutilizar a rota real `/purchase-approvals`.
+- BUY-01 deve vincular a aprovação simulada à versão/hash e invalidá-la em mudança. CART-01 e BUY-02 reais ficam fora da demo adotada; contratos externos e reconciliação permanecem requisitos de uma evolução. QA-01 deve validar a simulação e zero escritas.
 
-## Verificações executadas e aceite
+## Validação da integração sobre main — 18/10/2026
+
+Windows, Node **24.13.0**, dependências instaladas com `npm ci --ignore-scripts`, lockfile da main preservado.
+
+| Verificação | Resultado |
+| --- | --- |
+| `npm test -- --reporter=json --outputFile=.int01-test-results.json` | **474 passaram, 2 ignorados** (testes POSIX), 476 no total; zero falhas |
+| `npm run typecheck` | passou |
+| `npm run lint` | passou |
+| `npm run build` | passou |
+| `git diff --check` | passou |
+
+A primeira execução no sandbox teve erros `EPERM` ao gravar os temporários de persistência; a execução completa acima passou com acesso adequado aos temporários. A comparação do comando gerado foi corrigida para normalizar LF/CRLF, mantendo a verificação do código. Três novas regressões confirmam: F7 padrão/desligada não cria carrinho na rota; o pipeline somente leitura recusa todas as mutações F7 e envio antes de chamar o MCP; listar metadados de escrita não executa `tools/call` no probe. Os erros desconhecidos, isolamento, contratos API-01 e turnos RUN-01 são exercitados na mesma suíte.
+
+Nenhum login, leitura de credenciais pessoais, alteração de variável Railway, ensaio autenticado MCP ou operação de negócio externa foi executado nesta preparação. A CI da branch deverá confirmar a matriz Windows/Linux e Node 22.13/24 após a publicação; não confundir o resultado local com CI ou integração real.
+
+## Verificações históricas da auditoria original
 
 Windows, Node 24.19.0, dependências do mesmo `package-lock.json` de F7 reutilizadas do clone isolado:
 
@@ -136,8 +154,8 @@ Não foi executada CI/Linux, login iFood, captura autenticada de saída, mutaç�
 - [x] Matriz separa documentado, input capturado, simulado e observado nesta auditoria.
 - [x] Saídas desconhecidas bloqueiam confirmação da escrita; flag e checkout permanecem desabilitados.
 - [x] Lacunas de recuperação sem ID registradas; resultado desconhecido não é limpo por leitura.
-- [x] Plano relaciona gatilho de fechamento a DA10 e dependências para integrar F7.
-- [ ] Saídas autenticadas por operação capturadas/sanitizadas e parsers validados com elas.
-- [ ] Contrato/mecanismo de reconciliação e ambiente/limites confirmados; DA10 aceita.
+- [x] DEC-01 adotada; gatilho de fechamento simulado e fronteira somente leitura explicitados.
+- [ ] Evidência autenticada das leituras necessárias à demo, com fixtures sanitizadas correspondentes.
+- [ ] Saídas F7 e mecanismo de reconciliação validados para uma futura integração real, fora da demo atual.
 
-Os dois itens finais impedem declarar INT-01 concluída. Este relatório e a correção são uma entrega parcial revisável.
+Os itens de evidência continuam pendentes; este PR é uma entrega parcial revisável, sem encerrar INT-01 nem autorizar escrita para resolvê-los. Saídas de carrinho real não são gate de execução da sacola simulada.
