@@ -110,4 +110,17 @@ CI adicionada para Windows/Ubuntu e Node 22.13/24. Os testes específicos usam S
 
 Validação local em 18/10/2026, Windows/Node 24.13, após incorporar `main@9aa02f2`: **440 testes TypeScript passaram**, incluindo 35 da RUN-01; dois testes POSIX de permissões da OPS-01 foram omitidos no Windows, conforme a condição já existente nessa base. Typecheck, lint e build passaram. Os seis testes Python de conformidade da API-01 também passaram. O resultado da matriz de CI deve ser conferido na PR. Não houve merge na main, deploy, mudança de variáveis Railway nem ensaio com conta real.
 
+Validação integrada em 18/10/2026, Linux/Node 22.23, sobre `main@dc448f9` (AI-01 #36 + DATA-01 + GRP-01):
+
+- `test/turns/run01-integrated.test.ts`: morte real do processo com o **processador da AI-02** (Gemini com transporte
+  sintético) sobre o domínio da DATA-01 nas etapas aceite, execução (modelo em voo) e commit. O reinício recupera a mesma
+  operação e aplica uma vez; a leitura retomada chama o modelo de novo, e resultado já gravado não chama. Busca GRP-01
+  lenta × correção de teto na mesma versão: a correção vence e a busca termina `STALE_VERSION`.
+- Ensaio de processo real (API em execução, adaptador do bot simulado por HTTP, Gemini real, dados sintéticos, banco em
+  diretório dedicado 700/600): 202 após commit; replay idêntico → 200 com a mesma operação; mesmo `eventId` com outro
+  texto → 409 `EVENT_CONFLICT`; `kill -9` com o turno `RUNNING` → retomado após o lease (18 s, 2 tentativas, uma
+  aplicação, alergia preservada, teto R$ 150); `kill -9` após o commit → snapshot idêntico, sem nova execução; versão
+  antiga → 409 `STALE_VERSION`; "pode pedir" sem aprovação; `quick_check ok`; logs sem texto, identidade ou segredo.
+- Não executado: bot Telegram real (exige o único worker de polling e token do bot) e volume Railway (OPS-01).
+
 Para entrega operacional completa: instalar o processador AI-02 (modelo da AI-01) sobre o domínio da DATA-01, concluir OPS-01 com volume/recuperação verificados e ensaiar o bot via RUN-01. Manter zero escrita MCP, conforme DEC-01. Aprovação simulada exige ajuste explícito do contrato e suas tarefas; escrita real está fora dessa demo. Esses trabalhos não são marcados como concluídos pelos testes da infraestrutura.
