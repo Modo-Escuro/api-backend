@@ -2,7 +2,7 @@
 import type { Snapshot } from '../contracts/conversation.js';
 import type { DomainOp, PurchaseState } from '../domain/purchase.js';
 import type { AgentProposal } from './model.js';
-import { missingQuestions } from './policy.js';
+import { MAX_PLAUSIBLE_LIMIT_CENTS, missingQuestions } from './policy.js';
 
 /** Uma negativa responde apenas à pergunta canônica atualmente exibida. */
 export function restrictionQuestionTarget(state: PurchaseState | null, snapshot: Snapshot) {
@@ -56,6 +56,27 @@ export function shortReply(state: PurchaseState | null, snapshot: Snapshot, mess
   if (human) return { proposal: { actions: [] }, policyMessage: message, human };
   const text = message.normalize('NFD').replace(/\p{M}/gu, '').trim().toLowerCase();
   const reply = (note: string) => ({ proposal: { actions: [] }, policyMessage: message, note });
+  // Valores e qualificadores curtos só respondem ao orçamento atual exibido.
+  if (state?.status === 'ACTIVE' && snapshot.phase === 'COLLECTING'
+    && JSON.stringify(snapshot.pending) === JSON.stringify(missingQuestions(state))) {
+    const first = snapshot.pending[0];
+    const pendingLimit = state.clarifications.find(c => c.target === 'GROUP' && c.field === 'LIMIT' && c.question === first);
+    const candidate = pendingLimit && /^R\$ (\d+)[.,](\d{2}) para o grupo é um teto máximo ou só uma referência\?$/.exec(pendingLimit.question);
+    const askingBudget = first === 'Qual é o orçamento do grupo?' || first === 'Qual é o seu orçamento?'
+      || first === 'Qual é o teto de gastos do grupo? É um valor máximo ou só uma referência?' || !!candidate;
+    if (askingBudget) {
+      const kindOnly = /^(?:valor |teto )?maximo[.!]?$/.test(text) ? 'MANDATORY'
+        : /^(?:(?:so |uma |so uma |valor de )?referencia)[.!]?$/.test(text) ? 'PREFERENCE' : undefined;
+      const amount = /^(?:r\$\s*)?(\d{1,6})(?:[.,](\d{1,2}))?(?:\s*reais)?(?:\s+(valor maximo|teto maximo|maximo|referencia|valor de referencia))?[.!]?$/.exec(text);
+      const amountCents = amount ? Number(amount[1]) * 100 + Number((amount[2] ?? '').padEnd(2, '0'))
+        : candidate && kindOnly ? Number(candidate[1]) * 100 + Number(candidate[2]) : null;
+      if (amountCents !== null && amountCents <= MAX_PLAUSIBLE_LIMIT_CENTS) {
+        const kind = amount ? (amount[3]?.includes('maximo') ? 'MANDATORY' : amount[3] ? 'PREFERENCE' : undefined) : kindOnly;
+        return { proposal: { actions: [{ action: 'SET_LIMIT', target: 'GROUP', amountCents, ...(kind ? { kind } : {}) }] }, policyMessage: message };
+      }
+      if (kindOnly) return reply('Qual valor você quer usar como orçamento?');
+    }
+  }
   const newQuery = /^(?:troca|troque|muda|mude) (?:por|para) (.{1,80}?)[.!]?$/iu.exec(message.trim());
   if (newQuery) return { proposal: { actions: [{ action: 'SUGGEST_PROPOSALS', query: newQuery[1]! }] }, policyMessage: message };
   if (/^(oi|ola|bom dia|boa tarde|boa noite|vamos comecar)[!.?]*$/.test(text)) {

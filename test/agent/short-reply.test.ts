@@ -14,6 +14,32 @@ function setup() {
   return { state, snapshot: renderSnapshot(base, state, [], missingQuestions(state)) };
 }
 describe('resposta curta vinculada à pergunta exibida', () => {
+  it('guarda 60 reais, preserva a pergunta após reinício e aceita valor máximo sem repetir o valor', () => {
+    let { state } = setup();
+    state = applyPatch(state, state.participants.map(p => ({ op: 'SET_RESTRICTIONS' as const, participantId: p.participantId, value: 'NONE' as const })), ctx).state;
+    const turn = (message: string) => {
+      const snapshot = renderSnapshot(base, state, [], missingQuestions(state));
+      const direct = shortReply(state, snapshot, message)!;
+      expect(direct).not.toBeNull();
+      const plan = planActions(state, direct.proposal, change => change.ops.length ? applyPatch(state, change.ops, ctx).state : state, null, direct.policyMessage);
+      state = JSON.parse(JSON.stringify(applyPatch(state, plan.ops, ctx).state));
+    };
+    turn('60 reais');
+    expect(state.groupLimit.state).toBe('UNCLEAR');
+    expect(missingQuestions(state)[0]).toBe('R$ 60.00 para o grupo é um teto máximo ou só uma referência?');
+    turn('valor máximo');
+    expect(state.groupLimit).toMatchObject({ state: 'DECLARED', value: { amountCents: 6000, kind: 'MANDATORY' } });
+    expect(state.clarifications).toEqual([]);
+    expect(missingQuestions(state)[0]).toContain('economia ou rapidez');
+  });
+
+  it('não interpreta valores fora da pergunta de orçamento ou usa candidato de outra pessoa', () => {
+    const { state, snapshot } = setup();
+    expect(shortReply(state, snapshot, '60 reais')).toBeNull();
+    const unclear = applyPatch(state, [{ op: 'MARK_UNCLEAR', target: state.participants[0]!.participantId,
+      field: 'LIMIT', question: 'R$ 60,00 para Bruna é um teto máximo ou só uma referência?' }], ctx).state;
+    expect(shortReply(unclear, renderSnapshot(base, unclear, [], missingQuestions(unclear)), 'valor máximo')).toBeNull();
+  });
   it('Não/Nao/nenhuma responde somente à primeira pessoa ainda não perguntada', () => {
     const { state, snapshot } = setup();
     for (const message of ['Não', 'Nao', 'nenhuma.', 'não tenho', 'Não tenho restrições', 'não tenho nenhuma alergia.']) {
