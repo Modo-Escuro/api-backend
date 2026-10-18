@@ -1,5 +1,8 @@
 # Documentação da API
 
+[Acesso por senha no bot](acesso-bot-senha.md): opt-in para usuários admitidos pelo adaptador autenticado,
+com vínculos isolados e sem ampliar a fronteira de compra da DEC-01.
+
 1. [Plano e tasks](plano-conversacional.md): estado das branches, prioridades, gates e responsabilidades.
 2. [Contrato do bot](bot-api.md): login existente e avaliação; [conversa v1](conversation-api-v1.md) e [runtime RUN-01](runtime-turnos.md) opt-in, ainda sem processador DATA/IA instalado.
 3. [Revisão da branchBruna](reviews/branchBruna-8393615.md): achados e reproduções sobre o commit 8393615.

@@ -15,6 +15,8 @@ export interface AppConfig {
   botApiToken: string | undefined;
   /** IDs numéricos do Telegram autorizados como organizador. */
   allowedOrganizerIds: string[];
+  /** Acesso da demo por senha validada pelo bot autenticado; não é acesso HTTP anônimo. */
+  botPasswordAccess?: boolean;
   /** Diretório dos vínculos Telegram↔iFood (metadados + tokens; fora do Git). */
   linksDir: string;
   /** Durabilidade do diretório de vínculos, inferida da plataforma (OPS-01). */
@@ -86,6 +88,9 @@ export function resolveLinksStorage(env: NodeJS.ProcessEnv): { dir: string; stor
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
+  if (env.BOT_PASSWORD_ACCESS_ENABLED && !['true', 'false'].includes(env.BOT_PASSWORD_ACCESS_ENABLED)) {
+    throw new Error('BOT_PASSWORD_ACCESS_ENABLED deve ser true ou false.');
+  }
   let conversationRuntime: AppConfig['conversationRuntime'];
   if (env.CONVERSATION_RUNTIME_ENABLED === 'true') {
     const botId = env.BOT_TELEGRAM_ID ?? '';
@@ -114,6 +119,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       .split(',')
       .map((s) => s.trim())
       .filter((s) => /^[1-9][0-9]{0,19}$/.test(s)),
+    botPasswordAccess: env.BOT_PASSWORD_ACCESS_ENABLED === 'true',
     linksDir: links.dir,
     linksStorage: links.storage,
     publicBaseUrl: (env.PUBLIC_BASE_URL || `http://localhost:${Number(env.PORT || 8000)}`).replace(/\/$/, ''),

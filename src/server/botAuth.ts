@@ -9,13 +9,14 @@ import type { Context, MiddlewareHandler } from 'hono';
 export interface BotAuthConfig {
   token: string | undefined;
   allowedOrganizerIds: string[];
+  passwordAccess?: boolean;
 }
 
 const digest = (s: string) => createHash('sha256').update(s).digest();
 
 export function botAuth(cfg: BotAuthConfig): MiddlewareHandler<{ Variables: { organizerId: string } }> {
   return async (c, next) => {
-    if (!cfg.token || cfg.allowedOrganizerIds.length === 0) {
+    if (!cfg.token || (!cfg.passwordAccess && cfg.allowedOrganizerIds.length === 0)) {
       return c.json({ error: { kind: 'BOT_API_NOT_CONFIGURED', message: 'Integração com o bot não configurada no backend' } }, 503);
     }
     const header = c.req.header('authorization') ?? '';
@@ -27,7 +28,8 @@ export function botAuth(cfg: BotAuthConfig): MiddlewareHandler<{ Variables: { or
     if (!/^[1-9][0-9]{0,19}$/.test(id)) {
       return c.json({ error: { kind: 'ORGANIZER_REQUIRED', message: 'X-Telegram-User-Id ausente ou inválido' } }, 400);
     }
-    if (!cfg.allowedOrganizerIds.includes(id)) {
+    const passwordUser = cfg.passwordAccess === true && c.req.header('x-telegram-access') === 'PASSWORD';
+    if (!passwordUser && !cfg.allowedOrganizerIds.includes(id)) {
       return c.json({ error: { kind: 'ORGANIZER_NOT_ALLOWED', message: 'Organizador não autorizado' } }, 403);
     }
     c.set('organizerId', id);
