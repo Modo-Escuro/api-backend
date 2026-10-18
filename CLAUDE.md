@@ -87,6 +87,6 @@ fixtures/             # respostas reais salvas p/ testes offline
 
 ## F7 — Carrinho isolado (exceção autorizada ao escopo original)
 - Contrato e limites: `docs/f7-cart-checkout.md`; bot: `docs/bot-api.md` seção 10.
-- `IFOOD_CART_ENABLED=false` por padrão: não habilitar em conta real antes de validar saídas e integrar #2/#3.
+- `IFOOD_CART_ENABLED=false` por padrão: não habilitar em conta real antes de validar as saídas reais do MCP. As correções #2/#3 já foram incorporadas de origin/main.
 - Não usar sessão global, não repetir escritas com resultado desconhecido e não habilitar submitOrder.
 - Entradas reais em `fixtures/tools-list.json`; saídas de cart ainda não capturadas, testes explicitamente sintéticos.

@@ -4,6 +4,8 @@ import { vi } from 'vitest';
 import { IfoodAuth } from '../../src/server/auth';
 import { createApp } from '../../src/server/app';
 import { CartService } from '../../src/server/cart/service';
+import type { CallOptions } from '../../src/server/mcp/tools';
+import type { LatLng, SearchOffersArgs } from '../../src/server/mcp/types';
 import type { CartTool, Snapshot } from '../../src/server/cart/contracts';
 import { IfoodLinkService } from '../../src/server/links/service';
 import { BOT_TOKEN, ORG_A, setup } from '../helpers/fakes';
@@ -15,7 +17,7 @@ export const OPTION_ID = '44444444-4444-4444-8444-444444444444';
 export const PAYMENT_ID = '55555555-5555-4555-8555-555555555555';
 export const CARD_TOKEN = '66666666-6666-4666-8666-666666666666';
 export const CAMPAIGN_ID = '77777777-7777-4777-8777-777777777777';
-const DETAIL = { itemId: ITEM_ID, merchantId: MERCHANT_ID, itemName: 'Item sintético', merchantName: 'Loja sintética',
+export const DETAIL = { itemId: ITEM_ID, merchantId: MERCHANT_ID, itemName: 'Item sintético', merchantName: 'Loja sintética',
   optionGroups: [{ optionGroupId: '88888888-8888-4888-8888-888888888888', minSelections: 1, maxSelections: 1,
     options: [{ optionId: OPTION_ID, name: 'Tamanho sintético', additionalPrice: 0 }] }] };
 
@@ -64,12 +66,17 @@ export function cartSetup(enabled = true) {
   env.as.scope += ' mcp.cart.read mcp.cart.write mcp.cart.payment';
   env.mcp.addresses = [{ addressId: ADDRESS_ID, coordinates: { latitude: -1, longitude: -2 } }];
   const fake = new FakeCart();
+  const reads = {
+    searchOffers: vi.fn(async (_args: SearchOffersArgs, _opts: CallOptions) => ({ results: [{ itemId: ITEM_ID, merchant: { merchantId: MERCHANT_ID } }] })),
+    getItem: vi.fn(async (args: { itemId: string; merchantId: string; userLocation: LatLng }, _opts: CallOptions) => ({ ...structuredClone(DETAIL), itemId: args.itemId, merchantId: args.merchantId })),
+  };
   const links = new IfoodLinkService({ cfg: env.cfg, fetchImpl: env.as.fetch, now: env.clock.now,
     sessionFactory: (auth) => {
       const base = env.mcp.factory(auth);
-      base.deps.searchOffers = async () => ({ results: [{ itemId: ITEM_ID, merchant: { merchantId: MERCHANT_ID } }] });
-      base.deps.getItem = async () => structuredClone(DETAIL);
-      return { ...base, cart: { call: async (tool, args) => fake.call(await auth.getAccessToken(), tool, args) } };
+      base.deps.searchOffers = reads.searchOffers;
+      base.deps.getItem = reads.getItem;
+      const sessionId = randomUUID(); // identidade da sessão permanece estável após refresh do token
+      return { ...base, cart: { call: async (tool, args) => { await auth.getAccessToken(); return fake.call(sessionId, tool, args); } } };
     } });
   env.links = links;
   const carts = new CartService(links, enabled, env.clock.now);
@@ -77,6 +84,6 @@ export function cartSetup(enabled = true) {
   const call = (method: string, path: string, body?: unknown, org = ORG_A, token = BOT_TOKEN) => app.request(path, {
     method, headers: { 'content-type': 'application/json', authorization: `Bearer ${token}`, 'x-telegram-user-id': org },
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}) });
-  return { env, carts, fake, app, call };
+  return { env, carts, fake, reads, app, call };
 }
 export const chosenItem = (itemRef: string) => ({ itemRef, quantity: 1, options: [{ optionId: OPTION_ID, quantity: 1 as const }] });

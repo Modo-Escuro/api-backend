@@ -42,8 +42,7 @@ o adaptador. Totais BRL completos, finitos, não negativos e com precisão de ce
 `subtotal + deliveryFee + serviceFee - discount` deve coincidir com `total`. Ausência ⇒ `UNAVAILABLE` e valores
 `null`; divergência ⇒ `DIVERGENT` e revisão bloqueada. Não se completam componentes ausentes com zero.
 
-Por essas limitações e pelas issues de segurança pendentes, `IFOOD_CART_ENABLED=false` é o padrão. **Não habilitar
-em uma conta real até validar as respostas de saída e integrar as correções #2 e #3.** Essa flag não habilita checkout.
+Por essas limitações, `IFOOD_CART_ENABLED=false` continua sendo o padrão. **Não habilitar em uma conta real até validar as respostas de saída.** As correções relacionadas a #2/#3 já foram incorporadas de origin/main (20e46fd e 686300d). Essa flag não habilita checkout.
 
 ## Associação, proveniência e validação
 
@@ -65,7 +64,7 @@ em uma conta real até validar as respostas de saída e integrar as correções 
   todos os grupos realmente permitem isso. Informação ausente, nula ou inválida bloqueia a configuração.
 - Sessão de carrinho própria por vínculo, sem fallback global. O transporte não repete chamadas após 401.
   Estado do vínculo é rechecado antes/depois de cada tool; desconexão/troca de conta bloqueia acesso às referências
-  anteriores. Isso não corrige a corrida de confirmação da issue #2 nem desfaz uma mutação já enviada ao provedor.
+  anteriores. Token expirado no mesmo linkId provoca verificação/refresh antes de bloquear: erro temporário mantém UNAVAILABLE; refresh recusado exige reconexão. Isso não desfaz uma mutação já enviada ao provedor.
 
 ## Endpoints do Telegram
 
@@ -105,7 +104,7 @@ não comprova elegibilidade alimentar nem autorização de compra. Erros não de
 ## Concorrência, retries e resultado desconhecido
 
 Operações de F7 são serializadas por organizador. A chave `(organizador,linkId,requestId)` identifica a intenção;
-reutilizá-la com outro conteúdo gera `IDEMPOTENCY_CONFLICT`. Após sucesso conhecido, um retry só lê getCart.
+reutilizá-la com outro conteúdo gera `IDEMPOTENCY_CONFLICT`. Após sucesso conhecido, um retry só lê getCart. Há um único registro por requestId, marcado DONE imediatamente após a confirmação da tool, antes da leitura posterior. Entrega, pagamento e cupom usam a assinatura da escolha externa, sem registrar tokens de cartão. Retries de adicionar/atualizar itens consultam a intenção antes de validar novamente itemRef/getItem; a expiração do catálogo não impede reler uma escrita já confirmada.
 Falha da leitura posterior não repete a escrita. Não há retry automático, mesmo quando erro inline diz retryable.
 
 Após timeout/erro de transporte/erro inline de uma escrita, o resultado fica desconhecido de forma conservadora.
@@ -142,12 +141,9 @@ de F7 e o gateway de leitura rejeitam submitOrder em runtime; a regra de lint co
 
 ## Dependências de segurança e critérios antes de PR/checkout real
 
-- **#2 permanece pendente:** confirmação concorrente pode reinstalar vínculo após desconexão. A revisão-base já
-  contém regressões falhando e referências a `cancelAttempt` ausente. Não foi corrigida ou declarada integrada aqui.
-- **#3 permanece pendente:** filtro GLUTEN_FREE não prova segurança para alergia. O domínio de elegibilidade não
-  foi alterado. A referência de catálogo e a revisão de F7 mantêm `ELIGIBILITY_UNVERIFIED`; não autorizam consumo.
+- **Correções #2/#3 integradas:** origin/main foi incorporada à branch F7, incluindo 20e46fd e 686300d. O bloqueio fixo SECURITY_ISSUES_2_3_PENDING foi removido. A referência de catálogo e a revisão de F7 continuam com `ELIGIBILITY_UNVERIFIED`; não autorizam consumo nem compra.
 - Capturar/validar saídas reais por sessão de vínculo, sem realizar compra; ajustar parsers e sanitização.
-- Integrar as correções #2/#3, garantir elegibilidade rastreável por pessoa/opções e repetir regressões.
+- Garantir elegibilidade rastreável por pessoa/opções e manter os testes das correções de segurança.
 - Implementar armazenamento durável, reconciliação, expiração/limpeza, aprovação humana de uso único e proteção
   contra execução concorrente. Definir explicitamente semântica de idempotência e resultado desconhecido do submit.
 - Só então discutir habilitação de checkout, com revisão de segurança separada. **Nenhum PR/merge/push automático.**
@@ -158,3 +154,18 @@ de F7 e o gateway de leitura rejeitam submitOrder em runtime; a regra de lint co
 fluxo HTTP, entrega/pagamento/cupons, totais ausentes/divergentes, revisão invalidada, idempotência, timeout,
 falha de getCart depois de escrita, transporte sem replay 401 e submitOrder exclusivamente simulado.
 Comparação com a revisão-base e resultados completos estão em `docs/f7-validation.md`.
+
+
+## Catálogo parcial e limites de detalhamento (revisão do PR #4)
+
+Depois de listAddresses e searchOffers, o lote de getItem tem prazo total de 25 segundos, no máximo 3 chamadas
+simultâneas e 10 candidatos. Cada chamada recebe timeout de até 15 segundos, limitado ao prazo restante, e
+AbortSignal. O servidor também limita a espera local mesmo se o provedor ignorar o timeout; respostas tardias
+não publicam referências nem alteram o catálogo. Cancelamento remoto é melhor esforço. O orçamento de 25 segundos
+é da fase de detalhamento, não das verificações do vínculo, listAddresses ou searchOffers anteriores.
+
+A falha de um detalhe não elimina os outros. Itens válidos são publicados na ordem da listagem e acompanhados de
+`partial`, `errors: [{itemId,kind,code}]` e `details: {requested,detailed,failed,skippedDeadline,deadlineReached}`.
+Erros não carregam mensagens brutas do provedor. Falhas de credencial rejeitada encerram a operação de conta,
+em vez de oferecer um catálogo parcial usando uma sessão inválida. Se todos os detalhes falharem, a resposta
+é um catálogo vazio com partial=true e os erros correspondentes; nenhum itemRef é inventado para itens falhos.

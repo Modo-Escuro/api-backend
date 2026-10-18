@@ -8,6 +8,8 @@ import type { GetItemResult, LatLng } from '../mcp/types.js';
 import { CartError, confirmedTotals, deliveryList, id, parseItem, searchList, parseList, parseSnapshot, payload, paymentList, voucherList,
   type CartGateway, type CartTool, type ItemInput, type Snapshot } from './contracts.js';
 
+import { CATALOG_LIMITS, catalogDetails } from './catalog.js';
+
 const opaque = () => randomBytes(18).toString('base64url');
 const digest = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const TTL = 5 * 60_000;
@@ -43,12 +45,19 @@ export class CartService {
   }
 
   private async current(organizer: string, linkId: string): Promise<void> {
-    const status = await this.links.status(organizer);
-    if (status.linkId !== linkId || status.state !== 'CONNECTED' || !status.operational) {
+    let status = await this.links.status(organizer);
+    if (status.linkId === linkId && !status.operational && !status.attempt) {
+      // Expiração e falha temporária não significam troca de conta. verify usa a sessão
+      // do vínculo, renova o token se necessário e preserva UNAVAILABLE/RECONNECT_REQUIRED.
+      status = await this.links.verify(organizer);
+    }
+    if (status.linkId !== linkId || status.attempt || status.state === 'DISCONNECTED') {
       for (const [key, p] of this.products) if (p.organizer === organizer) this.products.delete(key);
       for (const cart of this.carts.values()) if (cart.organizer === organizer) { cart.review = null; cart.choices.clear(); }
-      throw new CartError('CART_LINK_CHANGED', 'A conta mudou ou deixou de estar operacional. Reconecte e monte novamente o carrinho.');
+      throw new CartError('CART_LINK_CHANGED', 'A conta mudou. Reconecte e monte novamente o carrinho.');
     }
+    if (status.state === 'RECONNECT_REQUIRED') throw new LinkError('IFOOD_RECONNECT_REQUIRED', 'A conexão com o iFood precisa ser refeita.', 409, status.state, status.reason);
+    if (status.state !== 'CONNECTED' || !status.operational) throw new LinkError('IFOOD_UNAVAILABLE', 'iFood indisponível no momento.', 503, status.state, status.reason);
   }
 
   private async run<T>(organizer: string, linkId: string, operation: Operation,
@@ -111,7 +120,7 @@ export class CartService {
       payment: snapshot?.paymentMethod ?? null, vouchers: snapshot?.vouchers ?? [],
       review: cart.review && Date.parse(cart.review.expiresAt) > this.now() ? cart.review : null,
       checkoutEnabled: false, purchaseAuthorized: false,
-      blockers: ['CHECKOUT_DISABLED', 'SECURITY_ISSUES_2_3_PENDING', 'ELIGIBILITY_UNVERIFIED',
+      blockers: ['CHECKOUT_DISABLED', 'ELIGIBILITY_UNVERIFIED',
         ...(cart.unknown ? ['RESULT_UNKNOWN'] : []), ...(money.status !== 'CONSISTENT' ? [`TOTALS_${money.status}`] : [])] };
   }
 
@@ -125,11 +134,12 @@ export class CartService {
       if (!parsedLocation.success) throw new CartError('INVALID_ADDRESS', 'Coordenadas do endereço não verificáveis.', 400);
       const location = parsedLocation.data;
       const page = parseList(searchList, await ctx.deps.searchOffers({ query: input.query, userLocation: location, resultKind: 'ITEM', pageSize: 10 }, { timeoutMs: 15_000 }));
+      const batch = await catalogDetails(page.results.slice(0, CATALOG_LIMITS.maxItems), ctx.deps, location);
+      // Só publica referências após confirmar que o vínculo continua sendo o mesmo.
+      // Respostas tardias de chamadas abortadas não executam gravação no catálogo.
+      await this.current(organizer, input.linkId);
       const items = [];
-      for (const listing of (page.results ?? []).slice(0, 10)) {
-        if (!id.safeParse(listing.itemId).success || !id.safeParse(listing.merchant.merchantId).success) continue;
-        const detail = parseItem(await ctx.deps.getItem({ itemId: listing.itemId, merchantId: listing.merchant.merchantId, userLocation: location }, { timeoutMs: 15_000 }));
-        if (detail.itemId !== listing.itemId || detail.merchantId !== listing.merchant.merchantId) throw new CartError('ITEM_IDENTITY_MISMATCH', 'Detalhamento não corresponde à listagem.', 502);
+      for (const detail of batch.details) {
         const normalized = normalizeItemDetail(detail);
         const itemRef = opaque();
         this.products.set(itemRef, { ref: itemRef, organizer, linkId: input.linkId, addressId: address.addressId, location,
@@ -141,7 +151,8 @@ export class CartService {
               additionalPriceCents: o.additionalPrice !== undefined ? Math.round(o.additionalPrice * 100) : null })) })) ?? null,
           eligibilityVerified: false, note: 'Referência de catálogo não comprova segurança alimentar nem aprovação de compra.' });
       }
-      return { linkId: input.linkId, expiresAt: new Date(this.now() + TTL).toISOString(), items };
+      return { linkId: input.linkId, expiresAt: new Date(this.now() + TTL).toISOString(), items,
+        partial: batch.errors.length > 0, errors: batch.errors, details: batch.summary };
     });
   }
   private async validatedItem(ctx: OperationalContext, organizer: string, linkId: string, input: ItemInput,
@@ -198,8 +209,8 @@ export class CartService {
     return new CartError('RESULT_UNKNOWN', 'Operação enviada sem confirmação segura. Não repetir; reconciliar com o iFood.', 409,
       error instanceof McpToolError && /^[A-Z0-9_]{1,80}$/.test(error.code ?? '') ? error.code : undefined);
   }
-  private async mutate(cart: Cart, gateway: CartGateway, requestId: string, tool: CartTool, args: Record<string, unknown>) {
-    const key = this.attemptKey(cart.organizer, cart.linkId, requestId), signature = digest([tool, cart.ref, args]);
+  private async mutate(cart: Cart, gateway: CartGateway, requestId: string, tool: CartTool, args: Record<string, unknown>, intentSignature?: string) {
+    const key = this.attemptKey(cart.organizer, cart.linkId, requestId), signature = intentSignature ?? digest([tool, cart.ref, args]);
     const previous = this.existing(key, signature);
     if (previous) return this.refresh(cart, gateway);
     if (cart.unknown) throw new CartError('RESULT_UNKNOWN', 'Carrinho aguarda reconciliação; mutações bloqueadas.');
@@ -221,12 +232,16 @@ export class CartService {
   changeItem(organizer: string, linkId: string, cartRef: string, requestId: string, input: ItemInput, cartItemId?: string) {
     return this.run(organizer, linkId, 'CART_WRITE', async (ctx, gateway) => {
       const cart = this.owned(organizer, linkId, cartRef);
+      const tool = cartItemId ? 'updateCartItem' : 'addItemToCart';
+      const signature = digest([tool, cart.ref, input, cartItemId ?? null]);
+      // Uma escrita confirmada pode ser relida mesmo se itemRef expirou ou getItem ficou indisponível.
+      if (this.existing(this.attemptKey(organizer, linkId, requestId), signature)) return this.refresh(cart, gateway);
       await this.refresh(cart, gateway);
       const existing = cartItemId ? cart.snapshot!.items.find((i) => i.cartItemId === cartItemId) : undefined;
       if (cartItemId && !existing) throw new CartError('CART_ITEM_NOT_FOUND', 'Item não encontrado neste carrinho.', 404);
       const validated = await this.validatedItem(ctx, organizer, linkId, input, { ...cart, itemId: existing?.itemId });
-      return this.mutate(cart, gateway, requestId, cartItemId ? 'updateCartItem' : 'addItemToCart',
-        { ...validated.args, ...(cartItemId ? { cartItemId } : {}) });
+      return this.mutate(cart, gateway, requestId, tool,
+        { ...validated.args, ...(cartItemId ? { cartItemId } : {}) }, signature);
     });
   }
   removeItemFromCart(organizer: string, linkId: string, cartRef: string, requestId: string, cartItemId: string) {
@@ -278,7 +293,7 @@ export class CartService {
     return this.run(organizer, linkId, kind === 'payment' ? 'CART_PAYMENT' : 'CART_WRITE', async (_ctx, gateway) => {
       const cart = this.owned(organizer, linkId, cartRef);
       // Idempotência por referência externa, inclusive depois de invalidar as escolhas.
-      const selectionKey = this.attemptKey(organizer, linkId, `selection:${requestId}`);
+      const selectionKey = this.attemptKey(organizer, linkId, requestId);
       const signature = digest([kind, cartRef, choiceRef]);
       if (this.existing(selectionKey, signature)) return this.refresh(cart, gateway);
       await this.refresh(cart, gateway);
@@ -288,11 +303,9 @@ export class CartService {
       const values = await this.listed(cart, gateway, kind);
       const args = values.find((v) => digest(v) === selected.choice.digest);
       if (!args) throw new CartError('CHOICE_CHANGED', 'Opção não está mais disponível; consulte novamente.');
-      this.attempts.set(selectionKey, { signature, status: 'UNKNOWN', cartRef });
       const tool = kind === 'delivery' ? 'setCartDelivery' : kind === 'payment' ? 'setCartPayment' : 'setVoucher';
-      const result = await this.mutate(cart, gateway, requestId, tool, args);
-      this.attempts.set(selectionKey, { signature, status: 'DONE', cartRef });
-      return result;
+      // O único registro da intenção vira DONE antes da releitura de getCart.
+      return this.mutate(cart, gateway, requestId, tool, args, signature);
     });
   }
   removeVoucher(organizer: string, linkId: string, cartRef: string, requestId: string) {

@@ -1,78 +1,99 @@
 # F7 — Relatório de implementação e validação
 
-Branch: `feat/f7-cart-checkout`, baseada em `ed76aea`. Commit e PR autorizados pelo usuário após a validação; sem merge automático.
-A árvore estava limpa no início. Arquivos ignorados já existentes foram preservados; nenhuma credencial foi
-lida para os testes. Nenhuma compra ou chamada real de carrinho foi executada.
+Branch: `feat/f7-cart-checkout`. PR #4 em rascunho, sem merge para main. A árvore estava limpa antes da
+incorporação solicitada de origin/main; arquivos existentes e ignorados foram preservados. Nenhuma compra
+ou chamada real de carrinho foi executada. Testes usam exclusivamente AS e MCP simulados.
 
-## Entrega
+## Estado atual após a revisão do PR #4
 
-F7.1/F7.2 implementadas como fluxo isolado de carrinho, com inputs dos schemas MCP capturados, referências de
-catálogo emitidas pelo backend, revalidação de item/opções, operações de itens, entrega, pagamento e cupons,
-totais exclusivamente de getCart, revisão invalidável e proteção contra repetição de mutações. As saídas de
-carrinho ainda não têm captura real; o adaptador conservador foi validado apenas com MCP simulado. A feature
-fica desligada por padrão (`IFOOD_CART_ENABLED=false`), sem reivindicar integração real pronta.
+Origin/main (`686300d`) foi incorporada à branch em `33f591e`, incluindo os commits `20e46fd` e `686300d`.
+As correções relacionadas a #2/#3 estão integradas, não apenas disponíveis em outra branch. O bloqueio fixo
+SECURITY_ISSUES_2_3_PENDING foi removido. A feature permanece `IFOOD_CART_ENABLED=false`, com revisão
+informativa, `ELIGIBILITY_UNVERIFIED` e checkout inacessível. Não se habilitou aprovação nem envio real.
 
-F7.3 preparada: revisão informativa, contrato de aprovação futura ligado a identidade/revisão/total/expiração,
-política pura e testes de submitOrder com função falsa. Gateway e rotas não permitem enviar pedido real;
-aprovação/envio HTTP retornam CHECKOUT_DISABLED. Login e revisão nunca aprovam compra.
+### Correções da revisão
 
-Contrato completo de endpoints e limitações: [f7-cart-checkout.md](f7-cart-checkout.md).
-O resumo foi acrescentado a [bot-api.md](bot-api.md#10-f7--contrato-do-carrinho-e-revisão).
+1. **Expiração do access token:** um linkId inalterado passa por verify/refresh antes de ser considerado
+   indisponível. Refresh válido conserva o carrinho; falha temporária mantém UNAVAILABLE; credencial rejeitada
+   exige RECONNECT_REQUIRED. Tentativa de troca de conta e alteração real de linkId continuam bloqueando acesso.
+2. **Idempotência após escrita confirmada:** um único registro por requestId vira DONE antes de reler getCart.
+   A seleção de entrega/pagamento/cupom não fica presa num segundo registro UNKNOWN. Retry confirmado de
+   adição/atualização também consulta a intenção antes de revalidar itemRef ou getItem, permitindo releitura
+   mesmo com catálogo expirado. Conteúdo diferente conflita, e escrita de resultado desconhecido continua bloqueada.
+3. **Catálogo parcial e limitado:** falha individual de getItem não elimina outros candidatos. Até três chamadas
+   simultâneas, dez candidatos e 25 segundos no total da fase de detalhamento; até 15 segundos por chamada,
+   limitados ao restante. Timeout local e AbortSignal impedem espera indefinida e publicação tardia de referências.
+   Respostas mantêm ordem e devolvem partial, errors sanitizados e contadores de detalhamento.
 
-## Verificações executadas
+Não houve expansão para ranking ou implementação do bot Telegram. As alterações de autenticação/elegibilidade
+nesta revisão vêm dos commits de segurança incorporados, sem mudanças adicionais nesses módulos de produção.
 
-Node/npm instalados localmente; dependências instaladas com `npm ci --no-audit --no-fund`, sem mudar o lockfile.
-Testes usam exclusivamente AS e MCP falsos.
+## Verificações finais — F7 integrada à main
 
-| Comando | Resultado final |
+| Comando | Resultado |
 |---|---|
-| `npm test` | **234 passaram, 3 falharam**, 237 no total; as três falhas já existem na revisão-base |
-| `npm run typecheck` | falha somente por `cancelAttempt` inexistente em `test/links/concurrency.test.ts:98` e `:148` |
+| `npm test` | **267 passaram**, 18 arquivos; nenhuma falha ou teste ignorado |
+| `npm run typecheck` | passou |
 | `npm run lint` | passou |
-| `npm run build` | bloqueado pelo mesmo typecheck, antes do Vite |
+| `npm run build` | passou, incluindo typecheck e bundle Vite |
 | `git diff --check` | passou |
 
-Os **40 testes novos** de `test/cart/` passaram na execução completa. Cobrem operações/contrato HTTP, IDs, opções obrigatórias e variantes desconhecidas, quantidades, isolamento por organizador/linkId, desconexão em chamada pendente, troca de conta, escopos, flag desabilitada, entrega/pagamento/cupons, cartão sem exposição de token, totais ausentes/divergentes, expiração/invalidação de revisão, repetição concorrente, conteúdo conflitante, timeout, erro inline sanitizado, falha de leitura depois de escrita, transporte sem replay em 401 e compra simulada.
+Há **53 testes de F7**, incluindo 13 regressões novas. As 13 falharam contra o serviço anterior às correções
+e passaram depois delas. As regressões exercitam refresh aceito/recusado/temporariamente indisponível,
+seleção confirmada com falha posterior de getCart, retry de adição/atualização com itemRef expirado,
+falha parcial/total de detalhes, concorrência, prazo total mesmo com dependência que ignora timeout,
+remoção do bloqueio fixo e manutenção de feature/checkout desabilitados.
 
-### Comparação isolada com a base
+A suíte existente também cobre isolamento entre organizadores, desconexão/troca de conta, referências de IDs,
+opções obrigatórias/variantes, dinheiro em centavos, totais divergentes, revisão invalidada, estado desconhecido,
+transporte sem replay em 401 e rejeição de submitOrder pelo gateway e pelas rotas HTTP. As simulações de
+submitOrder usam somente funções falsas, sem conexão ao provedor.
 
-Foi extraído `git archive HEAD` em diretório temporário separado, reutilizando somente as dependências
-instaladas. A branch de trabalho não foi revertida, e nenhum teste preexistente foi modificado/ignorado.
+### Portabilidade dos testes de armazenamento
 
-- Base `ed76aea`: **194 passaram e 3 falharam**, 197 testes; os mesmos dois erros de TypeScript.
-- Falha 1: desconexão durante gravação de tokens termina em CONNECTED, em vez de DISCONNECTED (issue #2).
-- Falhas 2 e 3: `env.links.cancelAttempt is not a function`, nos cenários de cancelamento concorrente.
-- A mesma comparação na branch de F7 produziu as três falhas e nenhum novo erro de TypeScript.
+A main trouxe testes que exigiam modos POSIX 700/600 incondicionalmente. Dois falhavam no Windows, onde
+[fs.chmod não representa integralmente permissões POSIX](https://nodejs.org/api/fs.html#file-modes).
+Foram ajustadas somente essas asserções: modos completos continuam sendo exigidos em plataformas POSIX;
+no Windows confere-se o bit de escrita suportado. Todos os testes de criação, gravação, refresh e rollback
+continuam executando. **Isso não valida privacidade por ACL no Windows**; uma execução POSIX e validação de
+ACLs Windows continuam necessárias para afirmar essas garantias. Nenhum teste foi simplesmente ignorado.
 
-## Arquivos alterados/adicionados
+## Arquivos desta revisão
 
-| Grupo | Arquivos |
-|---|---|
-| Serviço/contratos/política | `src/server/cart/service.ts`, `contracts.ts`, `approval.ts` |
-| Gateway/transporte | `src/server/mcp/cart.ts`, `client.ts` |
-| Integração de sessão | `src/server/links/session.ts`, `service.ts` (somente gateway, contexto, escopos e mensagem de status) |
-| HTTP/configuração | `src/server/routes/cart.ts`, `src/server/app.ts`, `src/server/config.ts`, `.env.example` |
-| Testes | `test/cart/cart.test.ts`, `approval.test.ts`, `transport.test.ts`, `fakes.ts` |
-| Regras e documentação | `CLAUDE.md`, `eslint.config.js`, `docs/requirements.md`, `docs/bot-api.md`, `docs/f7-cart-checkout.md`, este relatório |
+- `src/server/cart/service.ts`: renovação operacional e idempotência antes das releituras/validações.
+- `src/server/cart/catalog.ts`: workers limitados, prazo, cancelamento e falhas parciais por candidato.
+- `test/cart/review-regressions.test.ts`: 13 regressões reproduzidas antes da correção.
+- `test/cart/fakes.ts`: dependências de leitura injetáveis e identidade estável da sessão, independente da
+  rotação do access token.
+- `test/links/storage.test.ts`: asserções de modos apropriadas à plataforma, sem alterar autenticação de produção.
+- `.env.example`, `CLAUDE.md`, `docs/requirements.md`, `docs/bot-api.md`, `docs/f7-cart-checkout.md` e este relatório:
+  estado de integração, contrato de resposta parcial, limites e pendências atualizados.
 
-`auth.ts`, `botAuth.ts`, o domínio de elegibilidade e os testes preexistentes não foram alterados. A extensão de
-`McpSession` permite desligar replay 401 para o carrinho e preserva o padrão anterior das sessões de leitura.
+## Funcionalidades de F7 preservadas
 
-## Pendências antes de habilitação real e PR
+Carrinho isolado por organizador/linkId; createCart, getCart, adição/atualização/remoção de itens;
+validação contra respostas do catálogo; seleção de entrega/pagamento/cupons; totais reais exclusivamente
+através do adaptador getCart, em centavos; revisão invalidada por mudanças; proteção contra repetição de
+mutações. Endpoints e corpos completos: [f7-cart-checkout.md](f7-cart-checkout.md).
 
-**Issues #2 e #3 continuam pendentes e precisam constar como dependências do PR.** Não se declara segurança de alergia a partir de filtros nem correção do ciclo de vida de vínculos. Revisões de F7 têm bloqueio explícito
-`ELIGIBILITY_UNVERIFIED`, além de checkout desabilitado.
+As entradas vieram da captura real de tools/list, mas as **saídas de carrinho ainda não têm captura real**.
+O adaptador conservador permanece provisório e validado apenas por MCP simulado. Isso não constitui
+integração real pronta, mesmo com os checks passando.
 
-Ainda são necessários: validar payloads reais de cart/entrega/pagamento/cupons;
-integrar as correções de segurança;
-persistir intenções e revisões;
-implementar reconciliação de resultados desconhecidos e recuperação após reinício;
-definir limpeza/quotas;
-garantir elegibilidade por pessoa/opções;
-validar callback Telegram humano de uso único e consumir aprovação/intenção atomicamente;
-verificar o contrato real de idempotência do checkout.
-Não habilitar compra real apenas porque testes sintéticos passam ou porque o usuário fez login.
+## Limitações restantes antes de habilitar carrinho/checkout real
 
-## Estado remoto na preparação do PR
+- Validar saídas reais de cart, entrega, pagamento e cupons com sessão própria do vínculo.
+- Persistir intenções/revisões de forma durável e reconciliar resultados desconhecidos; estado atual é em memória,
+  um processo, e reinício perde referências. Nunca reexecutar intenções automaticamente ao reiniciar.
+- Definir limpeza, quotas, proteção multiprocesso e cancelamento/reconciliação de operações remotas.
+- Garantir elegibilidade rastreável por pessoa/opções; referência de catálogo não comprova segurança alimentar.
+- Validar aprovação humana de uso único, consumir aprovação/intenção atomicamente e verificar o contrato real
+  de idempotência do checkout, em uma etapa separada. submitOrder continua inacessível nesta etapa.
+- Validar permissões de armazenamento na plataforma de implantação, incluindo ACLs quando aplicável.
 
-A referência origin/main avançou para 686300d, com os commits de segurança 20e46fd e 686300d, após a implementação e os testes descritos acima. Essas correções ainda não foram integradas à branch F7. Os resultados registrados continuam correspondendo à branch baseada em ed76aea; não são uma validação da combinação com a main atual. O PR será aberto em rascunho para revisar essa integração e repetir os checks antes de habilitar a feature.
+## Histórico da primeira entrega
+
+A primeira entrega (a0a8f5d), baseada em ed76aea, tinha 40 testes novos passando; a suíte completa tinha
+234 aprovados e três falhas preexistentes, com typecheck/build bloqueados por cancelAttempt ausente.
+A comparação isolada de ed76aea reproduzia 194 aprovados e as mesmas três falhas em 197 testes.
+Esses resultados são históricos e foram substituídos pela validação integrada descrita acima.
