@@ -1,6 +1,6 @@
 # Contrato de conversa HTTP/JSON v1.0 — API-01
 
-Especificação e conformidade offline em 18/10/2026. **As rotas abaixo são propostas, não estão registradas no aplicativo.** Os schemas, validadores e mocks estão implementados; processamento durável é RUN-01, estado/patches são DATA-01, ações de carrinho são CART-01 e autorização/envio são BUY-01/02. Este contrato permite preparar AI-01 sem escolher políticas de DEC-01.
+Especificação e conformidade offline em 18/10/2026. Os schemas, validadores e mocks estão implementados. A [RUN-01](runtime-turnos.md) acrescenta as rotas e a infraestrutura durável em SQLite, com ativação explícita; **o processo padrão ainda não instala o processador DATA/IA e rejeita novos eventos com UNAVAILABLE**. Estado/patches são DATA-01, ações de carrinho são CART-01 e autorização/envio são BUY-01/02. Este contrato permite preparar AI-01 sem escolher políticas de DEC-01. A rota de aprovação permanece indisponível para execução de compra.
 
 Issue: [API-01 #12](https://github.com/Modo-Escuro/api-backend/issues/12). Base de implementação: `main@686300d`. A [proposta v0 do bot](https://github.com/Modo-Escuro/telegram-bot/blob/codex/plano-conversacional/docs/contrato-conversa-proposto.md) é a origem; este documento fixa nomes e formatos para a v1.0. O [contrato de vínculo existente](bot-api.md) continua válido e independente. Nenhum OAuth novo foi criado.
 
@@ -23,7 +23,7 @@ Reutilizar `Authorization: Bearer <BOT_API_TOKEN>` e `X-Telegram-User-Id` do [bo
 
 IDs de eventos e origem são metadados, não autorização. Operações, referências e snapshots só são acessíveis no escopo `(canal, bot, organizador, conversa)`. Outro organizador/conversa/recurso retorna 404 sem revelar existência; origem de outro bot/chat dentro da requisição autenticada retorna 400 `INVALID_SOURCE`. Referências de conta também são vinculadas ao `linkId` atual.
 
-## Rotas propostas
+## Rotas v1 e disponibilidade
 
 Prefixo `/api/bot/v1`. Todas exigem o canal autenticado e `Cache-Control: no-store`. Corpos JSON são estritos; não aceitar `organizerId`, `userId`, `userConsent`, preços ou autorização do modelo. Usar `Content-Type: application/json`. Erros de autenticação já existentes conservam o envelope de `bot-api.md`; depois da autenticação, os erros usam `error.schema.json`.
 

@@ -13,6 +13,8 @@ import { ALLOWED_TOOLS, listAddresses, searchOffers } from './mcp/tools.js';
 import type { Address } from './mcp/types.js';
 import { handleLinkCallback, registerBotRoutes, registerBrowserRoutes } from './routes/bot.js';
 import { registerEvaluate } from './routes/evaluate.js';
+import { registerConversationRoutes } from './routes/conversation.js';
+import type { TurnRuntime } from './turns/runtime.js';
 import { runEvaluation } from './services/evaluate.js';
 
 type ErrStatus = 400 | 401 | 403 | 404 | 409 | 410 | 423 | 500 | 502 | 503;
@@ -52,6 +54,7 @@ export interface AppOptions {
   links?: IfoodLinkService;
   sessionFactory?: SessionFactory;
   carts?: CartService;
+  conversations?: TurnRuntime;
 }
 
 export function createApp(auth: IfoodAuth = defaultAuth, opts: AppOptions = {}) {
@@ -64,7 +67,8 @@ export function createApp(auth: IfoodAuth = defaultAuth, opts: AppOptions = {}) 
   app.use('*', async (c, next) => {
     const t0 = Date.now();
     await next();
-    console.log(`${c.req.method} ${new URL(c.req.url).pathname} ${c.res.status} ${Date.now() - t0}ms`);
+    const path = new URL(c.req.url).pathname;
+    console.log(`${c.req.method} ${path.startsWith('/api/bot/v1/') ? '/api/bot/v1/[redigido]' : path} ${c.res.status} ${Date.now() - t0}ms`);
   });
 
   app.onError((err, c) => {
@@ -84,11 +88,13 @@ export function createApp(auth: IfoodAuth = defaultAuth, opts: AppOptions = {}) 
 
   // ---------- Bot → API (autenticado; identidade do organizador vem do adaptador) ----------
   const requireBot = botAuth({ token: cfg.botApiToken, allowedOrganizerIds: cfg.allowedOrganizerIds });
+  app.use('/api/bot/v1/*', async (c, next) => { c.header('Cache-Control', 'no-store'); await next(); });
   app.use('/api/bot/*', requireBot);
   app.use('/api/addresses', requireBot);
   app.use('/api/evaluate', requireBot);
   registerBotRoutes(app as unknown as Hono, links);
   registerCartRoutes(app, carts);
+  registerConversationRoutes(app as unknown as Hono, opts.conversations, cfg.conversationRuntime?.botId);
 
   // ---------- Navegador: início do login e callback OAuth (redirect registrado: http://localhost:8000) ----------
   // Callback localhost ⇒ só conexões da própria máquina abrem o início/retorno do login (anti link encaminhado).

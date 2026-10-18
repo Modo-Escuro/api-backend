@@ -25,6 +25,8 @@ export interface AppConfig {
   devGlobalSession: boolean;
   /** Habilitar só após validar saída MCP e integrar correções #2/#3. Nunca habilita checkout. */
   cartEnabled: boolean;
+  /** Opt-in da infraestrutura RUN-01; não instala processador de IA/domínio. */
+  conversationRuntime?: { dbFile: string; botId: string };
 }
 
 /**
@@ -45,7 +47,7 @@ export interface LinksStorageConfig {
   allowEphemeral: boolean;
 }
 
-import { isAbsolute, join, relative, resolve } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /** Raiz do projeto (src/server/config.ts → ../../). Caminhos relativos de armazenamento são resolvidos a partir dela. */
@@ -84,6 +86,17 @@ export function resolveLinksStorage(env: NodeJS.ProcessEnv): { dir: string; stor
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
+  let conversationRuntime: AppConfig['conversationRuntime'];
+  if (env.CONVERSATION_RUNTIME_ENABLED === 'true') {
+    const botId = env.BOT_TELEGRAM_ID ?? '';
+    if (!/^[1-9][0-9]{0,19}$/.test(botId) || botId.trim() !== botId || !env.CONVERSATION_DB_FILE?.trim()) {
+      throw new Error('RUN-01 exige BOT_TELEGRAM_ID válido e CONVERSATION_DB_FILE explícito.');
+    }
+    const dbFile = fromRoot(env.CONVERSATION_DB_FILE);
+    const storage = resolveLinksStorage({ ...env, IFOOD_LINKS_DIR: dirname(dbFile) }).storage;
+    if (storage.durability === 'EPHEMERAL') throw new Error('RUN-01 exige banco em armazenamento persistente.');
+    conversationRuntime = { dbFile, botId };
+  }
   const links = resolveLinksStorage(env);
   return {
     mcpUrl: env.IFOOD_MCP_URL || 'https://consumer-mcp.ifood.com.br/marketplace',
@@ -106,6 +119,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     publicBaseUrl: (env.PUBLIC_BASE_URL || `http://localhost:${Number(env.PORT || 8000)}`).replace(/\/$/, ''),
     devGlobalSession: env.DEV_GLOBAL_SESSION === 'true',
     cartEnabled: env.IFOOD_CART_ENABLED === 'true',
+    conversationRuntime,
   };
 }
 
