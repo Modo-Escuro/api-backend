@@ -100,6 +100,34 @@ function setup() {
 }
 
 describe('CART-01: confirmação humana, persistência e reconciliação (MCP mockado)', () => {
+  it('mesmo ID e preço com nome atual diferente bloqueiam revisão antiga e escrita', async () => {
+    const f = setup();
+    const original = vi.mocked(f.ctx.deps.getItem).getMockImplementation()!;
+    vi.spyOn(f.ctx.deps, 'getItem').mockImplementation(async (...args) => ({ ...(await original(...args) as Record<string,unknown>), itemName: 'Outro produto' }));
+    await expect(f.service.prepare(principal)).rejects.toMatchObject({ code: 'CART_ITEM_CHANGED' });
+    expect(f.write).not.toHaveBeenCalled();
+    expect(f.turns.db.prepare('SELECT count(*) AS n FROM cart_write_reviews').get()!['n']).toBe(0);
+  });
+  it('mesma identificação normalizada da proposta aceita espaços e controles removidos pela GRP-01', async () => {
+    const f = setup();
+    const original = vi.mocked(f.ctx.deps.getItem).getMockImplementation()!;
+    vi.spyOn(f.ctx.deps, 'getItem').mockImplementation(async (...args) => ({ ...(await original(...args) as Record<string,unknown>), itemName: '  Arroz\u200b  ' }));
+    expect((await f.service.prepare(principal)).purpose).toBe('PREPARE_CART');
+    expect(f.write).not.toHaveBeenCalled();
+  });
+  it('recupera resposta de confirmação perdida por requestId escopado, só com GET e sem reenviar escrita', async () => {
+    const f = setup(), review = await f.service.prepare(principal), command = f.command(review.confirmationRef);
+    const result = await f.service.confirm(principal, command);
+    const base = `/api/bot/v1/conversations/${principal.conversationId}/cart-writes/requests/`;
+    const headers = { authorization: `Bearer ${token}`, 'x-telegram-user-id': principal.organizerId, 'x-telegram-chat-id': principal.conversationId };
+    const response = await f.app.request(base + command.requestId, { headers });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ operationId: result.operationId, state: 'SUCCEEDED', purpose: 'PREPARE_CART' });
+    expect((await f.app.request(base + 'invalido', { headers })).status).toBe(400);
+    expect((await f.app.request(base + randomUUID(), { headers })).status).toBe(404);
+    expect(() => f.service.request({ ...principal, organizerId: '222222222', conversationId: '222222222' }, command.requestId)).toThrow();
+    expect(f.write).toHaveBeenCalledTimes(1);
+  });
   it.each([false, true])('runtime recupera intenção interrompida sent=%s mesmo sem montar serviço CART-01', async sent => {
     const f = setup(), review = await f.service.prepare(principal), store = new CartWriteStore(f.turns);
     const command = f.command(review.confirmationRef), plan = store.readReview(principal, command.confirmationRef);

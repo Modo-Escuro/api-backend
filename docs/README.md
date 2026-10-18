@@ -1,6 +1,6 @@
 # Documentação da API
 
-Esta branch reúne a implementação CART-01 do PR #46 e a revisão documental #43. Nenhuma dessas entregas deve ser confundida com merge/deploy ou validação do iFood.
+Esta branch reúne a implementação CART-01 do PR #46 sobre a main que já integrou #43/#44/#45. CART-01 continua separada da main; merge documental não comprova deploy ou validação do iFood.
 
 [Estado remoto/local](estado-remoto-local.md): SHAs conferidos, merges e código CART-01 publicado no PR #46, ainda separado da main. A DEC-01 permite preparação real confirmada; documentação não habilita a operação.
 
@@ -23,7 +23,7 @@ com vínculos isolados e sem ampliar a fronteira de compra da DEC-01.
 13. [Operação (OPS-02)](ops-02-operacao.md): logs sanitizados, métricas, orçamento do modelo, status operacional, rollout/rollback e ensaios pendentes.
 14. [Carrinho com confirmação humana (CART-01)](cart-01-escrita-confirmada.md): revisão PREPARE_CART, intenção durável, bloqueio de resultado desconhecido e [integração/auditoria](cart-01-integracao.md). Desligado até INT-02 e callback BOT-03 validados.
 
-O [plano revisado do telegram-bot](https://github.com/Modo-Escuro/telegram-bot/blob/codex/revisao-escopo-cart01/docs/plano-conversacional.md) acompanha esta revisão em branch separada; publicação em branch/PR não significa merge. A [StRS preservada](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/baseline/stakeholder-requirements-specification.md) continua em validação.
+O [plano revisado do telegram-bot](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/plano-conversacional.md) já foi integrado pelo #16. O incremento de callback CART-01 é código separado, ainda desligado. A [StRS preservada](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/baseline/stakeholder-requirements-specification.md) continua em validação.
 
 F7 foi incorporada pelo [PR #4](https://github.com/Modo-Escuro/api-backend/pull/4) e seu caminho legado não pode escrever. A CART-01 acrescenta preparação de itens após confirmação humana específica conforme a [DEC-01 vigente](decisoes-conversacionais.md). Outputs provisórios e testes sintéticos não comprovam iFood; a validação externa está na [INT-02 #40](https://github.com/Modo-Escuro/api-backend/issues/40). PREPARE_CART não aprova compra nem habilita pagamento/envio.
 

@@ -117,6 +117,12 @@ export class CartWriteStore {
     if (!r) throw new CartError('CART_INTENT_NOT_FOUND', 'Intenção não encontrada.', 404);
     return r as unknown as Intent;
   }
+  byRequest(p: AdapterPrincipal, requestId: string): Intent {
+    this.recover();
+    const row = this.db.prepare('SELECT * FROM cart_write_intents WHERE scope=? AND request_id=?').get(scopeKey(p), requestId);
+    if (!row) throw new CartError('CART_INTENT_NOT_FOUND', 'Intenção não encontrada.', 404);
+    return row as unknown as Intent;
+  }
   beforeCall(p: AdapterPrincipal, id: string, expectedHash: string) {
     this.transaction(() => {
       this.assertUnchanged(p, expectedHash);

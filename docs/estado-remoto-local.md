@@ -4,11 +4,13 @@ Retrato conferido em 18/10/2026, horário de São Paulo. Não é monitoramento c
 
 | Superfície | Referência conferida | O que está comprovado |
 | --- | --- | --- |
-| API remota | [`main@f3b8b55`](https://github.com/Modo-Escuro/api-backend/tree/f3b8b5561acc0c0ae5e9efe12b52acc2f29bf218) | Montagem Gemini/AI-02/GRP-01 (#35/#36), acesso por senha (#39), persistência DATA-01/DOM-01, finalização de testes RUN-01 (#41) e observabilidade/limites OPS-02 (#38) integrados; limpeza de HTMLs #42 e revisão documental #44 incorporadas |
-| Bot remoto | [`main@9314c72`](https://github.com/Modo-Escuro/telegram-bot/tree/9314c72e1324a36da09c014e74f98a470dde6306) | BOT-01/BOT-02, outbox/polling opt-in, retomada do grupo, acesso por senha (#13) e correção de entrada (#14) integrados |
-| Issues remotas | [CART-01 #18](https://github.com/Modo-Escuro/api-backend/issues/18), [INT-02 #40](https://github.com/Modo-Escuro/api-backend/issues/40), [BUY-01 #19](https://github.com/Modo-Escuro/api-backend/issues/19), [BUY-02 #20](https://github.com/Modo-Escuro/api-backend/issues/20) | Escopo de carrinho confirmado registrado; outputs reais e integração continuam pendentes |
-| CART-01 local | `codex/cart-01-confirmed-writes`, base `8191a0f`; patch auditado sem commit/push/merge na conferência | Implementação offline não está nas mains acima. Não transportar seus testes, rotas ou garantias para o estado remoto |
-| Esta revisão documental | Cópias separadas `codex/revisao-escopo-cart01`, sobre os SHAs acima | Só Markdown; não inclui o código local CART-01, não ativa flags nem altera produção. A publicação em PR não significa merge na main |
+| API main | [`8a6dadc`](https://github.com/Modo-Escuro/api-backend/tree/8a6dadc82ff8c7e952b665dedad6876677fade6b) | Gemini/AI-02/GRP-01, RUN-01/DATA-01/DOM-01, OPS-02 #38, documentação #43/#44 e conclusão do vínculo no navegador #45 integrados |
+| Bot main | [`d239edd`](https://github.com/Modo-Escuro/telegram-bot/tree/d239edd43d072198367fd2fda3846fa29774ba65) | BOT-01/BOT-02, senha, retomada, navegação/voz opt-in #15 e documentação #16 integrados |
+| API CART-01 | [PR #46](https://github.com/Modo-Escuro/api-backend/pull/46), `codex/cart-01-confirmed-writes` | Código publicado em draft, conciliado com #43/#45 nesta continuação. Não integrado na main nem ativado |
+| Bot CART-01 | `codex/cart-01-telegram` | Incremento separado de revisão/callback PREPARE_CART e recuperação técnica por GET. OFF; revisão final e identificação legível completa continuam pendentes |
+| Dependências | [CART-01 #18](https://github.com/Modo-Escuro/api-backend/issues/18), [INT-02 #40](https://github.com/Modo-Escuro/api-backend/issues/40), [BOT-03 #3](https://github.com/Modo-Escuro/telegram-bot/issues/3), [BUY-01 #19](https://github.com/Modo-Escuro/api-backend/issues/19) | Código parcial/testes offline não encerram as issues nem comprovam operação externa |
+
+Atualização posterior ao merge de API #43 e bot #16. Os retratos anteriores permanecem no histórico Git; não foram usados como estado ao vivo. Produção, deploys, volumes e modelo pago não foram alterados nesta continuação.
 
 ## Decisão vigente e limites
 
@@ -21,7 +23,7 @@ Enviar pedido (`submitOrder`), selecionar/processar pagamento (`setCartPayment`)
 ## Marcos distintos
 
 1. **Código integrado:** agente, grupo, ranking e infraestrutura presentes nos SHAs remotos.
-2. **Carrinho real:** escopo aprovado; implementação local auditada, integração e respostas reais ainda pendentes. [INT-02](https://github.com/Modo-Escuro/api-backend/issues/40) bloqueia ativação, não o desenvolvimento offline.
+2. **Carrinho real:** escopo aprovado; implementação publicada em draft, canal humano parcial e respostas reais ainda pendentes. [INT-02](https://github.com/Modo-Escuro/api-backend/issues/40) bloqueia ativação, não o desenvolvimento offline.
 3. **Fechamento externo do briefing:** continua pendente. Carrinho preparado não comprova pedido aceito nem pagamento; validar DA10 e obter resultado confiável quando esse escopo for autorizado.
 
 A INT-01 #7 fechada cobre auditoria/metadados, não saídas reais de negócio. O usuário confirmou que não havia capturas de createCart/getCart/mutações ou ambiente autenticado disponibilizado nesta sessão. Não inferir execução de tools/list, escopos ou CI.

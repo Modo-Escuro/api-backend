@@ -53,4 +53,9 @@ export function registerCartWriteRoutes(app: Hono, service: ConfirmedCartService
     if (!/^[A-Za-z0-9_-]{32}$/.test(id)) throw new CartError('CART_INTENT_NOT_FOUND', 'Intenção não encontrada.', 404);
     return c.json(service!.operation(p, id));
   }));
+  app.get(`${prefix}/requests/:requestId`, safe(c => {
+    const p = principal(c), requestId = c.req.param('requestId')!;
+    if (!z.uuid().safeParse(requestId).success) throw new CartError('VALIDATION', 'requestId inválido.', 400);
+    return c.json(service!.request(p, requestId));
+  }));
 }

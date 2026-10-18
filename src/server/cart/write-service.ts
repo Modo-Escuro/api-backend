@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { contentHash, type AdapterPrincipal } from '../contracts/guards.js';
 import { evaluateCandidate } from '../domain/eligibility.js';
-import { evaluatePlan, planCoverage } from '../domain/group.js';
+import { cleanName, evaluatePlan, planCoverage } from '../domain/group.js';
 import { normalizeItemDetail, normalizeListingItem } from '../domain/normalize.js';
 import { knownRestrictions, type PurchaseState } from '../domain/purchase.js';
 import { allocateCosts } from '../domain/purchase-costs.js';
@@ -74,7 +74,10 @@ export class ConfirmedCartService {
       const rows = listingResult.results.filter(r => r.itemId === line.itemId && r.merchant?.merchantId === bag.merchantId);
       if (rows.length !== 1) throw new CartError('CART_ITEM_UNAVAILABLE', 'Produto não apareceu univocamente na leitura atual.');
       const rawDetail = await ctx.deps.getItem({ itemId: line.itemId, merchantId: bag.merchantId, userLocation: location }, { timeoutMs: 10_000 });
-      parseItem(rawDetail); // também bloqueia variantes/customizações não suportadas
+      const parsedDetail = parseItem(rawDetail); // também bloqueia variantes/customizações não suportadas
+      const currentName = parsedDetail.itemName ?? rows[0]!.itemName;
+      if (typeof currentName !== 'string' || cleanName(currentName) !== line.name)
+        throw new CartError('CART_ITEM_CHANGED', 'A identificação do produto mudou; gere outra proposta antes de confirmar.');
       const detail = normalizeItemDetail(rawDetail), listing = normalizeListingItem(rows[0]);
       const options = line.optionIds.map(optionId => ({ optionId: id.parse(optionId), quantity: 1 as const }));
       for (const consumerId of line.consumerIds) {
@@ -241,5 +244,8 @@ export class ConfirmedCartService {
   }
   operation(p: AdapterPrincipal, id: string) {
     return this.result(this.store.intent(p, id));
+  }
+  request(p: AdapterPrincipal, requestId: string) {
+    return this.result(this.store.byRequest(p, requestId));
   }
 }

@@ -153,7 +153,7 @@ function optionOf(c: CatalogCandidate, e: EligibilityResult): Option | null {
   return { candidate: c, evaluation: e, unitMin: range.min, unitMax: range.max, optionIds };
 }
 
-const cleanName = (s: string) => {
+export const cleanName = (s: string) => {
   const v = [...s.replace(/[\p{Cc}\p{Cf}\p{Cs}]/gu, '').trim()].slice(0, 200).join('');
   return v || 'Item sem nome';
 };

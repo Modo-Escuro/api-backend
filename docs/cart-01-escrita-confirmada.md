@@ -30,6 +30,7 @@ Prefixo `B = /api/bot/v1/conversations/:conversationId/cart-writes`.
 | `POST B/confirm` | `{purpose:"PREPARE_CART",source:"TELEGRAM_CALLBACK",confirmationRef,requestId,callbackId}`; schema estrito; referência/ID preservados no replay |
 | `GET B/current` | Consulta o carrinho conhecido, custos e bloqueios. Não limpa resultado desconhecido |
 | `GET B/operations/:operationId` | Recupera estado da mesma intenção, sem escrever novamente |
+| `GET B/requests/:requestId` | Recupera a intenção pelo requestId persistido pelo adaptador, escopado ao mesmo principal. Não repete confirmação nem consulta MCP |
 
 Exige Bearer do adaptador, `X-Telegram-User-Id` validado pela autenticação e `X-Telegram-Chat-Id` igual ao organizador/conversa privados. A lista `CONVERSATION_ORGANIZER_IDS` também restringe estas rotas e nunca amplia a autenticação. Callback humano é atestado pelo adaptador autenticado, como na conexão; não é uma prova criptográfica independente do Telegram. A integração BOT-03 precisa conferir remetente, chat e mensagem do callback. Proteger o token do adaptador do modelo e de outros clientes. Falhas MCP/SDK na nova fronteira recebem mensagem fixa, sem corpo/erro bruto do provedor.
 

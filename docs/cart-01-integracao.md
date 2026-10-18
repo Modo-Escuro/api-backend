@@ -44,6 +44,16 @@ A primeira suíte completa teve 982 aprovações, 2 testes ignorados e um timeou
 
 **NO-GO operacional** até [INT-02 #40](https://github.com/Modo-Escuro/api-backend/issues/40), capturas autenticadas revisadas, validação do comportamento remoto e callback humano [BOT-03](https://github.com/Modo-Escuro/telegram-bot/issues/3). Nenhuma fixture sintética foi apresentada como resposta real.
 
-Na consulta anterior à publicação não havia branch/PR de código CART-01 concorrente no remoto; o trabalho não publicado de Maylon não foi sobrescrito. Uma eventual implementação paralela precisa ser confrontada antes do merge. A revisão documental [#43](https://github.com/Modo-Escuro/api-backend/pull/43) continua separada deste código.
+Na consulta anterior à publicação não havia branch/PR de código CART-01 concorrente no remoto; o trabalho não publicado de Maylon não foi sobrescrito. Uma eventual implementação paralela precisa ser confrontada antes do merge. A revisão documental [#43](https://github.com/Modo-Escuro/api-backend/pull/43) foi posteriormente mergeada e conciliada com este PR, junto do retorno de login #45.
+
+## Continuação após #43/#45
+
+Base remota atualizada: `main@8a6dadc82ff8c7e952b665dedad6876677fade6b`. O #46 existente foi reaproveitado; não se abriu API concorrente. A conciliação preserva Gemini/OPS-02 e a conclusão do vínculo no navegador, que não confirma carrinho.
+
+Novo `GET /requests/:requestId` permite ao bot recuperar uma confirmação cuja resposta foi perdida sem persistir referência ou reenviar POST. O principal precisa ser o mesmo; testes cobrem 400/404/isolamento e escrita única. Produto com mesmo ID/preço e nome visivelmente diferente bloqueia a revisão antiga; a canonicalização é a mesma da GRP-01. A auditoria de privacidade dos logs valida o formato e desconsidera apenas o `cid` aleatório no teste de conteúdo, evitando colisão acidental com nomes sintéticos.
+
+O canal humano no bot é outro incremento desligado, com revisão/callback e recuperação técnica por GET. Não conclui BOT-03: faltam identificação legível completa de loja/endereço/conta e apresentação de composição/custos finais. INT-02 permanece NO-GO operacional; nenhuma credencial, flag, produção ou negócio real foi usado nesta continuação.
+
+Checks finais desta continuação: typecheck, lint, build e diff aprovados; suíte completa com **986 aprovados, 2 ignorados, 988 no total**, sem falhas. A primeira execução teve um timeout de 5 s no teste existente RUN-01 `accepted`; a repetição completa passou com a mesma concorrência/prazo, sem modificar o teste. Auditor independente conferiu os novos regressores de identificação e lookup; parecer limitado à publicação draft OFF.
 
 [CART-01 #18](https://github.com/Modo-Escuro/api-backend/issues/18), [BUY-01 #19](https://github.com/Modo-Escuro/api-backend/issues/19) e [BUY-02 #20](https://github.com/Modo-Escuro/api-backend/issues/20) não são encerradas por este incremento. PREPARE_CART autoriza só as mutações revisadas; SUBMIT_ORDER exige outra finalidade/autorização e continua indisponível. Sem mecanismo confiável para reconciliar criação sem cartId ou escrita desconhecida, o bloqueio permanece. Releitura não elimina corrida externa nem promete execução única no iFood.
