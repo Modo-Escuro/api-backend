@@ -39,6 +39,9 @@ describe('RUN-01 integrado: morte real do processo com o agente da AI-02', () =>
       const dir = temporary(); cleanup.push(dir.clean);
       const child = spawnSync(process.execPath, ['--import', 'tsx', 'test/turns/crash-agent-process.ts', dir.file, stage], { encoding: 'utf8', timeout: 30_000 });
       expect(child.status, child.stderr).toBe(17);
+      // Logs do processo (OPS-02 ou outros) não podem misturar-se ao resultado: stdout tem exatamente uma linha JSON.
+      expect(child.stdout.trim().split('\n')).toHaveLength(1);
+      if (stage !== 'accepted') expect(child.stderr).toContain('synthetic.log');
       const { operationId, calls: childCalls } = JSON.parse(child.stdout) as { operationId: string; calls: number };
       expect(childCalls).toBe(stage === 'accepted' ? 0 : 1);
 

@@ -7,10 +7,16 @@ import { TurnStore } from '../../src/server/turns/store.js';
 import { geminiReply } from '../helpers/gemini.js';
 import { event, principal } from './helpers.js';
 
+// stdout é só do resultado estruturado lido pelo teste. Logs (inclusive os JSON da OPS-02, que usam console.log)
+// vão para stderr.
+const toStderr = (...args: unknown[]) => { process.stderr.write(args.map(String).join(' ') + '\n'); };
+console.log = console.info = console.debug = console.warn = toStderr;
+
 const [file, stage] = process.argv.slice(2);
 let calls = 0;
 const transport: typeof fetch = async () => {
   calls++;
+  console.log(JSON.stringify({ level: 'info', event: 'synthetic.log', component: 'test' })); // simula log estruturado
   if (stage === 'running') return new Promise<Response>(() => undefined); // modelo em voo quando o processo morre
   return geminiReply({ actions: [{ action: 'ADD_PARTICIPANT', name: 'Ana' }] });
 };
