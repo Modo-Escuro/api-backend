@@ -119,6 +119,27 @@ describe('GRP-01 ponta a ponta com AI-02 + DATA-01 + RUN-01', () => {
     expect((await w.send('pode pedir')).snapshot!.phase).toBe('EDITING_CART');
   });
 
+  it('Esvaziar sacola limpa somente a composição simulada e preserva contexto após reinício', async () => {
+    const w = await world();
+    await w.send('Somos Ana e Caio. Ana não tem restrição. Caio é alérgico a leite. Teto de R$ 180');
+    await w.send('Sugere pizza');
+    await w.send('Quero a proposta 1');
+    expect(w.domain().bag).toBeDefined();
+    const before = w.domain();
+    const reads = w.env.mcp.used.length;
+    const cleared = await w.send('Esvaziar sacola simulada');
+    expect(cleared.status).toBe('SUCCEEDED');
+    expect(w.domain().bag).toBeUndefined();
+    expect(w.domain().participants).toEqual(before.participants);
+    expect(w.domain().groupLimit).toEqual(before.groupLimit);
+    expect(cleared.snapshot!.blocks.some((b) => b.kind === 'REVIEW')).toBe(false);
+    expect(cleared.snapshot!.humanApproval).toBeNull();
+    w.restart();
+    expect(w.domain().bag).toBeUndefined();
+    expect(w.env.mcp.used).toHaveLength(reads);
+    expect(w.env.mcp.used.every((call) => READ_TOOLS.has(call.op))).toBe(true);
+  });
+
   it('falha do MCP na busca não derruba o turno nem perde dados', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const w = await world();

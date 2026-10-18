@@ -57,6 +57,23 @@ export async function generateProposals(
       result.explanation.push(`Só informação, não é recomendação: “${name}” (${merchant}). Segurança não verificada para ${names}; item bloqueado para essas pessoas.`);
     }
   }
+  // Prévia opcional por link: só imagem observada no getItem da primeira proposta completa.
+  // Não cria um segundo envio Telegram, nem troca um candidato bloqueado por recomendação visual.
+  const first = result.proposals[0];
+  if (first?.coverage.length && first.coverage.every((c) => c.status === 'COVERED')) {
+    const line = first.proposal.lines[0];
+    const item = line && outcome.candidates.find((c) => c.listing.itemId === line.itemId
+      && c.listing.merchant.merchantId === first.proposal.merchantId);
+    const image = item && val(item.detail.imageUrl);
+    if (image && image.length <= 240) {
+      try {
+        const url = new URL(image);
+        if (url.protocol === 'https:' && url.hostname === 'static.ifood-static.com.br'
+          && !url.port && !url.username && !url.password && !url.search && !url.hash
+          && url.pathname.startsWith('/image/upload/')) result.explanation.push(`Foto do item: ${url.href}`);
+      } catch { /* Sem URL verificável: manter somente texto. */ }
+    }
+  }
   return { result, read: r };
 }
 

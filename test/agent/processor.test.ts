@@ -88,6 +88,33 @@ describe('AI-02 com RUN-01 + DATA-01 (SQLite real)', () => {
     expect(op.snapshot!.pending.some((q) => q.includes('teto máximo'))).toBe(true);
   });
 
+  it('Não responde à pergunta de Bruna e depois de Bia, sem outro Gemini ou alteração de teto', async () => {
+    const model = new ScriptedModel((r) => new DeterministicModel().propose(r));
+    const e = env(model);
+    await e.send('Somos Bruna e Bia. Orçamento de R$ 100.');
+    const first = await e.send('Nao');
+    expect(first.status).toBe('SUCCEEDED');
+    expect(e.domain().participants.map((p: { restrictions: { state: string } }) => p.restrictions.state)).toEqual(['NONE', 'NOT_ASKED']);
+    expect(first.snapshot!.pending[0]).toBe('Bia tem alguma alergia ou restrição alimentar?');
+    await e.send('Não');
+    expect(e.domain().participants.map((p: { restrictions: { state: string } }) => p.restrictions.state)).toEqual(['NONE', 'NONE']);
+    expect(e.domain().groupLimit.value.amountCents).toBe(10000);
+    expect(model.inputs).toHaveLength(1);
+  });
+
+  it('botão de esvaziar sacola vazia é local e idempotente, sem chamar o modelo', async () => {
+    const model = new ScriptedModel((r) => new DeterministicModel().propose(r));
+    const e = env(model);
+    await e.send('Somos Ana. Ana é alérgica a amendoim. Teto de R$ 100');
+    for (let i = 0; i < 2; i++) {
+      const op = await e.send('Esvaziar sacola simulada');
+      expect(op.snapshot!.pending).toContain('A sacola simulada já está vazia.');
+      expect(e.domain().participants[0].restrictions.value[0].key.code).toBe('PEANUT');
+      expect(e.domain().groupLimit.value.amountCents).toBe(10000);
+    }
+    expect(model.inputs).toHaveLength(1);
+  });
+
   it('modelo indisponível: operação FAILED/UNAVAILABLE, estado e versão preservados, próximo turno funciona', async () => {
     let down = true;
     const e = env(new ScriptedModel(async (r) => { if (down) throw new Error('provedor fora'); return new DeterministicModel().propose(r); }));

@@ -21,6 +21,7 @@ import { AgentProposalSchema, type ConversationModel } from './model.js';
 import { buildModelInput, missingQuestions, planActions } from './policy.js';
 import { renderSnapshot, SNAPSHOT_BUDGET_BYTES } from './render.js';
 import { AddressError } from '../services/delivery-addresses.js';
+import { shortReply } from './short-reply.js';
 
 export interface AgentOptions {
   model: ConversationModel;
@@ -109,9 +110,10 @@ export function createAgentProcessor(opts: AgentOptions): TurnProcessor {
     } catch (e) {
       fail(reason(e, 'LINK_LOOKUP'));
     }
+    const direct = shortReply(ctx.purchase, ctx.snapshot, ctx.event.input.text);
     const input = buildModelInput(ctx.purchase, ctx.snapshot.phase, ctx.event.input.text);
     const reservedTokens = estimateInputTokens(input) + maxOutputTokens;
-    const reserved = opts.budget?.reserve(conversationKey(scopeKey(ctx.principal)), reservedTokens);
+    const reserved = direct ? undefined : opts.budget?.reserve(conversationKey(scopeKey(ctx.principal)), reservedTokens);
     if (reserved && !reserved.ok) {
       // Parada clara antes do provedor: nada é gravado, o snapshot e a compra continuam na versão atual.
       log('warn', 'agent.budget_exceeded', { component: 'agent', kind: reserved.denial, reservedTokens });
@@ -129,21 +131,21 @@ export function createAgentProcessor(opts: AgentOptions): TurnProcessor {
     let raw: unknown;
     const t0 = now();
     try {
-      raw = await withDeadline(signal, ctx.signal, (s) => opts.model.propose({ input, signal: s, maxOutputTokens, reportUsage,
+      raw = direct ? direct.proposal : await withDeadline(signal, ctx.signal, (s) => opts.model.propose({ input, signal: s, maxOutputTokens, reportUsage,
         budgetScope: scopeHash(ctx.principal) }));
-      metrics.inc('model_calls_total', { outcome: 'OK' });
+      if (!direct) metrics.inc('model_calls_total', { outcome: 'OK' });
     } catch (e) {
       metrics.inc('model_calls_total', { outcome: reason(e, 'MODEL') });
       fail(reason(e, 'MODEL'));
     } finally {
-      metrics.observe('model_call_duration_ms', {}, now() - t0);
+      if (!direct) metrics.observe('model_call_duration_ms', {}, now() - t0);
       settledUsage = true;
       const u = usage as { inputTokens: number | null; outputTokens: number | null; costMicroUsd: number | null } | null;
       const used = u && u.inputTokens !== null && u.outputTokens !== null ? u.inputTokens + u.outputTokens : null;
       if (reserved?.ok) reserved.reservation.settle(used);
       if (u?.inputTokens != null) metrics.inc('model_tokens_total', { kind: 'input' }, u.inputTokens);
       if (u?.outputTokens != null) metrics.inc('model_tokens_total', { kind: 'output' }, u.outputTokens);
-      if (used === null) metrics.inc('model_tokens_total', { kind: 'reserved_unreported' }, reservedTokens);
+      if (!direct && used === null) metrics.inc('model_tokens_total', { kind: 'reserved_unreported' }, reservedTokens);
       if (u?.costMicroUsd != null && u.costMicroUsd > 0) metrics.inc('model_cost_micro_usd_total', {}, u.costMicroUsd);
     }
     const parsed = AgentProposalSchema.safeParse(raw);
@@ -151,7 +153,7 @@ export function createAgentProcessor(opts: AgentOptions): TurnProcessor {
 
     // Só propostas exibidas no último snapshot podem ser escolhidas (nada de escolha às cegas).
     const visible = new Set(ctx.snapshot.blocks.flatMap((b) => (b.kind === 'PROPOSAL' ? [b.proposalRef] : [])));
-    const plan = planActions(ctx.purchase, parsed.data, (change) => ctx.previewDomain(change), linkId, ctx.event.input.text, visible);
+    const plan = planActions(ctx.purchase, parsed.data, (change) => ctx.previewDomain(change), linkId, direct?.policyMessage ?? ctx.event.input.text, visible);
     const extraNotes: string[] = [];
     if (plan.suggest !== null) {
       const state = plan.state;

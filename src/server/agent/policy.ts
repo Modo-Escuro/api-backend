@@ -64,7 +64,7 @@ export function buildModelInput(purchase: PurchaseState | null, phase: string, m
     participants: (s?.participants ?? []).map((p) => ({ ref: p.participantId, name: p.displayName, restrictions: restrictionsView(p), limit: limitView(p.limit) })),
     groupLimit: s ? limitView(s.groupLimit) : 'NOT_ASKED',
     priority: s ? (s.priority.state === 'DECLARED' ? s.priority.value : s.priority.state === 'UNCLEAR' ? 'UNCLEAR' : 'NOT_ASKED') : 'NOT_ASKED',
-    openQuestions: (s?.clarifications ?? []).map((c) => c.question),
+    openQuestions: missingQuestions(s),
     allowedActions: ALLOWED_ACTIONS,
     message,
   };
@@ -269,6 +269,7 @@ export function planActions(
       }
       case 'CLEAR_BAG':
         if (state?.bag) tryApply([{ op: 'CLEAR_BAG' }], 'Sacola simulada esvaziada.', 'Esvaziar a sacola');
+        else notes.push('A sacola simulada já está vazia.');
         break;
     }
   }

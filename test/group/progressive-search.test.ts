@@ -182,6 +182,18 @@ describe('exploração progressiva com limites globais', () => {
 });
 
 describe('diagnóstico distingue alimentação, orçamento, cobertura e catálogo', () => {
+  it('foto vem do getItem de proposta completa, nunca de item bloqueado ou URL arbitrária', async () => {
+    const f = catalog(1);
+    const photo = 'https://static.ifood-static.com.br/image/upload/t_medium/pratos/synthetic.jpg';
+    f.entries[0]!.detail.itemImageUrl = photo;
+    expect((await run(group(), f.deps)).result.explanation).toContain(`Foto do item: ${photo}`);
+    expect((await run(group(true), f.deps)).result.explanation.join(' ')).not.toContain('Foto do item:');
+    for (const image of ['http://127.0.0.1/image/upload/a.jpg', 'https://example.test/image/upload/a.jpg',
+      'https://static.ifood-static.com.br/image/upload/a.jpg?token=private']) {
+      f.entries[0]!.detail.itemImageUrl = image;
+      expect((await run(group(), f.deps)).result.explanation.join(' ')).not.toContain('Foto do item:');
+    }
+  });
   it('preço ausente não é chamado de falta de evidência alimentar', () => {
     const result = composeProposals(group(), [candidate({ name: 'Arroz', price: null })], { seed: 'x' });
     expect(result.diagnosis.issues).toEqual(['MISSING_DATA']);
