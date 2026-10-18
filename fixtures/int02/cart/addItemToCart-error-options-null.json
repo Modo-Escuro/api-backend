@@ -1,0 +1,9 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Parameter specified as non-null is null: method com.ifood.cart.mcp.core.service.McpToolsService.addItemToCart, parameter options\nParameter specified as non-null is null: method com.ifood.cart.mcp.core.service.McpToolsService.addItemToCart, parameter options"
+    }
+  ],
+  "isError": true
+}

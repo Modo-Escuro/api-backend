@@ -1,0 +1,28 @@
+{
+  "tool": "createAddress",
+  "observedAt": "2026-10-18T12:25:40.045Z",
+  "classification": "OBSERVED_AUTHENTICATED",
+  "args": {
+    "address": "Rua Aquidaban, 1, São Carlos, SP",
+    "candidateId": "87c543cc-f027-4535-a5ec-01df6a3885de"
+  },
+  "response": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"success\":false,\"errors\":{\"mcpCode\":-32502,\"code\":\"ADDRESS_CREATION_FAILED\",\"message\":\"failed to create address: unexpected status: 400 Bad Request (code=ADR-2001)\",\"suggestedAction\":\"Retry the request. If it persists, verify listAddresses to check if the address was created before retrying.\",\"retryable\":true}}"
+      }
+    ],
+    "structuredContent": {
+      "success": false,
+      "errors": {
+        "mcpCode": -32502,
+        "code": "ADDRESS_CREATION_FAILED",
+        "message": "failed to create address: unexpected status: 400 Bad Request (code=ADR-2001)",
+        "suggestedAction": "Retry the request. If it persists, verify listAddresses to check if the address was created before retrying.",
+        "retryable": true
+      }
+    },
+    "isError": false
+  }
+}

@@ -25,13 +25,17 @@ const money = z.number().finite().nonnegative().refine((n) => {
 }).transform(brlToCents);
 const cartItem = z.object({ cartItemId: id, itemId: id, quantity: z.number().int().positive(),
   options: z.array(selectedOption), customerNote: z.string().optional(), unitPrice: money.optional() });
-const totals = z.object({ subtotal: money, deliveryFee: money, serviceFee: money, discount: money, total: money });
-const snapshotSchema = z.object({ cartId: id, merchantId: id, addressId: id, items: z.array(cartItem),
+// benefits (observado): mistura promoção de item com entrega grátis já refletida na taxa; não decomponível.
+const totals = z.object({ subtotal: money, deliveryFee: money, serviceFee: money, discount: money, total: money, benefits: money.optional() });
+const deliveryAddress = z.object({ street: z.string().min(1), number: z.string().min(1), neighborhood: z.string().nullable() }).strict();
+const snapshotSchema = z.object({ cartId: id, merchantId: id, addressId: id.optional(), deliveryAddress: deliveryAddress.optional(),
+  items: z.array(cartItem),
   totals: totals.optional(),
   deliveryMethod: z.object({ deliveryMethodId: z.string().min(1), selectedTimeSlotId: id.nullable().optional() }).nullable().optional(),
   // Projeção: nunca guarda cardTokenId, PAN, documento ou dados brutos de pagamento.
   paymentMethod: z.object({ paymentMethodId: id }).nullable().optional(),
-  vouchers: z.array(z.object({ code: z.string(), campaignId: id })).optional() });
+  vouchers: z.array(z.object({ code: z.string(), campaignId: id })).optional() })
+  .refine(s => s.addressId !== undefined || s.deliveryAddress !== undefined, 'endereço do carrinho ausente');
 export type Snapshot = z.infer<typeof snapshotSchema>;
 export type ItemInput = z.infer<typeof itemInput>;
 export type CartTool = 'createCart' | 'getCart' | 'addItemToCart' | 'updateCartItem' | 'removeItemFromCart'
@@ -60,7 +64,10 @@ export function payload(raw: unknown): unknown {
 // Não aceitar undefined/texto/{}/queued=true como prova de que a escrita foi concluída.
 const mutationConfirmation = z.object({ success: z.literal(true) }).strict();
 export function assertMutationConfirmation(raw: unknown): void {
-  if (!mutationConfirmation.safeParse(payload(raw)).success)
+  const body = payload(raw);
+  // Observado: mutações devolvem o carrinho completo; a composição é conferida depois pela releitura.
+  if (isObservedCart(body)) { normalizeObserved(body); return; }
+  if (!mutationConfirmation.safeParse(body).success)
     throw new CartError('CART_CONTRACT_UNVERIFIED', 'Confirmação de escrita não reconhecida; reconciliar antes de repetir.', 502);
 }
 
@@ -69,8 +76,41 @@ export function parseCreatedCart(raw: unknown): { cartId: string } {
   if (!result.success) throw new CartError('CART_CONTRACT_UNVERIFIED', 'createCart não retornou cartId reconhecido.', 502);
   return result.data;
 }
+// Formato OBSERVADO na INT-02 (18/10/2026, fixtures/int02): createCart, getCart e as mutações devolvem o
+// carrinho completo em content[].text, sem success/data. addressId não volta; só deliveryAddress textual.
+// Item sem opções omite `options` (formato com opções ainda não observado: chave desconhecida rejeita).
+const observedItem = z.object({ itemId: id, cartItemId: id, quantity: z.number().int().positive(), unitPrice: money,
+  name: z.string().optional(), options: z.array(selectedOption).optional(), customerNote: z.string().optional() }).strict();
+const observedCart = z.object({
+  cartId: id, merchant: z.object({ merchantId: id }).passthrough(), items: z.array(observedItem),
+  deliveryAddress: z.object({ streetName: z.string().min(1), streetNumber: z.string().min(1), neighborhood: z.string().nullish() }).passthrough(),
+  deliveryMethod: z.object({ deliveryMethodId: z.string().min(1), fee: money }).passthrough(),
+  fees: z.array(z.object({ amount: money }).passthrough()),
+  summary: z.object({ totalAmount: money, subtotalAmount: money, deliveryFeeAmount: money, feeTotalAmount: money,
+    benefitsTotalAmount: money, voucherTotalAmount: money }).passthrough(),
+}).passthrough();
+const isObservedCart = (v: unknown) => !!v && typeof v === 'object' && 'merchant' in v && 'summary' in v;
+function normalizeObserved(raw: unknown): unknown {
+  const r = observedCart.safeParse(raw);
+  if (!r.success) throw new CartError('CART_CONTRACT_UNVERIFIED', 'Carrinho retornado fora do formato observado.', 502);
+  const c = r.data, extra = raw as Record<string, unknown>;
+  // Pagamento/cupons ainda não observados: presença bloqueia em vez de ser ignorada.
+  if ((extra['paymentMethod'] ?? null) !== null || (Array.isArray(extra['vouchers']) && extra['vouchers'].length))
+    throw new CartError('CART_CONTRACT_UNVERIFIED', 'Carrinho contém pagamento/cupom em formato não validado.', 502);
+  const feeSum = c.fees.reduce((a, f) => a + f.amount, 0);
+  if (c.deliveryMethod.fee !== c.summary.deliveryFeeAmount || feeSum !== c.summary.feeTotalAmount)
+    throw new CartError('CART_CONTRACT_UNVERIFIED', 'Taxas do carrinho divergem entre si.', 502);
+  return { cartId: c.cartId, merchantId: c.merchant.merchantId,
+    deliveryAddress: { street: c.deliveryAddress.streetName, number: c.deliveryAddress.streetNumber, neighborhood: c.deliveryAddress.neighborhood ?? null },
+    items: c.items.map(i => ({ cartItemId: i.cartItemId, itemId: i.itemId, quantity: i.quantity, options: i.options ?? [],
+      unitPrice: i.unitPrice / 100, ...(i.customerNote !== undefined ? { customerNote: i.customerNote } : {}) })),
+    totals: { subtotal: c.summary.subtotalAmount / 100, deliveryFee: c.summary.deliveryFeeAmount / 100, serviceFee: c.summary.feeTotalAmount / 100,
+      discount: c.summary.voucherTotalAmount / 100, total: c.summary.totalAmount / 100, benefits: c.summary.benefitsTotalAmount / 100 },
+    deliveryMethod: { deliveryMethodId: c.deliveryMethod.deliveryMethodId } };
+}
 export function parseSnapshot(raw: unknown): Snapshot {
-  const result = snapshotSchema.safeParse(payload(raw));
+  const body = payload(raw);
+  const result = snapshotSchema.safeParse(isObservedCart(body) ? normalizeObserved(body) : body);
   if (!result.success) throw new CartError('CART_CONTRACT_UNVERIFIED', 'Resposta de getCart não reconhecida; é necessária uma captura sanitizada do contrato real.', 502);
   const s = result.data;
   if (new Set(s.items.map((i) => i.cartItemId)).size !== s.items.length) throw new CartError('CART_CONTRACT_UNVERIFIED', 'Itens duplicados na resposta de getCart.', 502);
@@ -82,7 +122,12 @@ export function confirmedTotals(s: Snapshot) {
   const values = { subtotalCents: t.subtotal, deliveryFeeCents: t.deliveryFee,
     serviceFeeCents: t.serviceFee, discountCents: t.discount, totalCents: t.total };
   const expected = BigInt(values.subtotalCents) + BigInt(values.deliveryFeeCents) + BigInt(values.serviceFeeCents) - BigInt(values.discountCents);
-  return { status: expected >= 0n && expected === BigInt(values.totalCents) ? 'CONSISTENT' as const : 'DIVERGENT' as const, values };
+  if (expected >= 0n && expected === BigInt(values.totalCents)) return { status: 'CONSISTENT' as const, values };
+  // Decisão INT-02 (18/10/2026): com benefícios não decomponíveis, o total é só INFORMADO pelo iFood,
+  // nunca confirmado. Exige total entre 0 e o valor sem benefícios; orçamento/rateio seguem não verificados.
+  const total = BigInt(values.totalCents);
+  if ((t.benefits ?? 0) > 0 && total >= 0n && total <= expected) return { status: 'PROVIDER_REPORTED' as const, values };
+  return { status: 'DIVERGENT' as const, values };
 }
 export const deliveryList = z.object({ deliveryMethods: z.array(z.object({ deliveryMethodId: z.string().min(1),
   timeSlots: z.array(z.object({ timeSlotId: id })).optional() })) });

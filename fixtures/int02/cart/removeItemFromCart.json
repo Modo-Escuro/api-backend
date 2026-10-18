@@ -1,0 +1,55 @@
+{
+  "cartId": "b82b35b3-4660-4aad-805a-dfcab8995d30",
+  "merchant": {
+    "merchantId": "5d4b6c90-460a-4f1b-ab7d-2dd92cf16485",
+    "merchantName": "Jardim Cafeteria Express",
+    "orderMinimumPrice": 20,
+    "formattedAddress": "Alameda dos Crisântemos, 130 — Cidade Jardim, SAO CARLOS, SP"
+  },
+  "items": [
+    {
+      "itemId": "61da1f8c-b492-4ab3-befd-5c5fe8a51724",
+      "cartItemId": "167e3bd0-858c-49d7-b922-cb9ed8031741",
+      "quantity": 1,
+      "unitPrice": 7.99,
+      "name": "Refrigerante Guaraná Itubaina Lata 350ml"
+    }
+  ],
+  "deliveryAddress": {
+    "streetName": "Rua Doutor Carlos de Camargo Salles",
+    "streetNumber": "400",
+    "neighborhood": "Cidade Universitária"
+  },
+  "deliveryMethod": {
+    "deliveryMethodId": "DEFAULT",
+    "deliveryMethodMode": "DELIVERY",
+    "deliveryMethodName": "Padrão",
+    "fee": 0,
+    "estimatedMinutes": {
+      "min": 17,
+      "max": 32
+    }
+  },
+  "fees": [
+    {
+      "name": "Taxa de serviço",
+      "description": "A cobrança da taxa de serviço inclui o licenciamento de uso da Plataforma e contribui com custos operacionais, como desenvolvimento, atualização e suporte, além de viabilizar investimentos contínuos em segurança e inovação.",
+      "amount": 0.99
+    }
+  ],
+  "summary": {
+    "totalName": "Valor total",
+    "totalAmount": 4.99,
+    "subtotalName": "Valor dos itens",
+    "subtotalAmount": 7.99,
+    "deliveryFeeName": "Valor da taxa de entrega",
+    "deliveryFeeAmount": 0,
+    "feeTotalName": "Valor das taxas e serviços",
+    "feeTotalAmount": 0.99,
+    "benefitsTotalName": "Valor dos benefícios",
+    "benefitsTotalAmount": 8.98,
+    "voucherTotalName": "Valor dos cupons",
+    "voucherTotalAmount": 0
+  },
+  "appDeeplink": "ifood://cart?cartId=b82b35b3-4660-4aad-805a-dfcab8995d30"
+}

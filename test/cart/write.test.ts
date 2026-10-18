@@ -359,6 +359,36 @@ describe('CART-01: confirmação humana, persistência e reconciliação (MCP mo
     expect(await f.service.confirm(principal, command)).toMatchObject({ state: 'SUCCEEDED' });
     expect(f.write).toHaveBeenCalledTimes(1);
   });
+  it.each([
+    ['sem endereço textual igual', 'Outra Rua', 'FAILED'],
+    ['formato observado com promoção', 'Rua Sintética', 'SUCCEEDED'],
+  ])('INT-02 %s: carrinho inteiro sem addressId, total só informado pelo iFood', async (_label, street, expected) => {
+    const f = setup(), loc = { street: 'Rua Sintética', number: '10', neighborhood: 'Centro', city: 'Cidade sintética' };
+    const address = { addressId: A, location: loc, coordinates: { latitude: -1, longitude: -2 } };
+    vi.mocked(f.ctx.deps.listAddresses).mockResolvedValue({ results: [address] });
+    f.turns.db.prepare('UPDATE delivery_address_selected SET address_hash=?').run(contentHash(addressSchema.parse(address)));
+    // Forma das respostas reais (fixtures/int02/cart); valores sintéticos.
+    const cartId = randomUUID(), lines: { itemId: string; cartItemId: string; quantity: number }[] = [];
+    const observed = (promo: boolean) => { const sub = lines.reduce((n, l) => n + l.quantity * 20, 0);
+      return { cartId, merchant: { merchantId: M, merchantName: 'Loja' },
+        items: lines.map(l => ({ ...l, unitPrice: 20, name: 'Arroz' })),
+        deliveryAddress: { streetName: street, streetNumber: '10', neighborhood: 'Centro' },
+        deliveryMethod: { deliveryMethodId: 'DEFAULT', deliveryMethodMode: 'DELIVERY', fee: 0 },
+        fees: [{ name: 'Taxa de serviço', amount: 0.99 }],
+        summary: { totalAmount: Math.round((promo ? sub + 0.99 - 5 : sub + 0.99) * 100) / 100, subtotalAmount: sub, deliveryFeeAmount: 0, feeTotalAmount: 0.99,
+          benefitsTotalAmount: promo ? 10 : 5, voucherTotalAmount: 0 } }; };
+    f.write.mockImplementation(async (tool: string, args: Record<string, unknown>) => {
+      if (tool !== 'createCart') throw new Error('inesperado');
+      for (const i of args.items as { itemId: string; quantity: number }[]) lines.push({ itemId: i.itemId, cartItemId: randomUUID(), quantity: i.quantity });
+      return observed(false); // createCart responde antes de aplicar a promoção (observado)
+    });
+    f.read.mockImplementation((async () => observed(true)) as never);
+    const review = await f.service.prepare(principal), result = await f.service.confirm(principal, f.command(review.confirmationRef));
+    expect(result).toMatchObject({ state: expected, purchaseAuthorized: false, checkoutEnabled: false });
+    expect(f.write).toHaveBeenCalledTimes(1);
+    if (expected === 'SUCCEEDED') expect((result as { budget?: unknown }).budget).toMatchObject({ status: 'UNVERIFIED' }); // total informado nunca vira orçamento confirmado
+    else expect(result).toMatchObject({ code: 'CART_IDENTITY_MISMATCH' });
+  });
   it('confirmação ausente/expirada e referência de outro organizador não escrevem', async () => {
     const f = setup();
     await expect(f.service.confirm(principal, f.command('inexistente'))).rejects.toMatchObject({ code: 'CART_CONFIRMATION_EXPIRED' });

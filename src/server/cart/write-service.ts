@@ -10,7 +10,7 @@ import type { IfoodLinkService, OperationalContext, Operation } from '../links/s
 import { CartError, assertMutationConfirmation, confirmedTotals, id, parseCreatedCart, parseItem, parseSnapshot, payload, type CartGateway, type Snapshot } from './contracts.js';
 import type { CartContractGate } from './write-contract.js';
 import { CartWriteStore, type Head, type HumanCartCommand, type Intent, type WritePlan, type WriteStep } from './write-store.js';
-import { assertSelectedAddress, parseAddressList } from '../services/address-reference.js';
+import { assertSelectedAddress, parseAddressList, type DeliveryAddress } from '../services/address-reference.js';
 import { describeItem, descriptionHashes, displayContext, labelKey, readable, type CartDisplay, type ItemLabel } from './presentation.js';
 import { metrics } from '../ops/metrics.js';
 
@@ -22,6 +22,17 @@ const composition = (items: Snapshot['items'] | Item[]) => items.map(i => ({
 })).sort((a,b) => itemKey(a).localeCompare(itemKey(b)));
 
 /** CART-01: único caminho operacional de escrita. Não possui método de pagamento ou envio de pedido. */
+const norm = (v: string | null | undefined) => (v ?? '').normalize('NFC').trim().toLowerCase();
+/** Observado: carrinho real não devolve addressId, só deliveryAddress textual; compara com listAddresses relido. */
+function sameAddress(s: Snapshot, addressId: string, address: DeliveryAddress | undefined, write: boolean) {
+  if (s.addressId !== undefined) return s.addressId === addressId;
+  if (!s.deliveryAddress) return false;
+  if (!address) return !write; // consulta técnica sem escrita; escrita exige endereço relido
+  return address.addressId === addressId && norm(address.location?.street) === norm(s.deliveryAddress.street) &&
+    norm(address.location?.number) === norm(s.deliveryAddress.number) &&
+    norm(address.location?.neighborhood) === norm(s.deliveryAddress.neighborhood);
+}
+
 export class ConfirmedCartService {
   constructor(readonly store: CartWriteStore, private readonly links: Pick<IfoodLinkService, 'withOperational' | 'status'>,
     private readonly contract: CartContractGate) {}
@@ -48,13 +59,13 @@ export class ConfirmedCartService {
       });
     return write ? this.links.withOperational(p.organizerId, 'OFFERS_EVALUATE', use) : use();
   }
-  private async read(p: AdapterPrincipal, state: PurchaseState, gateway: CartGateway, cartId: string, write = true) {
+  private async read(p: AdapterPrincipal, state: PurchaseState, gateway: CartGateway, cartId: string, write = true, address?: DeliveryAddress) {
     await this.current(p, state.linkId!, write);
     const raw = await gateway.call('getCart', { cartId });
     await this.current(p, state.linkId!, write);
     const snapshot = parseSnapshot(raw);
     if (snapshot.cartId !== cartId || state.address.state !== 'DECLARED' || state.merchant.state !== 'DECLARED' ||
-      snapshot.addressId !== state.address.value.addressId || snapshot.merchantId !== state.merchant.value.merchantId)
+      !sameAddress(snapshot, state.address.value.addressId, address, write) || snapshot.merchantId !== state.merchant.value.merchantId)
       throw new CartError('CART_IDENTITY_MISMATCH', 'Carrinho, loja ou endereço divergem da compra.');
     const fingerprint = contentHash(payload(raw));
     this.store.saveHead(p, state, cartId, snapshot, fingerprint);
@@ -154,7 +165,7 @@ export class ConfirmedCartService {
     return this.using(p, async (ctx, gateway) => {
       const check = await this.validate(p, ctx), { state } = check;
       let head = this.store.head(p, state);
-      if (head) head = await this.read(p, state, gateway, head.cartId);
+      if (head) head = await this.read(p, state, gateway, head.cartId, true, check.address);
       const display: CartDisplay = { ...check.display, items: await this.remoteLabels(ctx, state.bag!.merchantId,
         check.location, head?.snapshot?.items ?? [], check.display.items) };
       const steps = this.steps(check.items, head);
@@ -203,7 +214,7 @@ export class ConfirmedCartService {
         throw new CartError('CART_REVIEW_CHANGED', 'Catálogo ou composição mudou; solicite nova confirmação.');
       let head = this.store.head(p, check.state);
       await this.contract.verify(gateway, plan.steps.map(s => s.tool), plan.steps.map(s => ({...s,args:{...s.args,...(head ? {cartId:head.cartId} : {})}})));
-      if (head) head = await this.read(p, check.state, gateway, head.cartId);
+      if (head) head = await this.read(p, check.state, gateway, head.cartId, true, check.address);
       if ((head?.fingerprint ?? null) !== plan.remoteHash) throw new CartError('CART_REMOTE_CHANGED', 'Carrinho alterado externamente; revise e confirme novamente.');
       const labels = await this.remoteLabels(ctx, plan.merchantId, check.location, head?.snapshot?.items ?? [], check.display.items);
       if (contentHash(descriptionHashes(labels)) !== contentHash(plan.descriptionHashes))
@@ -217,7 +228,7 @@ export class ConfirmedCartService {
           const fresh = await this.validate(p, ctx);
           if (fresh.validationHash !== plan.validationHash) throw new CartError('CART_REVIEW_CHANGED', 'Catálogo alterado; nova confirmação necessária.');
           if (cartId) {
-            const observed = await this.read(p, check.state, gateway, cartId);
+            const observed = await this.read(p, check.state, gateway, cartId, true, fresh.address);
             if (observed.fingerprint !== head?.fingerprint) throw new CartError('CART_REMOTE_CHANGED', 'Carrinho mudou antes da escrita.');
           }
           const currentLabels = await this.remoteLabels(ctx, plan.merchantId, fresh.location, head?.snapshot?.items ?? [], fresh.display.items);
@@ -235,7 +246,7 @@ export class ConfirmedCartService {
           if (createdId) cartId = createdId;
           this.store.stepDone(p, check.state, intent.id, index + 1, cartId!); sent = false;
           // ID reconhecido é salvo antes da releitura: falha em GET nunca recria o carrinho.
-          head = await this.read(p, check.state, gateway, cartId!);
+          head = await this.read(p, check.state, gateway, cartId!, true, fresh.address);
           await this.current(p, plan.linkId);
           if (head.snapshot!.items.some(i => i.customerNote) || contentHash(composition(head.snapshot!.items)) !== contentHash(composition(expected)))
             throw new CartError('CART_COMPOSITION_CHANGED', 'Composição intermediária diverge; interrompida a sequência para nova revisão.');
@@ -245,7 +256,7 @@ export class ConfirmedCartService {
             (i as Snapshot['items'][number]).unitPrice);
           if (head.snapshot!.items.some(i => i.unitPrice === undefined || i.unitPrice !== expectedPrices.get(itemKey(i))))
             throw new CartError('CART_PRICE_CHANGED', 'Preço unitário remoto divergente ou ausente; sequência interrompida para revisão.');
-          if (confirmedTotals(head.snapshot!).status !== 'CONSISTENT' ||
+          if (!['CONSISTENT', 'PROVIDER_REPORTED'].includes(confirmedTotals(head.snapshot!).status) ||
             head.snapshot!.totals?.subtotal !== addCents(...head.snapshot!.items.map(i => multiplyCents(i.unitPrice!,i.quantity))))
             throw new CartError('CART_TOTALS_UNVERIFIED', 'Subtotal ou total remoto divergente; sequência interrompida para revisão.');
           const actualTotals = head.snapshot!.totals;
@@ -292,7 +303,11 @@ export class ConfirmedCartService {
       const observed = await this.read(p, state, gateway, head.cartId, false);
       let active = true;
       try { this.store.purchase(p); } catch { active = false; }
-      const addresses = parseAddressList(await ctx.deps.listAddresses()), address = addresses.find(a => a.addressId === observed.snapshot!.addressId);
+      // Observado: carrinho real não devolve addressId; usa o endereço declarado e confere o texto devolvido.
+      const declared = observed.snapshot!.addressId ?? (state.address.state === 'DECLARED' ? state.address.value.addressId : undefined);
+      const addresses = parseAddressList(await ctx.deps.listAddresses()), address = addresses.find(a => a.addressId === declared);
+      if (!declared || !sameAddress(observed.snapshot!, declared, address, true))
+        throw new CartError('CART_IDENTITY_MISMATCH', 'Endereço do carrinho diverge do endereço confirmado.');
       const location = z.object({ latitude: z.number(), longitude: z.number() }).parse(address?.coordinates);
       const labels = await this.remoteLabels(ctx, observed.snapshot!.merchantId, location, observed.snapshot!.items);
       // Nome da loja vem de getItem, nunca de ID ou texto fornecido pelo modelo.
