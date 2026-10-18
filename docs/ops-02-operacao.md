@@ -44,7 +44,7 @@ Exige o mesmo `BOT_API_TOKEN` e um organizador autorizado, e responde com `Cache
 - `linksStorage`: estado e durabilidade (OPS-01), mais `permissions`.
 - `sessions`: `confirmed`, `operational` (última verificação OK), `unavailable`, `reconnectRequired`, `unverified`. A contagem usa o estado conhecido, sem chamada remota. Token presente ≠ operacional.
 - `conversation`: `enabled`, `rollout`, `runtime` (`accepting`, `healthy`, `processorInstalled`, `storage` = `OK`/`UNAVAILABLE`/`CLOSED`, fila, `resultUnknown`, compras ativas), permissões do diretório do banco e resumo do orçamento.
-- `purchase`: `capable: false`, `cartPreparation`, `submission: DISABLED`, `submitFlagIgnored`, `reason: DEC01_D8_READ_ONLY`.
+- `purchase`: `capable: false`, `cartPreparation`, `submission: DISABLED`, `submitFlagIgnored`. Com CART-01 montada, preparação é `HUMAN_CONFIRMATION_REQUIRED` e motivo `PREPARE_CART_ONLY`; isso indica o caminho instalado, não evidência aprovada nem autorização de compra. Desligada, mantém o status anterior.
 
 ## Limites de execução/gasto (`src/server/ops/budget.ts`)
 
@@ -71,11 +71,12 @@ Há dois conjuntos de limites, ambos em memória por processo e zerados ao reini
 | `CONVERSATION_RUNTIME_ENABLED` | Conversa v1 (RUN-01) | `false` |
 | `CONVERSATION_ORGANIZER_IDS` | Restringe a conversa a um subconjunto de `ALLOWED_ORGANIZER_IDS`; quem está fora recebe `UNAVAILABLE`. Nunca amplia a autorização. Qualquer entrada inválida impede a API de iniciar (falha fechada, para não virar "todos") | ausente/vazio = todos os autorizados |
 | `IFOOD_CART_ENABLED` | F7 legada (preparação de sacola). Manter `false` (DEC-01) | `false` |
+| `IFOOD_CONFIRMED_CART_WRITES_ENABLED` | CART-01: exige banco, manifesto de evidência e revisão/clique específico; não libera pagamento/envio | `false` |
 | `IFOOD_SUBMIT_ENABLED` | **Não existe como habilitação.** Se definido, é ignorado e reportado | — |
 
 Rollout sugerido: (1) ligar a conversa com `CONVERSATION_ORGANIZER_IDS=<1 organizador de teste>`; (2) acompanhar `/api/ops/status` (fila, `resultUnknown`, `budget_exceeded`, erros MCP/modelo); (3) ampliar a lista; (4) esvaziar a lista só depois de QA-01.
 
-**Rollback** = desligar a flag ou tirar o organizador da lista. Nenhuma migração é revertida e nada é apagado. O schema SQLite é aditivo (v1 → v2), e um binário antigo recusa versão mais nova sem substituí-la. Vínculos (`.ifood-links`), compras e `RESULT_UNKNOWN` continuam no disco e voltam a aparecer ao reativar (teste `rollback ... não apaga`). Rollback de código para antes da DATA-01 não abre o banco v2 e falha fechado: restaurar o binário atual, nunca um backup antigo do banco sobre operação desconhecida.
+**Rollback** = desligar a flag ou tirar o organizador da lista. Nenhuma migração é revertida e nada é apagado. O schema SQLite é aditivo (v1 → v2 → v3 com CART-01), e um binário antigo recusa versão mais nova sem substituí-la. Vínculos (`.ifood-links`), compras e `RESULT_UNKNOWN` continuam no disco e voltam a aparecer ao reativar (teste `rollback ... não apaga`). Binário anterior à CART-01 não abre banco v3: restaurar o binário compatível, nunca rebaixar `user_version` ou aplicar backup antigo sobre operação desconhecida.
 
 ## Retenção (D7)
 

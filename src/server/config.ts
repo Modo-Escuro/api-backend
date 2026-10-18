@@ -56,6 +56,8 @@ export interface AppConfig {
   submitFlagIgnored?: boolean;
   /** AI-01: opt-in separado (CONVERSATION_MODEL_ENABLED), provedor Gemini, limites explícitos. */
   conversationModel?: ConversationModelConfig;
+  /** CART-01: opt-in local separado da F7; exige manifesto de saídas observadas e o banco DATA-01. */
+  confirmedCartWrites?: { evidenceFile: string };
 }
 
 /**
@@ -175,6 +177,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     };
   }
   const links = resolveLinksStorage(env);
+  if (env.IFOOD_CONFIRMED_CART_WRITES_ENABLED !== undefined && !['true','false'].includes(env.IFOOD_CONFIRMED_CART_WRITES_ENABLED))
+    throw new Error('IFOOD_CONFIRMED_CART_WRITES_ENABLED deve ser true ou false.');
+  let confirmedCartWrites: AppConfig['confirmedCartWrites'];
+  if (env.IFOOD_CONFIRMED_CART_WRITES_ENABLED === 'true') {
+    if (!conversationRuntime || !env.IFOOD_CART_CONTRACT_EVIDENCE_FILE?.trim())
+      throw new Error('CART-01 exige DATA-01/RUN-01 e manifesto explícito de contrato observado. Não exige modelo.');
+    confirmedCartWrites = { evidenceFile: fromRoot(env.IFOOD_CART_CONTRACT_EVIDENCE_FILE) };
+  }
   return {
     mcpUrl: env.IFOOD_MCP_URL || 'https://consumer-mcp.ifood.com.br/marketplace',
     clientId: env.IFOOD_CLIENT_ID || undefined,
@@ -201,6 +211,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     conversationOrganizerIds: parseRollout(env.CONVERSATION_ORGANIZER_IDS),
     submitFlagIgnored: env.IFOOD_SUBMIT_ENABLED !== undefined,
     conversationModel,
+    confirmedCartWrites,
   };
 }
 

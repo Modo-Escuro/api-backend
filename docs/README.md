@@ -16,10 +16,11 @@ com vínculos isolados e sem ampliar a fronteira de compra da DEC-01.
 11. [Propostas coletivas e sacola simulada (GRP-01)](grp-01-propostas.md): matriz por pessoa, custos DOM-01, tetos, corte em 4 e sacola simulada.
 12. [Montagem AI-01 e ensaio BOT-02](ai-01-montagem-ensaio.md): Gemini 3.8 Flash (seleção do #35), configuração explícita, limites, avaliações e pendências operacionais.
 13. [Operação (OPS-02)](ops-02-operacao.md): logs sanitizados, métricas, orçamento do modelo, status operacional, rollout/rollback e ensaios pendentes.
+14. [Carrinho com confirmação humana (CART-01)](cart-01-escrita-confirmada.md): revisão PREPARE_CART, intenção durável, bloqueio de resultado desconhecido e [integração/auditoria](cart-01-integracao.md). Desligado até INT-02 e callback BOT-03 validados.
 
 Plano completo e contrato futuro estão no [telegram-bot](https://github.com/Modo-Escuro/telegram-bot/blob/codex/plano-conversacional/docs/plano-conversacional.md). A [StRS preservada](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/baseline/stakeholder-requirements-specification.md) continua em validação.
 
-F7 foi incorporada pelo [PR #4](https://github.com/Modo-Escuro/api-backend/pull/4) e permanece desabilitada por padrão. Outputs provisórios e testes simulados não comprovam carrinho real. A [DEC-01](decisoes-conversacionais.md) define demo com sacola simulada e MCP somente leitura; aprovação fictícia não pode usar a rota de compra da API-01.
+F7 foi incorporada pelo [PR #4](https://github.com/Modo-Escuro/api-backend/pull/4) e seu caminho legado não pode escrever. A CART-01 acrescenta preparação de itens após confirmação humana específica; outputs provisórios e testes simulados não comprovam iFood. A sincronização do recorte anterior da [DEC-01](decisoes-conversacionais.md) está no [PR documental #43](https://github.com/Modo-Escuro/api-backend/pull/43). PREPARE_CART não aprova compra nem habilita pagamento/envio.
 
 A infraestrutura RUN-01 mantém os schemas da API-01; a montagem do modelo tem opt-in separado na AI-01.
 [Validação histórica de API-01](api-01-validation.md) e testes SQLite são evidências offline; não comprovam operação implantada.

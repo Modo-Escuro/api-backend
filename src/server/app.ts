@@ -2,6 +2,10 @@ import { Hono, type Context } from 'hono';
 import { auth as defaultAuth, AuthError, type IfoodAuth } from './auth.js';
 import { CartError } from './cart/contracts.js';
 import { CartService } from './cart/service.js';
+import { ConfirmedCartService } from './cart/write-service.js';
+import { CartWriteStore } from './cart/write-store.js';
+import { ObservedCartContract } from './cart/write-contract.js';
+import { registerCartWriteRoutes } from './routes/cart-write.js';
 import { registerCartRoutes } from './routes/cart.js';
 import { botAuth, organizerOf } from './botAuth.js';
 import { config as defaultConfig, mask, type AppConfig } from './config.js';
@@ -63,6 +67,7 @@ export interface AppOptions {
   conversations?: TurnRuntime;
   /** OPS-02: orçamento do agente, só para o status operacional. */
   budget?: SpendBudget;
+  cartWrites?: ConfirmedCartService;
 }
 
 export function createApp(auth: IfoodAuth = defaultAuth, opts: AppOptions = {}) {
@@ -112,6 +117,9 @@ export function createApp(auth: IfoodAuth = defaultAuth, opts: AppOptions = {}) 
   app.use('/api/evaluate', requireBot);
   registerBotRoutes(app as unknown as Hono, links);
   registerCartRoutes(app, carts);
+  const cartWrites = opts.cartWrites ?? (cfg.confirmedCartWrites && opts.conversations
+    ? new ConfirmedCartService(new CartWriteStore(opts.conversations.store), links, new ObservedCartContract(cfg.confirmedCartWrites.evidenceFile)) : undefined);
+  registerCartWriteRoutes(app, cartWrites, cfg.conversationRuntime?.botId, cfg.conversationOrganizerIds);
   registerConversationRoutes(app as unknown as Hono, opts.conversations, cfg.conversationRuntime?.botId, cfg.conversationOrganizerIds);
 
   // ---------- OPS-02: status operacional (autenticado; só contagens, sem caminhos/identidades) ----------
@@ -133,13 +141,13 @@ export function createApp(auth: IfoodAuth = defaultAuth, opts: AppOptions = {}) 
         storagePermissions: cfg.conversationRuntime ? checkPrivatePath(dirname(cfg.conversationRuntime.dbFile)) : null,
         budget: opts.budget?.summary() ?? null,
       },
-      // DEC-01 D8: demo somente leitura. Nenhuma flag isolada habilita envio.
+      // Preparar carrinho exige evidência e confirmação específica. Nenhuma flag habilita envio.
       purchase: {
         capable: false,
-        cartPreparation: cfg.cartEnabled ? 'LEGACY_FLAG_ON' : 'DISABLED',
+        cartPreparation: cartWrites ? 'HUMAN_CONFIRMATION_REQUIRED' : cfg.cartEnabled ? 'LEGACY_FLAG_ON' : 'DISABLED',
         submission: 'DISABLED',
         submitFlagIgnored: Boolean(cfg.submitFlagIgnored),
-        reason: 'DEC01_D8_READ_ONLY',
+        reason: cartWrites ? 'PREPARE_CART_ONLY' : 'DEC01_D8_READ_ONLY',
       },
       metrics: metrics.snapshot(),
     });

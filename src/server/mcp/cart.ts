@@ -8,18 +8,36 @@ import { parseToolResult, type RawToolResult } from './tools.js';
 
 const READS = new Set(['getCart', 'getCartDeliveryMethods', 'listPaymentMethods', 'listVouchers']);
 export function cartGateway(getClient: () => Promise<Client>): CartGateway {
-  return { async call(tool: CartTool, args: Record<string, unknown>) {
-    if (!READS.has(tool) && !WRITES.has(tool)) throw new Error('Tool fora do escopo F7');
+  const dispatch = async (tool: CartTool, args: Record<string, unknown>) => {
     const client = await getClient();
-    // Sem retry de aplicação. A sessão deste gateway também desliga replay automático em 401.
     const result = await client.callTool({ name: tool, arguments: args }, undefined, { timeout: MCP_TIMEOUT_MS });
     const parsed = parseToolResult(tool, result as RawToolResult);
     if (parsed && typeof parsed === 'object' && 'success' in parsed && parsed.success === false)
       throw new McpToolError(tool, [{ code: 'UNCONFIRMED', message: 'O MCP não confirmou a operação.' }]);
-    // Conferir também erros aninhados antes de projetar dados; ausência de erro não confirma escrita.
     payload(parsed);
     if (tool === 'createCart') parseCreatedCart(parsed);
     else if (WRITES.has(tool)) assertMutationConfirmation(parsed);
     return parsed;
+  };
+  return { async describe() {
+    const client = await getClient(), tools: { name: string; inputSchema: unknown }[] = [];
+    let cursor: string | undefined;
+    const seen = new Set<string>();
+    do {
+      const page = await client.listTools(cursor ? { cursor } : undefined);
+      tools.push(...page.tools);
+      cursor = page.nextCursor;
+      if (cursor && seen.has(cursor)) throw new Error('Paginação de metadados inválida');
+      if (cursor) seen.add(cursor);
+      if (tools.length > 200) throw new Error('Catálogo MCP excede limite');
+    } while (cursor);
+    return tools;
+  }, async call(tool: CartTool, args: Record<string, unknown>) {
+    if (!READS.has(tool)) throw new Error('Escrita legada proibida; exige confirmação CART-01');
+    return dispatch(tool, args);
+  }, async writeConfirmed(tool, args) {
+    if (!new Set(['createCart','addItemToCart','updateCartItem','removeItemFromCart']).has(tool))
+      throw new Error('Operação fora do escopo CART-01; pagamento e envio proibidos');
+    return dispatch(tool, args);
   } };
 }

@@ -19,12 +19,12 @@ export const itemDetail = z.object({ itemId: id, merchantId: id, itemName: z.str
 export const itemInput = z.object({ itemRef: ref, quantity: z.number().int().min(1).max(20),
   options: z.array(option).max(50), customerNote: z.string().max(500).optional() }).strict();
 const selectedOption = z.object({ optionId: id, quantity: z.number().int().positive() });
-const cartItem = z.object({ cartItemId: id, itemId: id, quantity: z.number().int().positive(),
-  options: z.array(selectedOption), customerNote: z.string().optional() });
 // Fronteira do adaptador legado: saídas BRL sintéticas viram centavos antes de qualquer cálculo.
 const money = z.number().finite().nonnegative().refine((n) => {
   try { brlToCents(n); return true; } catch { return false; }
 }).transform(brlToCents);
+const cartItem = z.object({ cartItemId: id, itemId: id, quantity: z.number().int().positive(),
+  options: z.array(selectedOption), customerNote: z.string().optional(), unitPrice: money.optional() });
 const totals = z.object({ subtotal: money, deliveryFee: money, serviceFee: money, discount: money, total: money });
 const snapshotSchema = z.object({ cartId: id, merchantId: id, addressId: id, items: z.array(cartItem),
   totals: totals.optional(),
@@ -36,7 +36,13 @@ export type Snapshot = z.infer<typeof snapshotSchema>;
 export type ItemInput = z.infer<typeof itemInput>;
 export type CartTool = 'createCart' | 'getCart' | 'addItemToCart' | 'updateCartItem' | 'removeItemFromCart'
   | 'getCartDeliveryMethods' | 'setCartDelivery' | 'listPaymentMethods' | 'setCartPayment' | 'listVouchers' | 'setVoucher' | 'removeVoucher';
-export interface CartGateway { call(tool: CartTool, args: Record<string, unknown>): Promise<unknown> }
+export interface CartGateway {
+  call(tool: CartTool, args: Record<string, unknown>): Promise<unknown>;
+  /** Metadados diretos do servidor, sem modificar nomes anunciados pelo host. */
+  describe?(): Promise<{ name: string; inputSchema: unknown }[]>;
+  /** Exclusivo da orquestração determinística após consumir confirmação PREPARE_CART. */
+  writeConfirmed?(tool: 'createCart' | 'addItemToCart' | 'updateCartItem' | 'removeItemFromCart', args: Record<string, unknown>): Promise<unknown>;
+}
 export const WRITES: ReadonlySet<string> = new Set(['createCart', 'addItemToCart', 'updateCartItem', 'removeItemFromCart',
   'setCartDelivery', 'setCartPayment', 'setVoucher', 'removeVoucher']);
 

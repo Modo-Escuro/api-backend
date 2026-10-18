@@ -28,8 +28,8 @@ describe('INT-01 integrada à main: fronteira de leitura da DEC-01', () => {
       linkId: 'synthetic-link-reference', requestId: randomUUID(),
       items: [chosenItem('synthetic-item-reference')],
     });
-    expect(response.status).toBe(503);
-    expect(await response.json()).toMatchObject({ error: { kind: 'CART_FEATURE_DISABLED' }, purchaseAuthorized: false });
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error: { kind: 'CART_CONFIRMATION_REQUIRED' }, purchaseAuthorized: false });
     expect(f.fake.call).not.toHaveBeenCalled();
   });
 
@@ -50,7 +50,7 @@ describe('INT-01: saída desconhecida não confirma escrita', () => {
   ])('gateway bloqueia confirmação não reconhecida %j', async (raw) => {
     const callTool = vi.fn().mockResolvedValue({ structuredContent: raw });
     const gateway = cartGateway(async () => ({ callTool }) as unknown as Client);
-    await expect(gateway.call('addItemToCart', {})).rejects.toBeDefined();
+    await expect(gateway.writeConfirmed!('addItemToCart', {})).rejects.toBeDefined();
     expect(callTool).toHaveBeenCalledTimes(1);
   });
 

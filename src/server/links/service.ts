@@ -694,7 +694,9 @@ export class IfoodLinkService {
       }
       if (linkState === 'CONNECTED') {
         scopeEvidence = info.scopes ? 'TOKEN_SCOPES' : 'NOT_PROVIDED';
-        const ops = (Object.keys(OPERATION_SCOPES) as Operation[]).filter((o) => this.cfg.cartEnabled || !o.startsWith('CART_'));
+        // CART-01 tem opt-in próprio, compatível com Gemini e F7 desligada. Preparação nunca libera pagamento.
+        const ops = (Object.keys(OPERATION_SCOPES) as Operation[]).filter((o) => !o.startsWith('CART_') ||
+          (this.cfg.confirmedCartWrites ? o !== 'CART_PAYMENT' : this.cfg.cartEnabled));
         const has = (s: string) => !info.scopes || info.scopes.includes(s);
         missingScopes = [...new Set(ops.flatMap((o) => OPERATION_SCOPES[o]).filter((s) => !has(s)))];
         if (operational) allowed = ops.filter((o) => OPERATION_SCOPES[o].every(has));

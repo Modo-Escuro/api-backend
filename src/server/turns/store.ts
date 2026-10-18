@@ -1,10 +1,12 @@
 // RUN-01: fila e resultados transacionais. Nenhuma chamada a modelo/provedor neste módulo.
 // DATA-01 (schema v2): estado da compra no mesmo banco, gravado na MESMA transação do snapshot/operação;
 // patches com proveniência em purchase_changes; exclusão D7 ao encerrar ou após inatividade.
+// CART-01 (schema v3): confirmações/intenção duráveis; binários v2 recusam o banco para preservar bloqueios.
 import { randomBytes } from 'node:crypto';
 import { chmodSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { hasUnresolvedCartWrite, installCartWriteSchema, recoverCartWriteIntents } from '../cart/write-schema.js';
 import { CancelResultSchema, OperationSchema, SnapshotSchema, type ConversationEvent, type ErrorCode, type Operation, type Snapshot } from '../contracts/conversation.js';
 import { contractErrorResponse } from '../contracts/errors.js';
 import { log } from '../ops/log.js';
@@ -35,7 +37,7 @@ export const DEFAULT_LIMITS: TurnLimits = {
   maxRecords: 10_000, maxAttempts: 3, maxResultBytes: 65_536,
   maxParticipants: DEFAULT_MAX_PARTICIPANTS, inactivityMs: 24 * 60 * 60_000,
 };
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 export interface CancelCommand {
   contractVersion: '1.0'; eventId: string; conversationId: string; expectedVersion: number;
   source: ConversationEvent['source']; operationId: string;
@@ -125,6 +127,10 @@ export class TurnStore {
           CREATE INDEX IF NOT EXISTS purchase_changes_scope ON purchase_changes(scope, result_version);
           PRAGMA user_version=2;
         `);
+        if (current < 3) {
+          installCartWriteSchema(this.db);
+          this.db.exec('PRAGMA user_version=3;');
+        }
         // Conversas vindas do v1 não têm atividade registrada. O instante da migração abre uma janela única de
         // `inactivityMs` (D7): não presume atividade antiga como recente, nem apaga de surpresa uma conversa em uso.
         if (current === 1) this.db.prepare('UPDATE conversations SET last_activity_at=? WHERE last_activity_at IS NULL').run(this.now());
@@ -283,6 +289,7 @@ export class TurnStore {
 
   recover() {
     this.transaction(() => {
+      recoverCartWriteIntents(this.db, this.now());
       const rows = this.db.prepare("SELECT * FROM operations WHERE status IN ('ACCEPTED','RUNNING','CANCEL_REQUESTED') ORDER BY seq").all();
       for (const value of rows) {
         const saved = row(value)!, op = JSON.parse(saved.operation) as Operation;
@@ -363,6 +370,8 @@ export class TurnStore {
     return this.transaction(() => {
       const saved = this.owned(job);
       if (!saved) return false;
+      // CART-01: o domínio não muda durante efeito externo/resultado desconhecido.
+      if (hasUnresolvedCartWrite(this.db, saved.scope)) { this.failure(saved, saved.effect ? 'RESULT_UNKNOWN' : 'UNAVAILABLE'); return false; }
       const op = JSON.parse(saved.operation) as Operation;
       if (op.status === 'CANCEL_REQUESTED') {
         if (saved.effect) this.failure(saved, 'RESULT_UNKNOWN'); else this.cancelNow(saved);
@@ -454,7 +463,8 @@ export class TurnStore {
       const cutoff = this.now() - this.limits.inactivityMs;
       const scopes = this.db.prepare(`SELECT scope FROM conversations c WHERE last_activity_at IS NOT NULL AND last_activity_at <= ?
         AND NOT EXISTS (SELECT 1 FROM operations o WHERE o.scope = c.scope
-          AND (o.status IN ('ACCEPTED','RUNNING','CANCEL_REQUESTED','RESULT_UNKNOWN') OR (o.effect = 1 AND o.status <> 'SUCCEEDED')))`).all(cutoff);
+          AND (o.status IN ('ACCEPTED','RUNNING','CANCEL_REQUESTED','RESULT_UNKNOWN') OR (o.effect = 1 AND o.status <> 'SUCCEEDED')))
+        AND NOT EXISTS (SELECT 1 FROM cart_write_intents w WHERE w.scope=c.scope AND w.state IN ('PENDING','RESULT_UNKNOWN'))`).all(cutoff);
       let purged = 0, failed = 0;
       for (const r of scopes) {
         this.db.exec('SAVEPOINT purge_scope');
@@ -479,6 +489,11 @@ export class TurnStore {
    * incrementada, para que nada antigo passe na checagem de versão. Deve rodar dentro de uma transação.
    */
   private purgeScope(scope: string, keep: string | null) {
+    if (hasUnresolvedCartWrite(this.db, scope)) throw new ContractError('RESULT_UNKNOWN');
+    this.db.prepare('DELETE FROM cart_write_reviews WHERE scope=?').run(scope);
+    // Mantém só tombstones técnicos para impedir replay; sem conteúdo da composição após D7.
+    this.db.prepare("UPDATE cart_write_intents SET plan='{}' WHERE scope=?").run(scope);
+    this.db.prepare('UPDATE cart_write_heads SET snapshot=NULL WHERE scope=?').run(scope);
     if (keep === null) {
       const current = this.current(scope)!;
       this.db.prepare('UPDATE conversations SET snapshot=?, domain=NULL, last_activity_at=NULL WHERE scope=?')
