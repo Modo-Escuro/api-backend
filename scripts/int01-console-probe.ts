@@ -25,13 +25,27 @@ interface ProbeOptions {
   connect?: (token: string) => Promise<ProbeClient>;
 }
 
+async function readPrivateJson(path: string, kind: 'LINKS' | 'TOKEN', readText: (path: string) => Promise<string>) {
+  let text: string;
+  try { text = await readText(path); }
+  catch (error) {
+    const code = error !== null && typeof error === 'object' && 'code' in error ? error.code : undefined;
+    throw new ProbeBlocked(`${kind}_FILE_${code === 'ENOENT' ? 'MISSING' : 'UNREADABLE'}`);
+  }
+  let value: unknown;
+  try { value = JSON.parse(text); }
+  catch { throw new ProbeBlocked(`${kind}_JSON_INVALID`); }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new ProbeBlocked(`${kind}_FORMAT_UNRECOGNIZED`);
+  return value as Record<string, unknown>;
+}
+
 /** Obtém somente a credencial do vínculo confirmado permitido; nunca usa .tokens.json global. */
 export async function confirmedAuditToken(env: NodeJS.ProcessEnv, readText: (path: string) => Promise<string>, now: number) {
   if ((env.IFOOD_MCP_URL || endpoint) !== endpoint) throw new ProbeBlocked('ENDPOINT_MISMATCH');
   const allowed = (env.ALLOWED_ORGANIZER_IDS || '').split(',').map((s) => s.trim()).filter((s) => /^[1-9][0-9]{0,19}$/.test(s));
   if (!allowed.length) throw new ProbeBlocked('NO_ALLOWED_ORGANIZER');
   const dir = resolve(env.IFOOD_LINKS_DIR || '.ifood-links');
-  const raw = JSON.parse(await readText(resolve(dir, 'links.json')));
+  const raw = await readPrivateJson(resolve(dir, 'links.json'), 'LINKS', readText);
   if (raw.version !== 1 || !raw.links || typeof raw.links !== 'object') throw new ProbeBlocked('LINK_FORMAT_UNRECOGNIZED');
   const records = Object.values(raw.links).filter((r): r is Record<string, unknown> =>
     r !== null && typeof r === 'object' && allowed.includes(String((r as Record<string, unknown>).organizerId)));
@@ -40,7 +54,7 @@ export async function confirmedAuditToken(env: NodeJS.ProcessEnv, readText: (pat
   if (link.reconnectReason || typeof link.confirmedAt !== 'number' || !Number.isFinite(link.confirmedAt) || link.confirmedAt <= 0) throw new ProbeBlocked('LINK_NOT_READY');
   const name = link.tokenFileName;
   if (typeof name !== 'string' || !name || basename(name) !== name || !resolve(dir, name).startsWith(dir + sep)) throw new ProbeBlocked('INVALID_TOKEN_LOCATION');
-  const tokens = JSON.parse(await readText(resolve(dir, name)));
+  const tokens = await readPrivateJson(resolve(dir, name), 'TOKEN', readText);
   if (tokens.clientId && env.IFOOD_CLIENT_ID && tokens.clientId !== env.IFOOD_CLIENT_ID) throw new ProbeBlocked('CLIENT_MISMATCH');
   if (typeof tokens.accessToken !== 'string' || !tokens.accessToken || /[\r\n]/.test(tokens.accessToken)) throw new ProbeBlocked('TOKEN_UNAVAILABLE');
   if (typeof tokens.expiresAt !== 'number' || !Number.isFinite(tokens.expiresAt) || tokens.expiresAt < now + 60_000) throw new ProbeBlocked('VERIFY_LINK_THROUGH_EXISTING_API');
@@ -58,27 +72,32 @@ function metadata(tool: ToolMetadata) {
 
 async function connect(token: string): Promise<ProbeClient> {
   const client = new Client({ name: 'int01-readonly-metadata-audit', version: '1.0.0' });
+  let transportFailure: ProbeBlocked | undefined;
+  const failTransport = (reason: string): never => { transportFailure = new ProbeBlocked(reason); throw transportFailure; };
   const transport = new StreamableHTTPClientTransport(new URL(endpoint), { fetch: async (url, init) => {
     // Impede encaminhar a credencial a outra origem ou seguir redirects. Nenhum authProvider/refresh.
-    if (new URL(String(url)).origin !== new URL(endpoint).origin) throw new ProbeBlocked('UNEXPECTED_ORIGIN');
+    if (new URL(String(url)).origin !== new URL(endpoint).origin) failTransport('UNEXPECTED_ORIGIN');
     const headers = new Headers(init?.headers);
     headers.set('Authorization', `Bearer ${token}`);
     const response = await fetch(url, { ...init, headers, redirect: 'manual' });
-    if ([301, 302, 303, 307, 308].includes(response.status)) throw new ProbeBlocked('REDIRECT_REFUSED');
-    if (response.status === 401 || response.status === 403) throw new ProbeBlocked('SESSION_REJECTED');
+    if ([301, 302, 303, 307, 308].includes(response.status)) failTransport('REDIRECT_REFUSED');
+    if (response.status === 401 || response.status === 403) failTransport('SESSION_REJECTED');
     return response;
   } });
   try { await client.connect(transport, { timeout: 15_000 }); }
-  catch (error) { await client.close().catch(() => undefined); throw error; }
+  catch (error) { await client.close().catch(() => undefined); throw transportFailure ?? error; }
   return client as ProbeClient;
 }
 
 export async function runConsoleProbe(options: ProbeOptions = {}) {
   let client: ProbeClient | undefined;
+  let stage: 'READ_CONFIRMED_LINK' | 'CONNECT_MCP' | 'LIST_TOOLS' = 'READ_CONFIRMED_LINK';
   const now = options.now ?? Date.now;
   try {
     const token = await confirmedAuditToken(options.env ?? process.env, options.readText ?? ((path) => readFile(path, 'utf8')), now());
+    stage = 'CONNECT_MCP';
     client = await (options.connect ?? connect)(token);
+    stage = 'LIST_TOOLS';
     const deadline = now() + 30_000;
     const cursors = new Set<string>();
     const tools = new Map<string, ReturnType<typeof metadata>>();
@@ -101,6 +120,6 @@ export async function runConsoleProbe(options: ProbeOptions = {}) {
     return { audit: 'INT-01', status: 'OBSERVED_METADATA', observedAt: new Date(now()).toISOString(), operation: 'tools/list', pages,
       tools: [...tools.values()], businessToolsCalled: false, outputResponsesCaptured: false };
   } catch (error) {
-    return { audit: 'INT-01', status: 'BLOCKED', reason: error instanceof ProbeBlocked ? error.reason : 'PROBE_FAILED_NO_PRIVATE_DETAILS', businessToolsCalled: false };
+    return { audit: 'INT-01', status: 'BLOCKED', stage, reason: error instanceof ProbeBlocked ? error.reason : 'PROBE_FAILED_NO_PRIVATE_DETAILS', businessToolsCalled: false };
   } finally { await client?.close().catch(() => undefined); }
 }

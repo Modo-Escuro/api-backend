@@ -29,6 +29,30 @@ describe('INT-01: consulta manual pelo Console, sem SSH nem mutações', () => {
     expect(connect).not.toHaveBeenCalled();
     await expect(confirmedAuditToken(env, async () => JSON.stringify({ version: 1, links: {} }), now)).rejects.toThrow('REQUIRE_ONE_CONFIRMED_LINK');
   });
+  it('distingue arquivo ausente, leitura recusada e JSON inválido sem expor conteúdo ou caminho', async () => {
+    const connect = vi.fn();
+    for (const kind of ['LINKS', 'TOKEN'] as const) {
+      for (const code of ['ENOENT', 'EACCES', 'INVALID_JSON', 'INVALID_SHAPE']) {
+        const read = async (path: string) => {
+          if (kind === 'TOKEN' && path.endsWith('links.json')) return JSON.stringify(links);
+          if (code === 'INVALID_JSON') return 'private-file-content';
+          if (code === 'INVALID_SHAPE') return 'null';
+          throw Object.assign(new Error('private-path-and-error'), { code });
+        };
+        const result = await runConsoleProbe({ env, readText: read, connect, now: () => now });
+        const suffix = { ENOENT: 'FILE_MISSING', EACCES: 'FILE_UNREADABLE', INVALID_JSON: 'JSON_INVALID', INVALID_SHAPE: 'FORMAT_UNRECOGNIZED' }[code];
+        expect(result).toMatchObject({ status: 'BLOCKED', stage: 'READ_CONFIRMED_LINK', reason: `${kind}_${suffix}`, businessToolsCalled: false });
+        expect(JSON.stringify(result)).not.toMatch(/private-|synthetic-private-token/);
+      }
+    }
+    expect(connect).not.toHaveBeenCalled();
+  });
+  it('identifica a etapa de rede sem divulgar o erro privado', async () => {
+    const connect = vi.fn().mockRejectedValue(new Error('private-connect-error'));
+    const result = await runConsoleProbe({ env, readText, connect, now: () => now });
+    expect(result).toMatchObject({ stage: 'CONNECT_MCP', reason: 'PROBE_FAILED_NO_PRIVATE_DETAILS' });
+    expect(JSON.stringify(result)).not.toContain('private-connect-error');
+  });
   it('token expirado, client divergente e caminho fora do vínculo bloqueiam sem refresh', async () => {
     for (const bad of [{ ...token, expiresAt: now }, { ...token, clientId: 'other-client' }]) {
       await expect(confirmedAuditToken(env, async (p) => JSON.stringify(p.endsWith('links.json') ? links : bad), now)).rejects.toThrow();
@@ -51,6 +75,7 @@ describe('INT-01: consulta manual pelo Console, sem SSH nem mutações', () => {
     expect(await runConsoleProbe({ env, readText, now: () => now, connect: async () => client })).toMatchObject({ status: 'BLOCKED', reason: 'REPEATED_CURSOR' });
     client.listTools.mockRejectedValue(new Error('private-provider-response'));
     const result = await runConsoleProbe({ env, readText, now: () => now, connect: async () => client });
+    expect(result).toMatchObject({ stage: 'LIST_TOOLS', reason: 'PROBE_FAILED_NO_PRIVATE_DETAILS' });
     expect(JSON.stringify(result)).not.toMatch(/private-provider-response|secret-cursor/);
   });
 });

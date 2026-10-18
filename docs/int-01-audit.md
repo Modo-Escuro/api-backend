@@ -98,6 +98,8 @@ Para avançar sem confiar nessa chave de host, o usuário pode executar o [coman
 
 Fonte: `scripts/int01-console-probe.ts`; gerar o comando com `node --import tsx scripts/generate-int01-console.ts`. Os testes usam filesystem/cliente falsos e conferem paginação, ausência de fallback global, bloqueios e sanitização. O comando não foi executado no contêiner nesta sessão; aguarda ação do usuário no navegador. As saídas reais de cart e o mecanismo de recuperação sem IDs continuam pendentes.
 
+O usuário executou posteriormente o comando no Console e compartilhou `BLOCKED / PROBE_FAILED_NO_PRIVATE_DETAILS`, com `businessToolsCalled:false`. Esse resultado não distingue falha de leitura local, conexão ou tools/list; não comprova ausência do vínculo nem rejeição da sessão. O probe foi corrigido para retornar a etapa (`READ_CONFIRMED_LINK`, `CONNECT_MCP` ou `LIST_TOOLS`) e razões estáticas para arquivo ausente, leitura recusada, JSON inválido ou formato desconhecido. Caminhos, conteúdo dos arquivos e mensagens de exceção continuam privados. A nova execução no Console permanece pendente; não recriar vínculo nem alterar storage com base apenas no erro genérico.
+
 ## Reuso e dependências de integração
 
 - Reaproveitar gateway exclusivo, catálogo/getItem, validação de configuração, referências opacas, projeção e validação de totais e invalidação de revisão. Manter regressões F7.
@@ -120,6 +122,8 @@ Windows, Node 24.19.0, dependências do mesmo `package-lock.json` de F7 reutiliz
 | `vite build` | passou |
 | `git diff --check` | passou |
 | Healthcheck público | 200, `ok:true`; não é teste de integração MCP |
+
+Após o resultado genérico do Console, a correção de diagnóstico foi validada com **8/8 testes do probe**, TypeScript e ESLint dos arquivos alterados. A contagem 296/296 acima registra a suíte anterior; a suíte completa não foi repetida para essa correção isolada.
 
 Não foi executada CI/Linux, login iFood, captura autenticada de saída, mutação real, aprovação ou envio. O login e os metadados Railway são evidência separada acima. A F7 já contém ajuste de portabilidade dos testes POSIX; por isso esta suíte não reproduz as duas falhas Windows da main antiga. Esses resultados não incluem os testes da branch API-01.
 

@@ -15,6 +15,26 @@ class ProbeBlocked extends Error {
         this.reason = reason;
     }
 }
+async function readPrivateJson(path, kind, readText) {
+    let text;
+    try {
+        text = await readText(path);
+    }
+    catch (error) {
+        const code = error !== null && typeof error === 'object' && 'code' in error ? error.code : undefined;
+        throw new ProbeBlocked(`${kind}_FILE_${code === 'ENOENT' ? 'MISSING' : 'UNREADABLE'}`);
+    }
+    let value;
+    try {
+        value = JSON.parse(text);
+    }
+    catch {
+        throw new ProbeBlocked(`${kind}_JSON_INVALID`);
+    }
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        throw new ProbeBlocked(`${kind}_FORMAT_UNRECOGNIZED`);
+    return value;
+}
 /** Obtém somente a credencial do vínculo confirmado permitido; nunca usa .tokens.json global. */
 export async function confirmedAuditToken(env, readText, now) {
     if ((env.IFOOD_MCP_URL || endpoint) !== endpoint)
@@ -23,7 +43,7 @@ export async function confirmedAuditToken(env, readText, now) {
     if (!allowed.length)
         throw new ProbeBlocked('NO_ALLOWED_ORGANIZER');
     const dir = resolve(env.IFOOD_LINKS_DIR || '.ifood-links');
-    const raw = JSON.parse(await readText(resolve(dir, 'links.json')));
+    const raw = await readPrivateJson(resolve(dir, 'links.json'), 'LINKS', readText);
     if (raw.version !== 1 || !raw.links || typeof raw.links !== 'object')
         throw new ProbeBlocked('LINK_FORMAT_UNRECOGNIZED');
     const records = Object.values(raw.links).filter((r) => r !== null && typeof r === 'object' && allowed.includes(String(r.organizerId)));
@@ -35,7 +55,7 @@ export async function confirmedAuditToken(env, readText, now) {
     const name = link.tokenFileName;
     if (typeof name !== 'string' || !name || basename(name) !== name || !resolve(dir, name).startsWith(dir + sep))
         throw new ProbeBlocked('INVALID_TOKEN_LOCATION');
-    const tokens = JSON.parse(await readText(resolve(dir, name)));
+    const tokens = await readPrivateJson(resolve(dir, name), 'TOKEN', readText);
     if (tokens.clientId && env.IFOOD_CLIENT_ID && tokens.clientId !== env.IFOOD_CLIENT_ID)
         throw new ProbeBlocked('CLIENT_MISMATCH');
     if (typeof tokens.accessToken !== 'string' || !tokens.accessToken || /[\r\n]/.test(tokens.accessToken))
@@ -54,17 +74,19 @@ function metadata(tool) {
 }
 async function connect(token) {
     const client = new Client({ name: 'int01-readonly-metadata-audit', version: '1.0.0' });
+    let transportFailure;
+    const failTransport = (reason) => { transportFailure = new ProbeBlocked(reason); throw transportFailure; };
     const transport = new StreamableHTTPClientTransport(new URL(endpoint), { fetch: async (url, init) => {
             // Impede encaminhar a credencial a outra origem ou seguir redirects. Nenhum authProvider/refresh.
             if (new URL(String(url)).origin !== new URL(endpoint).origin)
-                throw new ProbeBlocked('UNEXPECTED_ORIGIN');
+                failTransport('UNEXPECTED_ORIGIN');
             const headers = new Headers(init?.headers);
             headers.set('Authorization', `Bearer ${token}`);
             const response = await fetch(url, { ...init, headers, redirect: 'manual' });
             if ([301, 302, 303, 307, 308].includes(response.status))
-                throw new ProbeBlocked('REDIRECT_REFUSED');
+                failTransport('REDIRECT_REFUSED');
             if (response.status === 401 || response.status === 403)
-                throw new ProbeBlocked('SESSION_REJECTED');
+                failTransport('SESSION_REJECTED');
             return response;
         } });
     try {
@@ -72,16 +94,19 @@ async function connect(token) {
     }
     catch (error) {
         await client.close().catch(() => undefined);
-        throw error;
+        throw transportFailure ?? error;
     }
     return client;
 }
 export async function runConsoleProbe(options = {}) {
     let client;
+    let stage = 'READ_CONFIRMED_LINK';
     const now = options.now ?? Date.now;
     try {
         const token = await confirmedAuditToken(options.env ?? process.env, options.readText ?? ((path) => readFile(path, 'utf8')), now());
+        stage = 'CONNECT_MCP';
         client = await (options.connect ?? connect)(token);
+        stage = 'LIST_TOOLS';
         const deadline = now() + 30_000;
         const cursors = new Set();
         const tools = new Map();
@@ -110,7 +135,7 @@ export async function runConsoleProbe(options = {}) {
             tools: [...tools.values()], businessToolsCalled: false, outputResponsesCaptured: false };
     }
     catch (error) {
-        return { audit: 'INT-01', status: 'BLOCKED', reason: error instanceof ProbeBlocked ? error.reason : 'PROBE_FAILED_NO_PRIVATE_DETAILS', businessToolsCalled: false };
+        return { audit: 'INT-01', status: 'BLOCKED', stage, reason: error instanceof ProbeBlocked ? error.reason : 'PROBE_FAILED_NO_PRIVATE_DETAILS', businessToolsCalled: false };
     }
     finally {
         await client?.close().catch(() => undefined);
