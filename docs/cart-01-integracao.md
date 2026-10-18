@@ -6,7 +6,7 @@ Integração de 18/10/2026, base `f3b8b5561acc0c0ae5e9efe12b52acc2f29bf218`, bra
 
 ## Resultado e alcance
 
-O incremento prepara criação e alterações de itens de carrinho por confirmação humana específica PREPARE_CART, usando a compra/sacola da DATA-01/GRP-01 e o dinheiro da DOM-01. Confirmação/intenção e reconhecimento/cartId são persistidos atomicamente. Replay consulta a intenção; falha parcial interrompe a sequência; resultado desconhecido impede novas escritas. O [contrato e fluxo completo](cart-01-escrita-confirmada.md) detalha os limites.
+O incremento prepara criação e alterações de itens de carrinho por confirmação humana específica PREPARE_CART, usando a compra/carrinho da DATA-01/GRP-01 e o dinheiro da DOM-01. Confirmação/intenção e reconhecimento/cartId são persistidos atomicamente. Replay consulta a intenção; falha parcial interrompe a sequência; resultado desconhecido impede novas escritas. O [contrato e fluxo completo](cart-01-escrita-confirmada.md) detalha os limites.
 
 O PR mantém **`IFOOD_CONFIRMED_CART_WRITES_ENABLED=false`**. Não inclui evidência operacional de contrato nem callback Telegram BOT-03. Não envia pedido, não seleciona/processa pagamento, não muda flags da Railway e não faz deploy/merge. Não há autorização de compra pela IA.
 

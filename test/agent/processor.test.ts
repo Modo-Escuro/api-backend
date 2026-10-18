@@ -102,13 +102,13 @@ describe('AI-02 com RUN-01 + DATA-01 (SQLite real)', () => {
     expect(model.inputs).toHaveLength(1);
   });
 
-  it('botão de esvaziar sacola vazia é local e idempotente, sem chamar o modelo', async () => {
+  it('botão de esvaziar carrinho vazio é local e idempotente, sem chamar o modelo', async () => {
     const model = new ScriptedModel((r) => new DeterministicModel().propose(r));
     const e = env(model);
     await e.send('Somos Ana. Ana é alérgica a amendoim. Teto de R$ 100');
     for (let i = 0; i < 2; i++) {
-      const op = await e.send('Esvaziar sacola simulada');
-      expect(op.snapshot!.pending).toContain('A sacola simulada já está vazia.');
+      const op = await e.send('Esvaziar carrinho simulado');
+      expect(op.snapshot!.pending).toContain('O carrinho simulado já está vazio.');
       expect(e.domain().participants[0].restrictions.value[0].key.code).toBe('PEANUT');
       expect(e.domain().groupLimit.value.amountCents).toBe(10000);
     }

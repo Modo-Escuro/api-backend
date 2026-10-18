@@ -8,7 +8,7 @@
 //  - Planos de uma loja só (D2); uma linha por pessoa atendida, quantidade 1 — porções não são inventadas.
 //  - Custos pela DOM-01 (`allocateCosts`). A taxa de serviço nunca aparece no catálogo: o total é desconhecido. Usamos a
 //    SOMA OBSERVADA (itens pelo mínimo da faixa, entrega observada ou 0 se ausente, serviço 0). Ela só mostra estouro de
-//    teto sob a hipótese, explícita, de não haver desconto/cupom não observado (a sacola simulada não aplica nenhum);
+//    teto sob a hipótese, explícita, de não haver desconto/cupom não observado (o carrinho simulado não aplica nenhum);
 //    nunca diz que cabe e nunca ordena planos como se entrega desconhecida fosse zero.
 //  - Teto individual rígido estourado: a pessoa sai do plano (BLOCKED/LIMIT_EXCEEDED) e o resto continua. Teto
 //    coletivo estourado: a pessoa mais cara sai, com cobertura parcial explícita (GROUP_LIMIT).
@@ -63,7 +63,7 @@ export interface PlanEvaluation {
   itemsRange: { minCents: number; maxCents: number | null };
   perParticipant: { participantId: string; lowerBoundCents: number | null }[];
   caps: CapCheck[];
-  /** Sem violação (teto rígido, coletivo, pedido mínimo, consumidor não verificado, sacola obsoleta) e alguém atendido. */
+  /** Sem violação (teto rígido, coletivo, pedido mínimo, consumidor não verificado, carrinho obsoleto) e alguém atendido. */
   valid: boolean;
   violations: string[];
   approvalBlockers: ApprovalBlocker[];
@@ -163,7 +163,7 @@ export const cleanName = (s: string) => {
   return v || 'Item sem nome';
 };
 
-/** Avalia um plano (proposta gerada ou sacola persistida): custos pela DOM-01, tetos e bloqueios de aprovação. */
+/** Avalia um plano (proposta gerada ou carrinho persistido): custos pela DOM-01, tetos e bloqueios de aprovação. */
 export function evaluatePlan(state: PurchaseState, proposal: Proposal | Bag, coverage: Coverage[], etaMaxMinutes: number | null = null): PlanEvaluation {
   const people = state.participants;
   const capOf = (d: Participant['limit']) => (d.state === 'DECLARED' ? d.value : null);
@@ -248,7 +248,7 @@ export function evaluatePlan(state: PurchaseState, proposal: Proposal | Bag, cov
 }
 
 /**
- * Cobertura de um plano persistido (proposta ou sacola), revalidada contra as restrições ATUAIS: quem consome só
+ * Cobertura de um plano persistido (proposta ou carrinho), revalidada contra as restrições ATUAIS: quem consome só
  * continua atendido se as restrições forem conhecidas e iguais às usadas na composição. Para os demais vale o motivo
  * gravado (dado insuficiente ≠ incompatível); quem entrou depois fica fora do plano.
  */

@@ -136,7 +136,7 @@ Encerrar = o organizador conclui ou cancela, ou a compra fica 24 h sem evento ac
 
 ## D8 — Preparação confirmada do carrinho real
 
-1. Fonte única: participantes/restrições/limites/sacola da DATA-01/GRP-01; custos e rateio DOM-01. Não duplicar o domínio no bot ou na CART-01.
+1. Fonte única: participantes/restrições/limites/carrinho da DATA-01/GRP-01; custos e rateio DOM-01. Não duplicar o domínio no bot ou na CART-01.
 2. Validar vínculo operacional e permissões, listAddresses/endereço, loja, getItem/produtos/opções/quantidades, cobertura por consumidor e versão antes de escrever. IDs do provedor; nunca enviar userId nem confundir itemId/cartItemId.
 3. Revisão humana explicita composição desejada, mudanças no carrinho existente, preços observados e custos desconhecidos. Vincular finalidade PREPARE_CART, organizador/bot/conversa privados, conta/link, compra, versão/hash, conteúdo e expiração.
 4. Aceitar somente callback humano do adaptador autenticado, referência opaca de uso único fora do contexto do modelo. Login, senha, texto “sim” e userConsent fornecido pela IA não confirmam escrita.

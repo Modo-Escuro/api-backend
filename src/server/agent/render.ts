@@ -45,7 +45,7 @@ const BLOCKER_TEXT: Record<ApprovalBlocker, string> = {
   RESTRICTIONS_UNVERIFIED: 'Há restrições alimentares sem confirmação.',
   BAG_NEEDS_REVALIDATION: 'A compra mudou depois da escolha; peça novas sugestões.',
 };
-const SIMULATED = 'Sacola simulada: aprovação e pedido ainda não estão disponíveis nesta etapa.';
+const SIMULATED = 'Carrinho simulado: aprovação e pedido ainda não estão disponíveis nesta etapa.';
 
 function planText(title: string, plan: PlanEvaluation, state: PurchaseState, compact = false): string {
   const who = (id: string) => state.participants.find((p) => p.participantId === id)?.displayName ?? '?';
@@ -106,7 +106,7 @@ function build(base: Snapshot, state: PurchaseState | null, applied: string[], p
       const b = plans.bag;
       blocks.push({ kind: 'REVIEW', reviewRef: b.proposal.proposalId, coverage: coverage(b), price: { kind: 'UNKNOWN', currency: 'BRL' },
         blockers: [...b.approvalBlockers.map((x) => BLOCKER_TEXT[x]), SIMULATED].slice(0, 30) });
-      blocks.push({ kind: 'TEXT', source: 'SERVER', text: planText('Sacola simulada', b, state, compact) });
+      blocks.push({ kind: 'TEXT', source: 'SERVER', text: planText('Carrinho simulado', b, state, compact) });
     }
   }
   const omitted = shown < plans.proposals.length

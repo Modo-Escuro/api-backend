@@ -70,7 +70,7 @@ Corpo de status (todas as rotas de vínculo devolvem este objeto; nunca há toke
 - `accountIdentity.status`: `VERIFIED` (nome/e-mail mascarados do `getUser`), `NOT_PROVIDED` (iFood respondeu sem esses
   campos) ou `UNAVAILABLE` (consulta falhou). Nos dois últimos, o bot deve dizer que a identidade não pôde ser verificada.
 - Em `CONNECTED`: `account = { "identity": {…mascarada…}, "addressCount": <n|null> }`, `linkId` opaco, `attempt: null`.
-- `linkId` muda a cada nova confirmação (reconexão/troca de conta). O bot deve invalidar sacola/aprovação associada a outro
+- `linkId` muda a cada nova confirmação (reconexão/troca de conta). O bot deve invalidar carrinho/aprovação associada a outro
   `linkId`. `confirm` também devolve `previousLinkId`.
 
 ## 3. Endpoints do bot
@@ -127,7 +127,7 @@ Regras para o bot:
 - Nunca pedir senha, código OAuth, token, URL de retorno ou qualquer código no chat.
 - Nunca construir `confirmationId`/`attemptId`; usar apenas os valores do status mais recente.
 - Não confirmar automaticamente: a confirmação é sempre um clique humano do organizador.
-- Não guardar tokens (o bot nunca os recebe). `linkId` pode ser guardado para invalidar sacolas.
+- Não guardar tokens (o bot nunca os recebe). `linkId` pode ser guardado para invalidar carrinhos.
 
 ## 5. Proteção contra link encaminhado e garantias da tentativa
 

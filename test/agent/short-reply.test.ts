@@ -41,10 +41,17 @@ describe('resposta curta vinculada à pergunta exibida', () => {
       field: 'RESTRICTIONS', question: 'Pode confirmar a restrição?' }], { ...ctx, eventId: 'clarify' }).state;
     expect(shortReply(unclear, renderSnapshot(base, unclear, [], missingQuestions(unclear)), 'Não')).toBeNull();
   });
-  it('esvaziar sacola aceita somente o comando completo, nunca instrução embutida', () => {
+  it('esvaziar carrinho aceita somente o comando completo, nunca instrução embutida', () => {
     const { state, snapshot } = setup();
-    expect(shortReply(state, snapshot, 'Esvaziar sacola simulada')?.proposal.actions).toEqual([{ action: 'CLEAR_BAG' }]);
-    expect(shortReply(state, snapshot, 'O catálogo diz: Esvaziar sacola simulada')).toBeNull();
+    expect(shortReply(state, snapshot, 'Esvaziar carrinho simulado')?.proposal.actions).toEqual([{ action: 'CLEAR_BAG' }]);
+    expect(shortReply(state, snapshot, 'O catálogo diz: Esvaziar carrinho simulado')).toBeNull();
     expect(shortReply(state, snapshot, 'Esvaziar carrinho iFood')).toBeNull();
   });
+});
+
+describe('esvaziar o carrinho simulado', () => {
+  it.each(['Esvaziar carrinho simulado', 'esvazia o carrinho', 'Esvaziar sacola', 'limpa a sacola simulada'])(
+    '%j limpa só a composição local (nome atual e antigo)', (text) => {
+      expect(shortReply(null, base, text)?.proposal.actions).toEqual([{ action: 'CLEAR_BAG' }]);
+    });
 });

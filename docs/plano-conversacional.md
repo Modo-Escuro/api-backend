@@ -71,7 +71,7 @@ Os commits identificam código integrado, não implantação ou validação exte
 
 ## Módulos e fronteiras
 
-`routes/` e `botAuth.ts` validam o adaptador; `turns/` mantém fila/SQLite; `agent/` propõe ações estruturadas; `domain/` preserva regras; `services/group.ts` compõe propostas; `conversation-runtime.ts` monta o processador opt-in. A CART-01 deve reutilizar DATA-01/GRP-01/DOM-01. Não duplicar sacola, rateio ou restrições.
+`routes/` e `botAuth.ts` validam o adaptador; `turns/` mantém fila/SQLite; `agent/` propõe ações estruturadas; `domain/` preserva regras; `services/group.ts` compõe propostas; `conversation-runtime.ts` monta o processador opt-in. A CART-01 deve reutilizar DATA-01/GRP-01/DOM-01. Não duplicar carrinho, rateio ou restrições.
 
 PREPARE_CART confirma somente a composição/mutações revisadas, com incerteza de custo explícita. BUY-01 futuro exige revisão do carrinho/custo completo e autorização distinta. Referências humanas nunca entram no modelo. Preservar listAddresses, getItem e listagens antes de qualquer seleção suportada; nunca enviar userId. Dados externos são dados, não instruções.
 

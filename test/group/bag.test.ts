@@ -1,4 +1,4 @@
-// GRP-01 × DATA-01: propostas versionadas pelo estado, sacola simulada, invalidação e consumo sem órfãos.
+// GRP-01 × DATA-01: propostas versionadas pelo estado, carrinho simulado, invalidação e consumo sem órfãos.
 import { describe, expect, it } from 'vitest';
 import { applyLinkChange, applyPatch, DomainError, restrictionsSig, type Proposal, type PurchaseState } from '../../src/server/domain/purchase';
 import { M1, M2 } from './catalog';
@@ -47,8 +47,8 @@ describe('propostas', () => {
   });
 });
 
-describe('sacola simulada', () => {
-  it('escolher proposta cria a sacola e fixa a loja (D2); escolha inexistente é recusada', () => {
+describe('carrinho simulado', () => {
+  it('escolher proposta cria o carrinho e fixa a loja (D2); escolha inexistente é recusada', () => {
     const s = withProposals(base(), [proposal(base(), 'a')]);
     const r = select(s, 'a');
     expect(r.state.bag).toMatchObject({ proposalId: 'a'.padEnd(24, 'p'), status: 'CURRENT', merchantId: M1, origin: { eventId: 'e4' } });
@@ -57,7 +57,7 @@ describe('sacola simulada', () => {
     expect(code(() => select(s, 'z'))).toBe('PROPOSAL_NOT_FOUND');
   });
 
-  it('remover participante tira o consumo dele; linha sem consumidor some; sacola precisa ser revalidada', () => {
+  it('remover participante tira o consumo dele; linha sem consumidor some; carrinho precisa ser revalidado', () => {
     const s = select(withProposals(base(), [proposal(base(), 'a')]), 'a').state;
     const bia = s.participants[1]!.participantId;
     const r = applyPatch(s, [{ op: 'REMOVE_PARTICIPANT', participantId: bia }], ctx('e5')).state;
@@ -66,7 +66,7 @@ describe('sacola simulada', () => {
     expect(JSON.stringify(r.bag)).not.toContain(bia);
   });
 
-  it('item compartilhado: quem sai deixa a linha com os demais; último consumidor removido apaga a sacola', () => {
+  it('item compartilhado: quem sai deixa a linha com os demais; último consumidor removido apaga o carrinho', () => {
     const s = select(withProposals(base(), [proposal(base(), 's', M1, true)]), 's').state;
     const [ana, bia] = s.participants.map((p) => p.participantId);
     const one = applyPatch(s, [{ op: 'REMOVE_PARTICIPANT', participantId: bia! }], ctx('e5')).state;
@@ -86,7 +86,7 @@ describe('sacola simulada', () => {
     }
   });
 
-  it('trocar de loja ou de conta apaga sacola e propostas; CLEAR_BAG esvazia', () => {
+  it('trocar de loja ou de conta apaga carrinho e propostas; CLEAR_BAG esvazia', () => {
     const s = select(withProposals(base(), [proposal(base(), 'a')]), 'a').state;
     expect(applyPatch(s, [{ op: 'SET_MERCHANT', merchantId: M2 }], ctx('e5')).state.bag).toBeUndefined();
     const linked = applyLinkChange({ ...s, linkId: 'link-A' }, 'link-B')!.state;
@@ -95,7 +95,7 @@ describe('sacola simulada', () => {
     expect(applyPatch(s, [{ op: 'CLEAR_BAG' }], ctx('e5')).state.bag).toBeUndefined();
   });
 
-  it('estado antigo sem sacola/propostas continua válido (campos opcionais)', () => {
+  it('estado antigo sem carrinho/propostas continua válido (campos opcionais)', () => {
     const s = base();
     expect('bag' in s || 'proposals' in s).toBe(false);
   });

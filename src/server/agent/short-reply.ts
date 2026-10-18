@@ -33,7 +33,8 @@ export function shortReply(state: PurchaseState | null, snapshot: Snapshot, mess
   if (human) return { proposal: { actions: [] }, policyMessage: message, human };
   const text = fold(message);
   // Comando humano exato: limpa só a composição local, nunca o carrinho remoto.
-  if (/^(?:esvaziar|esvazia|limpar|limpa) (?:a )?sacola(?: simulada)?[.!]?$/.test(text)) {
+  // Aceita "carrinho" (atual) e "sacola" (nome antigo) para não quebrar quem ainda digita o termo anterior.
+  if (/^(?:esvaziar|esvazia|limpar|limpa) (?:(?:o )?carrinho(?: simulado)?|(?:a )?sacola(?: simulada)?)[.!]?$/.test(text)) {
     return { proposal: { actions: [{ action: 'CLEAR_BAG' }] }, policyMessage: message };
   }
   // Escolha do início da conversa (botões do bot). Individual cria uma única pessoa "Você", sem modelo.

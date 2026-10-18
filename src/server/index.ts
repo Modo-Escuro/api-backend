@@ -38,7 +38,7 @@ const server = serve({ fetch: app.fetch, port: config.port }, (info) => {
 });
 conversations?.start();
 if (conversations) console.warn(config.conversationModel
-  ? '[turnos] Agente Gemini ativo (coleta + sugestões somente leitura); sacola simulada, sem envio de pedidos. Limites de chamadas e gasto por processo.'
+  ? '[turnos] Agente Gemini ativo (coleta + sugestões somente leitura); carrinho simulado, sem envio de pedidos. Limites de chamadas e gasto por processo.'
   : '[turnos] Infraestrutura ativa sem processador; novos eventos retornam UNAVAILABLE.');
 const shutdown = () => {
   conversations?.stop();
