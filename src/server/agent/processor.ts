@@ -69,7 +69,8 @@ export function createAgentProcessor(opts: AgentOptions): TurnProcessor {
     const input = buildModelInput(ctx.purchase, ctx.snapshot.phase, ctx.event.input.text);
     let raw: unknown;
     try {
-      raw = await withDeadline(signal, ctx.signal, (s) => opts.model.propose({ input, signal: s, maxOutputTokens }));
+      raw = await withDeadline(signal, ctx.signal, (s) => opts.model.propose({ input, signal: s, maxOutputTokens,
+        budgetScope: `${ctx.principal.botId}:${ctx.principal.organizerId}:${ctx.principal.conversationId}` }));
     } catch (e) {
       fail(reason(e, 'MODEL'));
     }

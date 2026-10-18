@@ -27,6 +27,8 @@ export interface AppConfig {
   cartEnabled: boolean;
   /** Opt-in da infraestrutura RUN-01; não instala processador de IA/domínio. */
   conversationRuntime?: { dbFile: string; botId: string };
+  /** Opt-in separado: credencial só na API, sem aprovação/escrita externa. */
+  conversationModel?: { id: 'gemini-3.8-flash'; apiKey: string };
 }
 
 /**
@@ -98,6 +100,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     conversationRuntime = { dbFile, botId };
   }
   const links = resolveLinksStorage(env);
+  let conversationModel: AppConfig['conversationModel'];
+  if (env.CONVERSATION_MODEL && env.CONVERSATION_MODEL !== 'off') {
+    if (env.CONVERSATION_MODEL !== 'gemini-3.8-flash' || !conversationRuntime || !env.GEMINI_API_KEY || /\s/.test(env.GEMINI_API_KEY)) {
+      throw new Error('Modelo conversacional exige opção suportada, runtime configurado e GEMINI_API_KEY válida.');
+    }
+    conversationModel = { id: 'gemini-3.8-flash', apiKey: env.GEMINI_API_KEY };
+  }
   return {
     mcpUrl: env.IFOOD_MCP_URL || 'https://consumer-mcp.ifood.com.br/marketplace',
     clientId: env.IFOOD_CLIENT_ID || undefined,
@@ -120,6 +129,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     devGlobalSession: env.DEV_GLOBAL_SESSION === 'true',
     cartEnabled: env.IFOOD_CART_ENABLED === 'true',
     conversationRuntime,
+    conversationModel,
   };
 }
 

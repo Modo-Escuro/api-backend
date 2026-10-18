@@ -82,6 +82,8 @@ export interface AgentModelInput {
 }
 
 export interface ModelRequest {
+  /** Chave local para limitar chamadas; nunca faz parte do prompt. */
+  budgetScope?: string;
   input: AgentModelInput;
   signal: AbortSignal;
   /** Teto de tokens de saída que o provedor deve respeitar. */
