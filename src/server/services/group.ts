@@ -18,10 +18,11 @@ export interface ProposalsOutcome {
 
 export async function generateProposals(
   state: PurchaseState, req: ProposalRequest, deps: EvaluateDeps,
-  opts: { seed: string; ranker?: PlanRanker; groupLimits?: Partial<GroupLimits>; evaluateLimits?: Partial<EvaluateLimits>; cache?: ItemCache },
+  opts: { seed: string; ranker?: PlanRanker; groupLimits?: Partial<GroupLimits>; evaluateLimits?: Partial<EvaluateLimits>; cache?: ItemCache; signal?: AbortSignal },
 ): Promise<ProposalsOutcome> {
   const outcome = await runEvaluation({
     query: req.query,
+    ...(opts.signal ? { signal: opts.signal } : {}),
     ...(state.address.state === 'DECLARED' ? { addressId: state.address.value.addressId } : {}),
     restrictions: [], // sem filtro por união: a matriz por pessoa decide
     limits: { maxDetails: 12, ...opts.evaluateLimits },
@@ -46,7 +47,7 @@ export function linkedProposalProvider(
   opts: { ranker?: PlanRanker; groupLimits?: Partial<GroupLimits>; evaluateLimits?: Partial<EvaluateLimits> } = {},
 ) {
   // Devolve o linkId realmente usado: o processador descarta o resultado se o vínculo mudou durante a busca.
-  return (organizerId: string, state: PurchaseState, query: string): Promise<GroupResult & { linkId: string }> =>
+  return (organizerId: string, state: PurchaseState, query: string, signal?: AbortSignal): Promise<GroupResult & { linkId: string }> =>
     links.withOperational(organizerId, 'OFFERS_EVALUATE', async (ctx) =>
-      ({ ...(await generateProposals(state, { query }, ctx.deps, { seed: organizerId, cache: ctx.cache, ...opts })).result, linkId: ctx.linkId }));
+      ({ ...(await generateProposals(state, { query }, ctx.deps, { seed: organizerId, cache: ctx.cache, ...opts, ...(signal ? { signal } : {}) })).result, linkId: ctx.linkId }));
 }

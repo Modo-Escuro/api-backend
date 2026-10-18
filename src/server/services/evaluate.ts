@@ -54,6 +54,8 @@ export const DEFAULT_LIMITS: EvaluateLimits = {
 
 export interface EvaluateRequest {
   query: string;
+  /** Cancelamento cooperativo repassado às chamadas MCP (ex.: prazo do turno). */
+  signal?: AbortSignal;
   /** Um dos dois; se nenhum, usa o único endereço salvo. addressId precisa vir de listAddresses. */
   addressId?: string;
   userLocation?: LatLng;
@@ -185,7 +187,7 @@ export async function runEvaluation(req: EvaluateRequest, deps: EvaluateDeps, ca
   const limits: EvaluateLimits = { ...DEFAULT_LIMITS, ...req.limits };
   limits.pageSize = Math.min(limits.pageSize, 25);
   const remaining = () => limits.deadlineMs - (now() - t0);
-  const callOpts = (): CallOptions => ({ timeoutMs: Math.min(15_000, remaining()) });
+  const callOpts = (): CallOptions => ({ timeoutMs: Math.min(15_000, remaining()), ...(req.signal ? { signal: req.signal } : {}) });
   let deadlineReached = false;
 
   const query = req.query.trim();

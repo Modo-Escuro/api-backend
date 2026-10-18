@@ -48,8 +48,14 @@ recuperação do runtime pode chamar o modelo de novo. **Não são teto mensal d
 gasto no console do Google. Persistência, alertas e liberação gradual ficam para a OPS-02. Esgotado o limite, o
 turno falha com `UNAVAILABLE` sem alterar o estado; não há retry interno.
 
-Falha HTTP, timeout, resposta truncada (`MAX_TOKENS`), corpo acima do limite ou proposta fora do schema não altera
-o estado. Erros viram códigos fixos (`QUOTA`, `AUTH`, `UNAVAILABLE`, `TIMEOUT`, `INVALID_OUTPUT`, `BUDGET`...);
+**Riscos conhecidos dos contadores:** não têm janela de tempo e contam falhas. Uma conversa trava ao atingir o limite
+por conversa (padrão 200) e o processo ao atingir `CONVERSATION_MODEL_MAX_REQUESTS`, até reiniciar; com erros 5xx,
+cada chamada reserva cerca de US$ 0,013, então US$ 2 cobrem cerca de 150 falhas. O usuário vê `UNAVAILABLE`
+genérico. Dimensionar para a demo e acompanhar; janela/alerta ficam para a OPS-02.
+
+Falha HTTP, rede, timeout, resposta truncada (`MAX_TOKENS`), corpo de resposta acima de 64 KB (lido com teto, sem
+confiar em `Content-Length`) ou proposta fora do schema não altera o estado. A configuração antiga do #35
+(`CONVERSATION_MODEL=gemini-…` sem `CONVERSATION_MODEL_ENABLED`) falha no boot com motivo claro. Erros viram códigos fixos (`QUOTA`, `AUTH`, `UNAVAILABLE`, `TIMEOUT`, `INVALID_OUTPUT`, `BUDGET`...);
 corpo, headers e mensagens do provedor nunca são registrados. Endpoint fixo
 `generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent`; redirects recusados.
 
@@ -106,7 +112,7 @@ ponta a ponta da D10 continuam sem evidência. Qualquer envio real está fora de
 
 Ambiente: Linux, worktree de integração sobre o #36 + `main@8191a0f` (GRP-01) + #35.
 
-- `npm test`: 806 testes aprovados em 48 arquivos; `npm run typecheck`, `npm run lint`, `npm run build` e `git diff --check`: passaram.
+- `npm test`: 811 testes aprovados em 48 arquivos; `npm run typecheck`, `npm run lint`, `npm run build` e `git diff --check`: passaram.
 - `npm run ai:demo:offline`: 18/18 casos (stub = esperado; não é inferência).
 - `npm run eval:agent`: 7/8 casos pelo stub de regras; `teto-ambiguo` reprovado por limitação conhecida do stub.
 - Testes com transporte Gemini falso: rotas autenticadas Hono, serviço real de vínculos com OAuth/MCP falsos,

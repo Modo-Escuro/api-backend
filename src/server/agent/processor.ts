@@ -54,7 +54,7 @@ const scopeHash = (p: TurnContext['principal']) =>
 
 /** Mensagem específica por causa (sem dados pessoais); nada de "deu erro" genérico quando a causa é conhecida. */
 function proposalFailureText(e: unknown): string {
-  if (e instanceof StaleLinkError) return 'A conta iFood mudou durante a busca; peça as sugestões de novo.';
+  if (e instanceof StaleLinkError) return 'A conexão com a conta iFood mudou durante a busca; peça as sugestões de novo.';
   if (e instanceof DomainError) return 'A compra mudou enquanto eu buscava; peça as sugestões de novo.';
   const code = typeof e === 'object' && e !== null && 'code' in e ? String((e as { code: unknown }).code) : '';
   if (code === 'ADDRESS_AMBIGUOUS') return 'Há mais de um endereço salvo no iFood e nenhum foi escolhido para esta compra; não busquei para não usar o endereço errado.';

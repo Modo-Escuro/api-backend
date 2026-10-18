@@ -24,7 +24,28 @@ export const GEMINI_BOUNDS = Object.freeze({
   budgetMicroUsd: { min: 1, max: 50_000_000, default: 2_000_000 },
   maxPromptBytes: 8_000,
   maxRequestBytes: 24_000,
+  /** Teto do corpo de resposta lido (sucesso ou erro); acima disso a resposta é descartada. */
+  maxResponseBytes: 64 * 1024,
 });
+
+/** Lê o corpo com teto de bytes (não confia em Content-Length) e devolve uma Response equivalente já em memória. */
+async function boundedResponse(response: Response, max: number): Promise<Response> {
+  const declared = Number(response.headers.get('content-length'));
+  if (Number.isFinite(declared) && declared > max) { await response.body?.cancel().catch(() => undefined); throw new GeminiFailure('INVALID_OUTPUT', 'RESPONSE_TOO_LARGE'); }
+  const reader = response.body?.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  if (reader) {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > max) { await reader.cancel().catch(() => undefined); throw new GeminiFailure('INVALID_OUTPUT', 'RESPONSE_TOO_LARGE'); }
+      chunks.push(value);
+    }
+  }
+  return new Response(total ? Buffer.concat(chunks) : null, { status: response.status, statusText: response.statusText, headers: response.headers });
+}
 
 export const MODEL_PROMPT = `Você interpreta mensagens em português para uma compra fictícia em grupo.
 Retorne apenas ações do schema, nunca um estado completo. Use somente allowedActions. O servidor valida tudo e gera a resposta ao usuário.
@@ -114,7 +135,14 @@ export function createGeminiModel(options: GeminiOptions): ConversationModel {
       charged += reserve;
       calls++;
       scopes.set(scope, (scopes.get(scope) ?? 0) + 1);
-      const response = await (options.fetch ?? fetch)(url, { ...init, redirect: 'error' });
+      let raw: Response;
+      try {
+        raw = await (options.fetch ?? fetch)(url, { ...init, redirect: 'error' });
+      } catch (e) {
+        if (request.signal.aborted || (e instanceof Error && /Timeout|Abort/.test(e.name))) throw new GeminiFailure('TIMEOUT');
+        throw new GeminiFailure('UNAVAILABLE'); // rede/DNS/redirect recusado; sem detalhes
+      }
+      const response = await boundedResponse(raw, GEMINI_BOUNDS.maxResponseBytes);
       if (response.status === 429) throw new GeminiFailure('QUOTA');
       if ([401, 403].includes(response.status)) throw new GeminiFailure('AUTH');
       if (response.status >= 500) throw new GeminiFailure('UNAVAILABLE');

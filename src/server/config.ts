@@ -118,6 +118,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   if (env.CONVERSATION_MODEL_ENABLED && !['true', 'false'].includes(env.CONVERSATION_MODEL_ENABLED)) {
     throw new Error('CONVERSATION_MODEL_ENABLED deve ser true ou false.');
   }
+  // Formato antigo do #35 (CONVERSATION_MODEL=gemini-... sem ENABLED): falhar com motivo claro em vez de subir
+  // silenciosamente sem processador. ENABLED=false explícito continua desligando sem erro.
+  if (env.CONVERSATION_MODEL_ENABLED === undefined && env.CONVERSATION_MODEL && env.CONVERSATION_MODEL !== 'off') {
+    throw new Error('AI-01: CONVERSATION_MODEL definido sem CONVERSATION_MODEL_ENABLED. Use CONVERSATION_MODEL_ENABLED=true (ver docs/ai-01-montagem-ensaio.md) ou remova CONVERSATION_MODEL.');
+  }
   if (env.CONVERSATION_MODEL_ENABLED === 'true') {
     const apiKey = env.GEMINI_API_KEY ?? '';
     const organizers = (env.ALLOWED_ORGANIZER_IDS ?? '').split(',').map((s) => s.trim());

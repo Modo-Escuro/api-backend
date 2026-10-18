@@ -184,4 +184,13 @@ describe('montagem do entrypoint AI-01 (rede sintética)', () => {
       expect(transport).toHaveBeenCalledTimes(3);
     } finally { runtime.stop(); dir.clean(); }
   });
+
+  it('auditoria: config no formato antigo do #35 falha com motivo claro; ENABLED=false explícito desliga sem erro', () => {
+    const legacy = { CONVERSATION_RUNTIME_ENABLED: 'true', BOT_TELEGRAM_ID: principal.botId, CONVERSATION_DB_FILE: '.conversations/test.sqlite',
+      CONVERSATION_MODEL: 'gemini-3.8-flash', GEMINI_API_KEY: 'synthetic-key' };
+    expect(() => loadConfig(legacy)).toThrow(/CONVERSATION_MODEL definido sem CONVERSATION_MODEL_ENABLED/);
+    try { loadConfig(legacy); } catch (e) { expect(String(e)).not.toContain('synthetic-key'); }
+    expect(loadConfig({ ...legacy, CONVERSATION_MODEL_ENABLED: 'false' }).conversationModel).toBeUndefined();
+    expect(loadConfig({ ...legacy, CONVERSATION_MODEL: 'off' }).conversationModel).toBeUndefined();
+  });
 });

@@ -119,4 +119,32 @@ describe('AI-01: Gemini no contrato de ações AI-02', () => {
       expect(String(err.mock.calls)).not.toMatch(/PRIVATE_QUOTA|synthetic-key|900001|111111111/);
     } finally { runtime.stop(); dir.clean(); err.mockRestore(); }
   });
+
+  it('auditoria: resposta acima de 64 KB é descartada sem ler o corpo inteiro', async () => {
+    let served = 0;
+    const big = () => new ReadableStream<Uint8Array>({ pull(c) { if (served > 20 * 1024 * 1024) { c.close(); return; } const chunk = new Uint8Array(16 * 1024).fill(97); served += chunk.byteLength; c.enqueue(chunk); } });
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response(big(), { status: 200, headers: { 'content-type': 'application/json' } }));
+    await expect(createGeminiModel({ apiKey: 'synthetic-key', fetch, maxRequests: 5 }).propose(request())).rejects.toThrow('INVALID_OUTPUT');
+    expect(served).toBeLessThan(256 * 1024);
+    const errBody = vi.fn<typeof globalThis.fetch>(async () => new Response('x'.repeat(70 * 1024), { status: 400 }));
+    await expect(createGeminiModel({ apiKey: 'synthetic-key', fetch: errBody, maxRequests: 5 }).propose(request())).rejects.toThrow('INVALID_OUTPUT');
+  });
+
+  it('auditoria: falha de rede vira UNAVAILABLE, sem detalhes', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => { throw new TypeError('fetch failed synthetic-key'); });
+    const err = await createGeminiModel({ apiKey: 'synthetic-key', fetch, maxRequests: 5 }).propose(request()).catch((e: Error) => e);
+    expect((err as Error).message).toBe('UNAVAILABLE');
+    expect(JSON.stringify(err)).not.toContain('synthetic-key');
+  });
+
+  it('auditoria: limites valem sob concorrência (checagem e reserva síncronas)', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => { await new Promise((r) => setTimeout(r, 5)); return geminiReply({ actions: [] }); });
+    const model = createGeminiModel({ apiKey: 'synthetic-key', fetch, maxRequests: 3, maxRequestsPerConversation: 1000 });
+    const results = await Promise.allSettled(Array.from({ length: 10 }, (_, i) => model.propose(request(`c${i}`))));
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(3);
+    expect(fetch).toHaveBeenCalledTimes(3);
+    const perConv = createGeminiModel({ apiKey: 'synthetic-key', fetch: vi.fn<typeof globalThis.fetch>(async () => geminiReply({ actions: [] })), maxRequests: 100, maxRequestsPerConversation: 2 });
+    const same = await Promise.allSettled(Array.from({ length: 6 }, () => perConv.propose(request('mesma'))));
+    expect(same.filter((r) => r.status === 'fulfilled')).toHaveLength(2);
+  });
 });
