@@ -16,6 +16,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "contract:generate": "tsx scripts/export-conversation-contract.ts && tsx scripts/conversation-examples.ts",
+    "test:contract": "vitest run test/contracts/conversation.test.ts",
     "setup:env": "node scripts/setup-env-from-opencode.mjs",
     "auth:import-opencode": "node scripts/import-opencode-token.mjs",
     "smoke": "tsx --env-file-if-exists=.env scripts/smoke.ts"

@@ -4,6 +4,8 @@ Status: **implementado no api-backend** (2026-10-17). Decisões aceitas: confirm
 `BOT_API_TOKEN` + `X-Telegram-User-Id`, dinheiro em **centavos inteiros** no contrato do bot, demo com um organizador.
 Base: `telegram-bot/docs/login-ifood.md`. Login **não** aprova compra; não há operação de compra no backend.
 
+Contrato de conversa versionado: [API-01 v1.0](conversation-api-v1.md), com schemas e testes offline. Suas rotas continuam propostas; as rotas de vínculo deste documento permanecem independentes.
+
 ## 1. Autenticação bot → API
 
 Toda chamada do bot leva:

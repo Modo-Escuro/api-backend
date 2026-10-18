@@ -1,4 +1,8 @@
 node_modules/
+.npm-cache/
+.venv-contract/
+__pycache__/
+.contract-test-results.json
 dist/
 .env
 .env.*
