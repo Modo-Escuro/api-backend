@@ -389,6 +389,13 @@ describe('CART-01: confirmação humana, persistência e reconciliação (MCP mo
     if (expected === 'SUCCEEDED') expect((result as { budget?: unknown }).budget).toMatchObject({ status: 'UNVERIFIED' }); // total informado nunca vira orçamento confirmado
     else expect(result).toMatchObject({ code: 'CART_IDENTITY_MISMATCH' });
   });
+  it('teto individual nunca perguntado não bloqueia a revisão (o bot só pergunta o orçamento do grupo)', async () => {
+    const f = setup(), s = f.state();
+    s.participants[0]!.limit = { state: 'NOT_ASKED' };
+    f.save(s);
+    expect(await f.service.prepare(principal)).toMatchObject({ purpose: 'PREPARE_CART', purchaseAuthorized: false });
+    expect(f.write).not.toHaveBeenCalled();
+  });
   it('confirmação ausente/expirada e referência de outro organizador não escrevem', async () => {
     const f = setup();
     await expect(f.service.confirm(principal, f.command('inexistente'))).rejects.toMatchObject({ code: 'CART_CONFIRMATION_EXPIRED' });
