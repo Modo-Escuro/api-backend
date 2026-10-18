@@ -39,6 +39,8 @@ export interface MatrixCell {
   status: CellStatus;
   /** Códigos dos bloqueios (evidência da avaliação), sem dados pessoais. */
   reasons: string[];
+  /** Avisos que não bloqueiam: restrição obrigatória sem dado do iFood (ALLERGY_UNVERIFIED/RESTRICTION_UNVERIFIED). */
+  warnings?: string[];
 }
 
 export type CoverageStatus = 'COVERED' | 'BLOCKED' | 'NEEDS_VERIFICATION';
@@ -129,6 +131,7 @@ export { knownRestrictions, restrictionsSig };
 
 interface Option { candidate: CatalogCandidate; evaluation: EligibilityResult; unitMin: number; unitMax: number | null; optionIds: string[] }
 
+const FOOD_UNVERIFIED = new Set(['ALLERGY_UNVERIFIED', 'RESTRICTION_UNVERIFIED']);
 const MAX_OPTION_IDS = 50; // limite do schema PlanLine
 /** Avaliações extras por combinação no reparo em cascata (custo limitado e determinístico). */
 const REPAIR_BUDGET = 64;
@@ -349,8 +352,10 @@ export function composeProposals(
       const cat = classifyBlockers(e.blockers);
       const opt = cat === 'ELIGIBLE' ? optionOf(c, e) : null;
       const status: CellStatus = cat === 'ELIGIBLE' ? (opt ? 'COMPATIBLE' : 'NEEDS_VERIFICATION') : cat === 'BLOCKED' ? 'INCOMPATIBLE' : 'NEEDS_VERIFICATION';
+      const unverified = e.warnings.filter((w) => FOOD_UNVERIFIED.has(w.code)).map((w) => w.code);
       matrix.push({ participantId: p.participantId, itemId: c.listing.itemId, merchantId: c.listing.merchant.merchantId, status,
-        reasons: opt || cat !== 'ELIGIBLE' ? e.blockers.map((b) => b.code) : ['PRICE_OR_OPTIONS_UNAVAILABLE'] });
+        reasons: opt || cat !== 'ELIGIBLE' ? e.blockers.map((b) => b.code) : ['PRICE_OR_OPTIONS_UNAVAILABLE'],
+        ...(unverified.length ? { warnings: [...new Set(unverified)] } : {}) });
       if (opt) compatible.push(opt);
     }
     // Teto individual rígido: opção cujo preço mínimo sozinho já passa do teto nunca cabe (taxas só somam).
@@ -514,6 +519,10 @@ function explain(state: PurchaseState, search: GroupResult['search'], all: PlanE
   const cuts = search.truncated.length ? ' A busca foi cortada pelos limites de opções e combinações.' : '';
   out.push(`Busca limitada: ${search.candidates} itens detalhados em ${search.merchants} loja(s).${cuts} Pode haver opções fora dela; isso não prova que não existe combinação válida.`);
   if (merchantFilter !== null) out.push(`A compra está fixada numa loja escolhida antes; só itens dela foram considerados (${search.discarded.outsideMerchant} de outras lojas ignorados).`);
+  // Decisão de produto: restrição sem dado do iFood não bloqueia, mas o aviso nunca pode ser cortado.
+  const unverifiedNames = state.participants.filter((p) => chosen.some((pl) => pl.proposal.lines.some((l) => l.consumerIds.includes(p.participantId) &&
+    matrix.some((c) => c.participantId === p.participantId && c.itemId === l.itemId && c.merchantId === pl.proposal.merchantId && c.warnings?.length)))).map((p) => p.displayName);
+  if (unverifiedNames.length) out.push(`Atenção: o iFood não informa ingredientes nem alérgenos. As restrições de ${unverifiedNames.slice(0, 10).join(', ')}${unverifiedNames.length > 10 ? ` e mais ${unverifiedNames.length - 10}` : ''} não puderam ser verificadas nos itens sugeridos; confirme com o restaurante antes de pedir.`);
   if (search.discarded.inconsistent) out.push(`${search.discarded.inconsistent} item(ns) ignorado(s) por dados inconsistentes do iFood.`);
 
   // Motivo de quem ficou sem atendimento nas propostas exibidas, agrupado por motivo.

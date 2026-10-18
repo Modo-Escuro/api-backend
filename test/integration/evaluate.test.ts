@@ -23,10 +23,11 @@ describe('runEvaluation + view (fixtures reais)', () => {
     expect(brooks.pricing.minimumConfigurable).toMatchObject({ status: 'ESTIMATED', itemsAndDeliverySubtotal: 4290, estimatedTotal: null });
     expect(brooks.pricing.confirmedTotal).toBeNull();
 
-    // Conflito filtro × descrição ("muçarela", "maionese") ⇒ UNKNOWN ⇒ bloqueado (obrigatória)
-    const maria = byName(v.needsVerification, 'Maria salada Veg')!;
+    // Conflito filtro × descrição ("muçarela", "maionese") ⇒ UNKNOWN ⇒ aviso, não bloqueio (decisão 18/10/2026)
+    const maria = byName([...v.eligible, ...v.needsVerification, ...v.blocked], 'Maria salada Veg')!;
     expect(maria.restrictions[0]).toMatchObject({ status: 'UNKNOWN', source: 'CONFLICT' });
-    expect(maria.blockers.map((b) => b.code)).toEqual(['RESTRICTION_UNVERIFIED']);
+    expect(maria.blockers.map((b) => b.code)).not.toContain('RESTRICTION_UNVERIFIED');
+    expect(maria.warnings.map((w) => w.code)).toContain('RESTRICTION_UNVERIFIED');
 
     // Sem getItem (sem fixture) ⇒ bloqueado com motivo e erro preservados
     const failed = v.needsVerification.filter((c) => c.detail.status === 'FAILED'); // sem getItem ⇒ falta de informação

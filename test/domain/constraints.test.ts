@@ -51,7 +51,7 @@ describe('evaluateRestriction (itens reais)', () => {
   describe('obrigatória × preferência', () => {
     it('obrigatória (default) UNKNOWN bloqueia', () => {
       const c = evaluateRestriction(VEGAN, { detail: item('Açai Artesanal'), serverFilters: [] });
-      expect(c).toMatchObject({ requirement: 'MANDATORY', status: 'UNKNOWN', blocking: true });
+      expect(c).toMatchObject({ requirement: 'MANDATORY', status: 'UNKNOWN', blocking: false });
     });
     it('preferência UNKNOWN ou FAIL não bloqueia', () => {
       const pref = { ...VEGAN, requirement: 'PREFERENCE' } as const;
@@ -76,7 +76,7 @@ describe('evaluateRestriction (itens reais)', () => {
   describe('conflitos entre filtro do iFood e descrição', () => {
     it('VEGAN filtrado, mas descrição cita "muçarela" e "maionese" ⇒ UNKNOWN/CONFLICT (bloqueia se obrigatória)', () => {
       const c = evaluateRestriction(VEGAN, { detail: item('Maria salada Veg'), serverFilters: ['VEGAN'] });
-      expect(c).toMatchObject({ status: 'UNKNOWN', source: 'CONFLICT', heuristic: true, blocking: true });
+      expect(c).toMatchObject({ status: 'UNKNOWN', source: 'CONFLICT', heuristic: true, blocking: false });
       expect(c.reasons.join()).toMatch(/mucarela.*maionese|maionese.*mucarela/);
     });
     it('mesmo conflito como preferência ⇒ UNKNOWN sem bloquear', () => {
@@ -93,7 +93,7 @@ describe('evaluateRestriction (itens reais)', () => {
     });
     it('nome do item conflitante com o filtro ⇒ UNKNOWN, nunca PASS', () => {
       const c = evaluateRestriction(VEGAN, { detail: item('Açaí + Morango e Leite Condensado'), serverFilters: ['VEGAN'] });
-      expect(c).toMatchObject({ status: 'UNKNOWN', source: 'CONFLICT', blocking: true });
+      expect(c).toMatchObject({ status: 'UNKNOWN', source: 'CONFLICT', blocking: false });
     });
   });
 
@@ -111,7 +111,7 @@ describe('evaluateRestriction (itens reais)', () => {
   it('NO_PORK na pizza: "Presunto" bloqueado, item UNKNOWN (há sabores restantes) e bloqueante', () => {
     const d = item('Promoção pizza grande');
     const c = evaluateRestriction(NO_PORK, { detail: d, serverFilters: [] });
-    expect(c).toMatchObject({ status: 'UNKNOWN', blocking: true });
+    expect(c).toMatchObject({ status: 'UNKNOWN', blocking: false });
     expect(c.blockedOptionIds).toContain(optionId(d, 'Presunto'));
     expect(c.blockedOptionIds).not.toContain(optionId(d, 'Margherita'));
   });
@@ -119,27 +119,28 @@ describe('evaluateRestriction (itens reais)', () => {
   describe('alergias: tudo que não for PASS bloqueia', () => {
     it('sem evidência ⇒ UNKNOWN bloqueante', () => {
       const c = evaluateRestriction({ kind: 'ALLERGY', code: 'PEANUT' }, { detail: item('Veggie Burger'), serverFilters: ['VEGAN'] });
-      expect(c).toMatchObject({ status: 'UNKNOWN', blocking: true });
+      expect(c).toMatchObject({ status: 'UNKNOWN', blocking: false });
     });
-    it('LAC_FREE não serve como evidência para alergia ao leite', () => {
+    it('LAC_FREE não serve como evidência para alergia ao leite; laticínio na descrição bloqueia', () => {
       const c = evaluateRestriction({ kind: 'ALLERGY', code: 'MILK' }, { detail: item('Veggie Burger'), serverFilters: ['LAC_FREE', 'VEGAN'] });
-      expect(c).toMatchObject({ status: 'UNKNOWN', blocking: true });
+      expect(c).toMatchObject({ status: 'FAIL', source: 'HEURISTIC', blocking: true });
+      expect(c.reasons.join()).toMatch(/descrição menciona/);
     });
-    it('GLUTEN_FREE do servidor ⇒ UNKNOWN (filtro insuficiente para alergia), bloqueante', () => {
+    it('GLUTEN_FREE do servidor ⇒ UNKNOWN (filtro insuficiente para alergia), só aviso', () => {
       const c = evaluateRestriction({ kind: 'ALLERGY', code: 'GLUTEN' }, { detail: item('Veggie Burger'), serverFilters: ['GLUTEN_FREE'] });
-      expect(c).toMatchObject({ status: 'UNKNOWN', source: 'SERVER_FILTER_INSUFFICIENT', blocking: true });
+      expect(c).toMatchObject({ status: 'UNKNOWN', source: 'SERVER_FILTER_INSUFFICIENT', blocking: false });
       expect(c.reasons.join()).toMatch(/contaminação cruzada/);
     });
-    it('filtro do servidor + descrição com termo de glúten ⇒ UNKNOWN (descrição pode listar opções)', () => {
+    it('filtro do servidor + descrição com termo de glúten ⇒ FAIL (alérgeno citado bloqueia, mesmo com filtro)', () => {
       const c = evaluateRestriction({ kind: 'ALLERGY', code: 'GLUTEN' }, { detail: item('Vegano Brooks'), serverFilters: ['GLUTEN_FREE'] });
-      expect(c).toMatchObject({ status: 'UNKNOWN', source: 'SERVER_FILTER_INSUFFICIENT', blocking: true });
+      expect(c).toMatchObject({ status: 'FAIL', source: 'HEURISTIC', blocking: true });
       expect(c.reasons.join()).toMatch(/descrição menciona: pao/);
     });
     it('opção "castanha" é bloqueada; grupo ainda tem alternativas', () => {
       const d = item('Maria salada Veg');
       const c = evaluateRestriction({ kind: 'ALLERGY', code: 'TREE_NUTS' }, { detail: d, serverFilters: [] });
       expect(c.blockedOptionIds).toEqual([optionId(d, 'Grão de bico c/ castanha do pará')]);
-      expect(c.blocking).toBe(true);
+      expect(c.blocking).toBe(false); // item UNKNOWN: aviso; a opção com castanha continua bloqueada
     });
   });
 });
