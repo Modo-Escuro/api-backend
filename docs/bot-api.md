@@ -162,31 +162,52 @@ Identidade da conta: `getUser` com `includeProfileData=false` (contrato observad
 - Mensagens (`blockers[].message`, `notes`) continuam em texto "R$ x.yz" para leitura humana.
 - O domínio também usa centavos inteiros; BRL do MCP é convertido na normalização. `src/server/services/cents.ts` só projeta os nomes do contrato, sem multiplicar novamente. Ver DOM-01 na seção 11.
 
-## 8. Recomendações ranqueadas (`/api/evaluate` — F4)
+## 8. Recomendações ranqueadas (`/api/evaluate` — contrato 2.0, RANK-03)
 
-Detalhe da implementação (pesos, critérios, política de dado ausente, testes): `docs/ranking.md`.
+Detalhe da implementação: [ranking](ranking.md). Migração, políticas e consumidores:
+[rank-03-contrato-v2](rank-03-contrato-v2.md). Schema Zod: `src/server/contracts/evaluate.ts`.
+Respostas de avaliação bem-sucedidas trazem `contractVersion: "2.0"` no topo e em `ranking`.
+Esta versão é independente do contrato conversacional 1.0; os erros e a autenticação existentes não mudam.
 
 - **Requisição**: além de `query`/`location`/`restrictions`/`budget`/`refinements`, existe
   `preferences: { foodTypes?, likedIngredients?, avoidedIngredients?, occasion?, priority? }` opcional, com
   `priority` em `ECONOMY | SPEED | PREFERENCES`. Preferência **nunca** vira filtro obrigatório no iFood e nunca
-  muda a elegibilidade — só a pontuação.
+   muda a elegibilidade. DEC-01 D9 exige `ECONOMY` ou `SPEED` para ordenar; ausência ou `PREFERENCES`
+   legado retorna HTTP 200 com `ranking.status: "PRIORITY_REQUIRED"`, `clarification` e `recommendations: []`.
+   O cliente pergunta qual das duas prioridades e envia nova avaliação; os buckets de diagnóstico continuam presentes.
 - **Três buckets mutuamente exclusivos** (a restrição obrigatória decide *antes* de qualquer pontuação):
-  - `recommendations` — só candidatos **ELIGIBLE**, no máx. 4, em ordem decrescente de `ranking.score`;
-  - `eligible` — todos os elegíveis (apenas os quatro primeiros têm `ranking`, na mesma ordem);
+   - `recommendations` — só candidatos **ELIGIBLE**, no máx. 4, em ordem estrita D9;
+   - `eligible` — todos os elegíveis na ordem de coleta; consultar `recommendations` para a ordem ranqueada;
   - `blocked` — incompatibilidade identificada (`RESTRICTION_FAIL`, `OVER_ITEM_BUDGET`, `MERCHANT_CLOSED`,
-    `NO_VALID_CONFIGURATION`…). O bot mostra o motivo e **não** oferece o item;
+     `NO_VALID_CONFIGURATION`…). O bot mostra o motivo e **não** oferece o item;
   - `needsVerification` — falta de informação (`NOT_DETAILED`, `ALLERGY_UNVERIFIED`, `PRICE_UNAVAILABLE`…).
     Não é "seguro": o bot pede confirmação/explique a lacuna, **nunca** recomenda.
-  - `summary = { candidates, eligible, blocked, needsVerification, recommendations, blockerCounts }`, com
-    `eligible + blocked + needsVerification === candidates` e `recommendations ≤ 4`.
+   - `summary = { candidates, eligible, blocked, needsVerification, recommendations, blockerCounts }`, com
+     `eligible + blocked + needsVerification === candidates` e `recommendations ≤ 4`.
+- Cada candidato tem `category: ELIGIBLE | BLOCKED | NEEDS_VERIFICATION`. Todos os motivos originais
+  permanecem em `blockers`, inclusive em casos mistos. Incompatibilidade confirmada ou código desconhecido
+  prevalece sobre pendência conhecida; desconhecido usa `BLOCKED` como fallback conservador, não comprovação.
+  `PRICE_UNVERIFIED`, `CONFIG_UNVERIFIED`, `AVAILABILITY_UNKNOWN` e limites DOM-01 não verificáveis são pendências.
+- **Ordem D9**: ECONOMY compara total completo estimado, prazo e preferências atendidas; SPEED compara
+  prazo, total e preferências atendidas. Custo crescente, prazo crescente, preferências decrescentes; desconhecidos
+  depois dos conhecidos em cada chave; empate por `merchantId`, depois `itemId`. Score não decide a ordem.
 - **`ranking` em cada recomendação**: `rank` (1-based), `score` (0–1 ou `null`), `criteria[]`
   (`PREFERENCES 35% · CONTEXT 25% · PRICE 20% · DELIVERY 10% · RATING 10%`; com `priority` o critério escolhido
   dobra e os pesos entram no `ranking.weights` do topo), `reasons[]` (por que pontuou assim) e
   `dataLimitations[]` (o que faltou). Critério sem dado vem `status: "NO_DATA"`, `score: null`,
   `effectiveWeight: 0`, `contribution: null` — o peso é redistribuído entre os avaliados e **nenhuma nota é
-  inventada**; `score: null` só quando nenhum critério pôde ser avaliado.
+   inventada**; `score: null` só quando nenhum critério pôde ser avaliado. O score é **diagnóstico relativo à
+   consulta**, não percentual de satisfação, probabilidade de segurança alimentar ou garantia de qualidade.
+   A redistribuição não influencia a ordem. PRICE usa total completo, DELIVERY usa apenas prazo (sem frete).
+   CONTEXT recebe `softLimits`, enquanto `refinements` obrigatórios já foram validados na elegibilidade.
+- **`coverage` por recomendação**: critérios com/sem dado, contagens, peso configurado, peso observado e
+  `weightedFraction = scoredWeight / configuredWeight`; descreve cobertura de critérios, não confiança.
+  **`orderingKeys`**: `estimatedTotalCents`, `estimatedMinutes` (máximo observado), `preferencesSatisfied`;
+  valor desconhecido é `null`, nunca zero. Limitações de observação parcial ficam em `dataLimitations`.
 - O `ranking` do topo traz `weights`, `priority`, `maxRecommendations`, `eligibleConsidered`, `eligibleScored` e
-  `notes` (inclusive "Nenhuma opção pôde ser confirmada como compatível…" quando `recommendations` for `[]`).
+   `notes`, além de `contractVersion`, `status`, `clarification`, `orderingPolicy: "DEC_01_D9"`,
+   `scoreInterpretation: "RELATIVE_DIAGNOSTIC_NOT_PROBABILITY"` e
+   `missingDataPolicy: "UNKNOWN_LAST_SCORE_DIAGNOSTIC_ONLY"`.
 - Preferência opcional não exclui uma configuração obrigatoriamente viável: a configuração preferida só é
   adotada com configuração válida e `PASS` em todos os tetos informados. Caso contrário, mantém-se o mínimo
   obrigatório e informa-se `PREFERENCE_NOT_MET`. Quando adotada, `configuration.source` é `PREFERENCE` e
@@ -195,11 +216,11 @@ Detalhe da implementação (pesos, critérios, política de dado ausente, testes
 - Sugestões alternativas do domínio mantêm a quantidade original e reavaliam entrega + orçamento; `FAIL`
   ou `UNKNOWN` em qualquer teto impede a sugestão validada. Sem teto, preço aberto continua explicitamente
   incerto. Detalhes e regressões: `docs/ranking.md`, seção 10.
-- Garantias: restrição obrigatória vence qualquer pontuação (preço/promoção/avaliação preferência não compensam
-  bloqueio); empate é determinístico (score desc → ordem da busca → `itemId`); os campos numéricos de `ranking` não incluem
-  valores monetários; os textos podem apresentar valores em reais formatados a partir de centavos e passam intactos (seção 7).
+- Garantias: restrição obrigatória vence qualquer pontuação; zero/uma opção não é completada com não elegíveis.
+  `orderingKeys.estimatedTotalCents` já está em centavos e não é reconvertido. Textos apresentam reais formatados.
 
-Exemplo real (fixtures de teste, `query: "lanche vegano"`, `priority: "ECONOMY"`) — recorte:
+Exemplo **histórico**, anterior à RANK-03 (não usar como contrato 2.0). O exemplo atual e a tabela antes/depois
+estão no [guia de migração](rank-03-contrato-v2.md#contrato-http-antesdepois):
 
 ```json
 {

@@ -50,7 +50,7 @@ function alternative(quantity: number, budget?: Budget, price: Field<number> = p
   const evaluation = evaluateCandidate({ detail, listing, serverFilters: [], quantity, selection }, constraints);
   const candidate: RankCandidate = { detail, listing, evaluation };
   const before = structuredClone(evaluation);
-  const recommendation = rankCandidates([candidate], { likedIngredients: ['bacon'] }, null, constraints).recommendations[0]!;
+  const recommendation = rankCandidates([candidate], { priority: 'ECONOMY', likedIngredients: ['bacon'] }, null, constraints).recommendations[0]!;
   expect(evaluation).toEqual(before);
   expect(evaluation.eligible).toBe(budget?.maxOrderTotal === undefined);
   return { proposal: recommendation?.alternativeConfiguration ?? null, evaluation, detail, listing, id };
@@ -68,7 +68,7 @@ describe('preferência opcional respeita viabilidade e mantém mínimo real', ()
     expect(evaluation.pricing.minimumConfigurable!.unitTotal).toBe(2300);
     expect(evaluation.budget.itemPrice).toBe('PASS');
     expect(evaluation.warnings.map((w) => w.code)).toContain('PREFERENCE_NOT_MET');
-    const rec = rankCandidates([{ ...input, evaluation }], { likedIngredients: ['bacon'] }).recommendations[0]!;
+    const rec = rankCandidates([{ ...input, evaluation }], { priority: 'ECONOMY', likedIngredients: ['bacon'] }).recommendations[0]!;
     expect(rec.criteria.find((c) => c.criterion === 'PREFERENCES')!.reasons.join(' ')).toContain('menciona "bacon"');
     expect(rec.criteria.find((c) => c.criterion === 'PRICE')!.reasons.join(' ')).toContain('23.00');
   });
@@ -81,7 +81,7 @@ describe('preferência opcional respeita viabilidade e mantém mínimo real', ()
     expect(evaluation.pricing.minimumConfigurable!.unitTotal).toBe(2300);
     expect(evaluation.pricing.selected!.unitTotal).toBe(3000);
     expect(evaluation.warnings.map((w) => w.code)).not.toContain('PREFERENCE_NOT_MET');
-    const rec = rankCandidates([{ ...input, evaluation }], { likedIngredients: ['vegetal'] }).recommendations[0]!;
+    const rec = rankCandidates([{ ...input, evaluation }], { priority: 'ECONOMY', likedIngredients: ['vegetal'] }).recommendations[0]!;
     expect(rec.criteria.find((c) => c.criterion === 'PRICE')!.reasons.join(' ')).toContain('30.00');
     expect(rec.criteria.find((c) => c.criterion === 'PREFERENCES')!.reasons.join(' ')).toContain('menciona "vegetal"');
   });

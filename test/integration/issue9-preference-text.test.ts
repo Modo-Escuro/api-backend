@@ -2,7 +2,7 @@
 // Fixtures reais de searchOffers/getItem, sem rede. O contrato HTTP (centavos) não muda:
 // a configuração alternativa fica no domínio; a view expõe apenas motivos/limitações já existentes.
 import { describe, expect, it } from 'vitest';
-import { runEvaluation } from '../../src/server/services/evaluate';
+import { evaluateWithEconomy as runEvaluation } from '../helpers/ranking';
 import { evaluateView } from '../../src/server/services/evaluate-view';
 import { evaluateViewCents } from '../../src/server/services/cents';
 import { fake, fx, ITEMS } from './fakes';

@@ -6,7 +6,7 @@
 import type { Field } from '../domain/fields.js';
 import { indexOptions } from '../domain/normalize.js';
 import type { PriceBreakdown } from '../domain/pricing.js';
-import type { EligibilityCategory, RankedRecommendation } from '../domain/ranking.js';
+import { RANKING_CONTRACT_VERSION, type EligibilityCategory, type RankedRecommendation } from '../domain/ranking.js';
 import type { DetailOutcome, EvaluatedCandidate, EvaluateOutcome } from './evaluate.js';
 
 type FieldState = Exclude<Field<unknown>['state'], 'PRESENT'>;
@@ -75,6 +75,7 @@ export function candidateView(c: EvaluatedCandidate) {
     itemId: e.itemId,
     merchantId: e.merchantId,
     eligible: e.eligible,
+    category: c.category,
     item: {
       name: d ? v('itemName', d.itemName) : v('itemName', listing.itemName),
       description: d ? v('itemDescription', d.itemDescription) : null,
@@ -148,12 +149,12 @@ export function evaluateView(o: EvaluateOutcome) {
 
   // Recomendações = candidatos ELIGIBLE ordenados pelo ranking (os demais nunca aparecem aqui).
   const byId = new Map(views.map((v) => [v.itemId, v]));
-  type Recommendation = (typeof views)[number] & { ranking: Pick<RankedRecommendation, 'rank' | 'score' | 'criteria' | 'reasons' | 'dataLimitations'> };
+  type Recommendation = (typeof views)[number] & { ranking: Pick<RankedRecommendation, 'rank' | 'score' | 'criteria' | 'coverage' | 'orderingKeys' | 'reasons' | 'dataLimitations'> };
   const recommendations: Recommendation[] = [];
   for (const r of o.ranking.recommendations) {
     const c = byId.get(r.itemId);
     if (!c) continue;
-    recommendations.push({ ...c, ranking: { rank: r.rank, score: r.score, criteria: r.criteria, reasons: r.reasons, dataLimitations: r.dataLimitations } });
+    recommendations.push({ ...c, ranking: { rank: r.rank, score: r.score, criteria: r.criteria, coverage: r.coverage, orderingKeys: r.orderingKeys, reasons: r.reasons, dataLimitations: r.dataLimitations } });
   }
 
   const notEligible = [...blocked, ...needsVerification];
@@ -161,6 +162,7 @@ export function evaluateView(o: EvaluateOutcome) {
   for (const b of notEligible) for (const code of new Set(b.blockers.map((x) => x.code))) blockerCounts[code] = (blockerCounts[code] ?? 0) + 1;
 
   return {
+    contractVersion: RANKING_CONTRACT_VERSION,
     query: o.query,
     interpretedQuery: o.interpretedQuery,
     location: o.location,
@@ -174,6 +176,12 @@ export function evaluateView(o: EvaluateOutcome) {
       blockerCounts,
     },
     ranking: {
+      contractVersion: o.ranking.contractVersion,
+      status: o.ranking.status,
+      orderingPolicy: o.ranking.orderingPolicy,
+      scoreInterpretation: o.ranking.scoreInterpretation,
+      missingDataPolicy: o.ranking.missingDataPolicy,
+      clarification: o.ranking.clarification,
       weights: o.ranking.weights,
       priority: o.ranking.priority,
       maxRecommendations: o.ranking.maxRecommendations,
@@ -191,7 +199,7 @@ export function evaluateView(o: EvaluateOutcome) {
     durationMs: o.durationMs,
     deadlineReached: o.deadlineReached,
     notes: [
-      `Ranking aplicado a ${o.ranking.eligibleConsidered} candidato(s) já elegível(eis): ${recommendations.length} recomendação(ões) emitida(s) (máx. ${o.ranking.maxRecommendations}), em ordem decrescente de score.`,
+      `Ranking DEC-01 D9: ${o.ranking.eligibleConsidered} candidato(s) já elegível(eis); ${recommendations.length} recomendação(ões) (máx. ${o.ranking.maxRecommendations}). Score é diagnóstico relativo à consulta e não ordena.`,
       'Restrições obrigatórias decidem a elegibilidade antes do ranking: preço, promoção, avaliação e preferência nunca compensam uma restrição obrigatória.',
       'Produtos bloqueados (incompatibilidade) e pendentes de verificação (falta de informação) ficam fora de `recommendations`.',
       'Preços são estimativas ou faixas; o total confirmado só existe no carrinho do iFood (fora do escopo).',
