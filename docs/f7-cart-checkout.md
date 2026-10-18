@@ -3,6 +3,8 @@
 Implementação do carrinho com gateway MCP por vínculo e testes offline. **Envio de pedido e aprovação de compra
 permanecem desabilitados**, inclusive quando o carrinho é habilitado. Login não autoriza compra.
 
+Auditoria INT-01: [matriz de evidências, correção de respostas desconhecidas e ensaio autenticado pendente](int-01-audit.md). A correção não valida saídas reais nem habilita a integração.
+
 ## Evidência do contrato e limite da entrega
 
 Os nomes, parâmetros, obrigatoriedade e formatos de entrada foram inspecionados em `fixtures/tools-list.json`,
@@ -23,6 +25,8 @@ não foram lidos tokens locais e nenhuma operação real de carrinho/pedido foi 
 A captura **não contém outputSchema nem respostas reais de carrinho**. Os HTMLs locais do portal não fornecem
 payloads úteis dessas respostas. Portanto, o adaptador de saída é **provisório**, exercitado com MCP sintético;
 não é evidência de integração validada com o iFood. Formatos desconhecidos produzem `CART_CONTRACT_UNVERIFIED`.
+Confirmações de escrita de formato desconhecido não marcam a intenção como DONE; mantêm RESULT_UNKNOWN. Além do cartId na criação, as demais mutações reconhecem provisoriamente apenas `{success:true}` direto ou em `data`, sem campos adicionais nesse objeto de confirmação. É o formato dos fakes, ainda sem comprovação do provedor. Erro no envelope ou dentro de `data` bloqueia antes da projeção.
+
 Os DTOs abaixo especificam o que o adaptador aceita; não afirmam que o provedor devolva esse formato:
 
 ```text

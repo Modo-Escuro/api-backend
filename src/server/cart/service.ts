@@ -5,7 +5,7 @@ import { normalizeItemDetail } from '../domain/normalize.js';
 import { LinkError, type IfoodLinkService, type OperationalContext, type Operation } from '../links/service.js';
 import { McpToolError } from '../mcp/errors.js';
 import type { GetItemResult, LatLng } from '../mcp/types.js';
-import { CartError, confirmedTotals, deliveryList, id, parseItem, searchList, parseList, parseSnapshot, payload, paymentList, voucherList,
+import { CartError, assertMutationConfirmation, confirmedTotals, deliveryList, id, parseCreatedCart, parseItem, searchList, parseList, parseSnapshot, payload, paymentList, voucherList,
   type CartGateway, type CartTool, type ItemInput, type Snapshot } from './contracts.js';
 
 import { CATALOG_LIMITS, catalogDetails } from './catalog.js';
@@ -191,9 +191,8 @@ export class CartService {
       let cart: Cart | undefined;
       try {
         const raw = await this.call(gateway, organizer, input.linkId, 'createCart', { ...expected, items });
-        const parsed = z.object({ cartId: id }).safeParse(payload(raw));
-        if (!parsed.success) throw new CartError('CART_CONTRACT_UNVERIFIED', 'createCart não retornou cartId reconhecido.', 502);
-        cart = { ref: opaque(), organizer, linkId: input.linkId, ...expected, location: first.location, cartId: parsed.data.cartId,
+        const parsed = parseCreatedCart(raw);
+        cart = { ref: opaque(), organizer, linkId: input.linkId, ...expected, location: first.location, cartId: parsed.cartId,
           snapshot: null, fingerprint: null, revision: 0, unknown: false, review: null, choices: new Map() };
         this.carts.set(cart.ref, cart);
         this.attempts.set(key, { signature, status: 'DONE', cartRef: cart.ref });
@@ -217,7 +216,8 @@ export class CartService {
     this.invalidate(cart);
     this.attempts.set(key, { signature, status: 'UNKNOWN', cartRef: cart.ref });
     try {
-      await this.call(gateway, cart.organizer, cart.linkId, tool, { cartId: cart.cartId, ...args });
+      const response = await this.call(gateway, cart.organizer, cart.linkId, tool, { cartId: cart.cartId, ...args });
+      assertMutationConfirmation(response);
       this.attempts.set(key, { signature, status: 'DONE', cartRef: cart.ref });
     } catch (error) { cart.unknown = true; throw this.unknownError(error); }
     // Se a leitura falhar, um retry do mesmo requestId só lê; nunca repete a mutação.
