@@ -2,9 +2,8 @@
 
 Issue: [#13 DATA-01](https://github.com/Modo-Escuro/api-backend/issues/13) · Decisões: [DEC-01](decisoes-conversacionais.md) · Runtime: [RUN-01](runtime-turnos.md) · Contrato: [conversa v1](conversation-api-v1.md)
 
-O estado da compra simulada fica **no mesmo SQLite da RUN-01** (schema v2) e muda **só por operações tipadas**,
-gravadas na mesma transação do snapshot e da operação. Nenhuma rota, schema da API-01 ou processador de IA foi
-alterado; o runtime continua respondendo 503 a eventos novos até a AI-02 instalar um `TurnProcessor`.
+O estado local da compra fica **no mesmo SQLite da RUN-01** (schema v2) e muda **só por operações tipadas**,
+gravadas na mesma transação do snapshot e da operação. A DATA-01 não sincroniza carrinho por si só. A main remota já integra montagem AI-01/AI-02; novos eventos dependem dos opt-ins e configuração explícitos. CART-01 deve reutilizar este domínio para preparar o carrinho real confirmado.
 
 ## Onde está cada coisa
 
@@ -23,7 +22,7 @@ dados a partir de `PurchaseState` (`participants[].limit`, `groupLimit`) e não 
 
 - **Uma compra ativa por conversa privada do organizador** (D2): o escopo da RUN-01
   (`TELEGRAM/bot/organizador/conversa`) isola cada organizador; leituras e escritas filtram por ele.
-- **Participantes simulados** (D1): sem conta; nome e dados declarados pelo organizador. Máximo configurável
+- **Participantes declarados pelo organizador** (D1): sem conta; nome e dados declarados pelo organizador. Máximo configurável
   (`TurnLimits.maxParticipants`, padrão 20; o contrato API-01 aceita até 100).
 - **Textos** (nomes, perguntas) recusam caracteres de controle, formatação invisível (zero-width, bidi) e surrogate isolado.
 - **Estados distintos** para cada campo declarável: `NOT_ASKED`, `UNCLEAR` (pergunta pendente), `NONE`
@@ -56,7 +55,7 @@ operação, nada gravado).
 | `SET_PRIORITY { value: ECONOMY \| SPEED }` | D9 |
 | `SET_MERCHANT { merchantId }` / `SET_ADDRESS { addressId }` | ID precisa vir de resposta MCP (o processador valida) |
 | `END { reason: CLOSED \| CANCELLED }` | Exige compra ativa antes do patch; encerra e dispara a exclusão D7 na mesma transação |
-| `SET_PROPOSALS { proposals }` / `SELECT_PROPOSAL { proposalId }` / `CLEAR_BAG` | GRP-01: propostas (apagadas por qualquer outra alteração) e sacola simulada; ver [grp-01-propostas](grp-01-propostas.md) |
+| `SET_PROPOSALS { proposals }` / `SELECT_PROPOSAL { proposalId }` / `CLEAR_BAG` | GRP-01: propostas (apagadas por qualquer outra alteração) e composição local a sincronizar pela CART-01; ver [grp-01-propostas](grp-01-propostas.md) |
 
 `humanConfirmed` só pode ser preenchido pelo processador quando o organizador declarou a mudança explicitamente.
 

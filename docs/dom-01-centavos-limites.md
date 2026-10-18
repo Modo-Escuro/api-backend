@@ -45,9 +45,9 @@ As respostas de catálogo observadas não fornecem taxa de serviço. Por isso:
 - um teto de pedido maior que o subtotal conhecido continua UNKNOWN, não PASS. Preço ambíguo ou opção sem preço não gera subtotal parcial de valor único;
 - promoções de item/entrega já entram no componente correspondente. Não aplicar desconto promocional duas vezes nem inventar desconto/cupom ou taxa zero.
 
-O catálogo continua produzindo estimativas/faixas, nunca cotação CONFIRMED. O contrato conversacional mantém UNKNOWN, ESTIMATE, RANGE e CONFIRMED distintos; a auditoria F7 não é prova de total remoto confirmado. Esta alteração não habilita `/purchase-approvals` para a aprovação fictícia.
+O catálogo continua produzindo estimativas/faixas, nunca cotação CONFIRMED. O contrato conversacional mantém UNKNOWN, ESTIMATE, RANGE e CONFIRMED distintos; a auditoria F7 não é prova de total remoto confirmado. `/purchase-approvals` não é autorização PREPARE_CART; preparação exige seu contrato próprio e aprovação futura de pedido exige custo completo confirmado.
 
-**Limitação prática:** enquanto faltar um custo relevante, o orçamento completo e a aprovação simulada ficam bloqueados. Um modelo não pode preencher a lacuna por suposição. Obter os componentes verificáveis é trabalho de integração; não habilitar F7 para contornar essa ausência.
+**Limitação prática:** enquanto faltar um custo relevante, a validação do orçamento completo e a aprovação de pedido ficam bloqueadas. PREPARE_CART explicita a incerteza e não autoriza ignorar limites já verificáveis ou evidência alimentar insuficiente. Um modelo não pode preencher a lacuna por suposição. Obter os componentes verificáveis é trabalho de integração; não habilitar F7 para contornar essa ausência.
 
 ## Rateio informativo
 
@@ -59,7 +59,7 @@ O catálogo continua produzindo estimativas/faixas, nunca cotação CONFIRMED. O
 4. Maiores restos em cada rateio; empate por bytes de identificador. Soma exata e nenhum componente negativo. Quantidades, identificadores e centavos inválidos são rejeitados.
 5. Tetos coletivo e individuais são conferidos simultaneamente, sem compensação entre pessoas. Custo comum desconhecido produz total/budget UNKNOWN para os consumidores afetados; mínimo da loja informado é conferido sobre o subtotal.
 
-Esse helper recebe preços de item de valor único e componentes explícitos; não aceita uma faixa como se fosse um valor. Faixas permanecem no domínio de preço e seus limites são verificados por `checkCap`; eventual rateio dos extremos exige duas entradas de custo distintas, sem promover qualquer extremo a cotação única/aprovação. Integração com propostas, evidência alimentar por consumidor e revisão simulada continua fora desta task.
+Esse helper recebe preços de item de valor único e componentes explícitos; não aceita uma faixa como se fosse um valor. Faixas permanecem no domínio de preço e seus limites são verificados por `checkCap`; eventual rateio dos extremos exige duas entradas de custo distintas, sem promover qualquer extremo a cotação única/aprovação. Integração com propostas, evidência alimentar por consumidor e revisão/confirmação PREPARE_CART pertence à CART-01; o helper não implementa esse contrato nem realiza escritas.
 
 O campo `budgetsSatisfied` só resume as condições financeiras informadas: não é autorização nem prova de elegibilidade alimentar, validade de revisão ou clique humano. Não conectar JSON bruto do modelo a esse helper sem a validação de DATA-01/AI-02.
 

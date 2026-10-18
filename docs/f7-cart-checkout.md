@@ -5,7 +5,7 @@ permanecem desabilitados**, inclusive quando o carrinho é habilitado. Login nã
 
 Auditoria INT-01: [matriz de evidências, correção de respostas desconhecidas e ensaio autenticado pendente](int-01-audit.md). A correção não valida saídas reais nem habilita a integração.
 
-**Escopo vigente:** a [DEC-01 D8](decisoes-conversacionais.md) adota sacola simulada e MCP somente leitura. Manter `IFOOD_CART_ENABLED=false`; este documento descreve o adaptador legado e não autoriza preparação de carrinho real na demo. Validação futura de outputs não basta para alterar essa decisão de escopo. Aprovação fictícia não usa `/purchase-approvals` nem envia pedido.
+**Escopo vigente:** a [DEC-01 D8](decisoes-conversacionais.md) permite carrinho real após confirmação humana específica. O código CART-01 novo permanece local; este documento descreve a F7 legada sem suas garantias. Manter `IFOOD_CART_ENABLED=false` até integrar confirmação/durabilidade e validar saídas na INT-02. Preparar carrinho não aprova pedido. Envio e pagamento continuam proibidos. Ver [remoto/local](estado-remoto-local.md).
 
 ## Evidência do contrato e limite da entrega
 
@@ -48,7 +48,7 @@ o adaptador. Totais BRL completos, finitos, não negativos e com precisão de ce
 `subtotal + deliveryFee + serviceFee - discount` deve coincidir com `total`. Ausência ⇒ `UNAVAILABLE` e valores
 `null`; divergência ⇒ `DIVERGENT` e revisão bloqueada. Não se completam componentes ausentes com zero.
 
-Por essas limitações e pela DEC-01, manter `IFOOD_CART_ENABLED=false`. Validar saídas não autoriza mudar o escopo simulado. As correções relacionadas a #2/#3 já foram incorporadas de origin/main (20e46fd e 686300d). Essa flag não habilita checkout.
+Por essas limitações e pela DEC-01, manter `IFOOD_CART_ENABLED=false`. O escopo de carrinho real já foi aprovado; validar saídas na INT-02 é necessário, mas não substitui integrar confirmação humana específica, intenção durável e reconciliação da CART-01. As correções relacionadas a #2/#3 já foram incorporadas de origin/main (20e46fd e 686300d). Essa flag não habilita checkout.
 
 ## Associação, proveniência e validação
 

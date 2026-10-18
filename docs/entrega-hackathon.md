@@ -1,16 +1,16 @@
 # Compra com Contexto — Entrega do Hackathon SEMCOMP × iFood 2026
 
-**Equipe:** Modo Escuro · **Repositórios:** [api-backend](https://github.com/Modo-Escuro/api-backend) (este) e [telegram-bot](https://github.com/Modo-Escuro/telegram-bot) · **Data:** 18/10/2026 · **Base conferida:** API `main@f3b8b55`, bot `main@9314c72`
+**Equipe:** Modo Escuro · **Repositórios:** [api-backend](https://github.com/Modo-Escuro/api-backend) (este) e [telegram-bot](https://github.com/Modo-Escuro/telegram-bot) · **Data:** 18/10/2026 · **Base conferida:** API `main@8a6dadc`, bot `main@d239edd`
 
 Este documento reúne os seis entregáveis obrigatórios. Ele resume e referencia os relatórios técnicos das pastas `docs/` dos dois repositórios; os detalhes ficam nos documentos de origem citados em cada seção. Links para o bot apontam para a `main` do [telegram-bot](https://github.com/Modo-Escuro/telegram-bot/tree/main/docs).
 
-> **Leitura rápida para a banca.** O Compra com Contexto é um agente conversacional que organiza uma compra em grupo no iFood: registra quem vai comer, as alergias e dietas de cada pessoa e os limites de gasto; busca ofertas reais pelo MCP do iFood; e monta propostas mostrando, pessoa a pessoa, quem está atendido e o que não pôde ser verificado. Na demo, o MCP é usado **somente para leitura** e a sacola é **simulada**: nenhum carrinho real é criado e nenhum pedido é enviado.
+> **Leitura rápida para a banca.** O Compra com Contexto é um agente conversacional — o assistente **Ailo**, no Telegram — que organiza uma compra em grupo no iFood: registra quem vai comer, as alergias e dietas de cada pessoa e os limites de gasto; busca ofertas reais pelo MCP do iFood; e monta propostas mostrando, pessoa a pessoa, quem está atendido e o que não pôde ser verificado. A decisão do projeto é preparar o **carrinho real só depois de uma confirmação humana específica** e nunca enviar pedido ou pagar sozinho. Hoje, na versão integrada, o iFood é usado **somente para leitura** e a composição escolhida é uma **sacola simulada**; a preparação do carrinho real está em revisão (PR #46).
 
 **Como ler os estados citados neste documento**
 
 | Marca | Significado |
 | --- | --- |
-| **Na main** | Código integrado em `main@f3b8b55`. Não implica deploy nem flag ativa. |
+| **Na main** | Código integrado em API `main@8a6dadc` ou bot `main@d239edd`. Não implica deploy nem flag ativa. |
 | **Ativado em produção** | Deploy e flags conferidos no serviço da Railway, com registro sanitizado. Não comprova que um humano usou o fluxo inteiro. |
 | **Ensaiado online** | Existe registro de execução real contra o iFood ou o Telegram (com data e documento de origem). |
 | **Relatado** | Etapa humana informada pelo usuário, sem inspeção independente. |
@@ -31,6 +31,8 @@ Este documento reúne os seis entregáveis obrigatórios. Ele resume e referenci
 9. [Anexo C — Checklist dos seis entregáveis](#anexo-c--checklist-dos-seis-entregáveis)
 10. [Anexo D — Exportação para PDF único](#anexo-d--exportação-para-pdf-único)
 11. [Anexo E — Fontes utilizadas](#anexo-e--fontes-utilizadas)
+12. [Anexo F — Checklist operacional do ensaio humano](#anexo-f--checklist-operacional-do-ensaio-humano)
+13. [Anexo G — Textos a atualizar depois de merges e deploys](#anexo-g--textos-a-atualizar-depois-de-merges-e-deploys)
 
 ---
 
@@ -97,7 +99,7 @@ Pedidos coletivos tendem a ter ticket maior e a ser recorrentes. Reduzir o atrit
 | --- | --- | --- |
 | **Técnica — integração iFood** | Login real da conta pelo Telegram funcionou; consultas de leitura ao MCP implementadas | Ensaio online de 17/10 ([estado do bot](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/estado-atual.md)); `tools/list` autenticado em 18/10 ([INT-01](int-01-audit.md)) |
 | **Técnica — IA** | Gemini interpreta o grupo em português dentro de regras fixas | 16/16 tarefas e 12/12 casos críticos com modelo real e dados sintéticos ([AI-01](ai-01-result.md)) |
-| **Operacional** | Bot e API ativados na Railway com conversa e Gemini, limites de gasto definidos (US$ 0,50 de reserva, 100 chamadas por processo) | Registro de ativação de 18/10, 06:49, na [PR #15 do bot](https://github.com/Modo-Escuro/telegram-bot/pull/15) |
+| **Operacional** | Bot e API ativados na Railway com conversa e Gemini, limites de gasto definidos (US$ 0,50 de reserva, 100 chamadas por processo) | Ativação de 18/10, 06:49 ([registro do bot](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/ensaio-bot02-operacional.md)) |
 | **Produto — fechamento real do pedido** | Não executável com segurança hoje: faltam formato de resposta, idempotência e reconciliação nas ferramentas de carrinho | [Feedback MCP](#06--feedback-sobre-o-mcp-do-ifood), [INT-01](int-01-audit.md) |
 | **Comercial** | Hipótese: menos atrito e menos risco aumentam pedidos coletivos | Não medido |
 
@@ -108,7 +110,7 @@ Pedidos coletivos tendem a ter ticket maior e a ser recorrentes. Reduzir o atrit
 ### Fluxo ponta a ponta
 
 0. **Entrar na demo.** No modo senha, o organizador envia `/entrar` com a senha da equipe; o acesso vale 24 horas e cada conta Telegram tem sua própria conversa ([acesso no bot](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/acesso-senha.md)).
-1. **Conectar a conta iFood.** No Telegram, o organizador envia `/conectar`, autoriza no navegador (OAuth do iFood), volta à mensagem do login — que o bot edita para mostrar a conta mascarada e o botão **Confirmar conexão** — e confirma. `/verificar` confere se a sessão está operacional. *Ensaiado online em 17/10/2026 ([estado do bot](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/estado-atual.md)).* Com sessão operacional, o bot recupera o grupo já salvo ("Retomada informativa"), sem repetir mensagens nem mostrar propostas antigas ([BOT-02](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/bot-02-retomada-contexto.md)).
+1. **Conectar a conta iFood.** No Telegram, o organizador toca em **Conectar iFood** (ou envia `/conectar`), abre o link de uso único e autoriza no navegador (OAuth do iFood). Desde o PR #45, o retorno do navegador já conclui o vínculo e o bot avisa "Pronto, sua conta iFood está conectada!"; o botão **Confirmar conexão** com a conta mascarada fica como recuperação para tentativas antigas ([retorno natural](login-retorno-natural.md)). **Verificar conexão** confere se a sessão está operacional. *O login foi ensaiado online em 17/10/2026 na versão com botão de confirmação ([estado do bot](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/estado-atual.md)); o novo retorno ainda não.* Com sessão operacional, o bot recupera o grupo já salvo ("Vamos continuar de onde paramos?"), sem repetir mensagens nem mostrar propostas antigas ([BOT-02](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/bot-02-retomada-contexto.md)).
 2. **Descrever o grupo.** Ex.: "Somos Ana e Bia. Ana é alérgica a amendoim. Teto de R$ 180. Preferimos o mais barato." O agente registra duas pessoas, a alergia como obrigatória, o teto do grupo e a prioridade ECONOMIA.
 3. **Corrigir sem recomeçar.** "Na verdade, no máximo R$ 150." O teto muda; participantes e alergia são preservados.
 4. **Perguntar só o que falta.** Se o teto for vago ("uns R$ 150") ou a prioridade não estiver clara, o agente pergunta antes de validar.
@@ -165,7 +167,7 @@ sequenceDiagram
 
 ### Organização dos participantes
 
-- **Um organizador real** (autenticado pelo Telegram) e **participantes simulados**, sem conta própria; tudo é "declarado pelo organizador" ([DEC-01 D1/D2](decisoes-conversacionais.md)). Limite padrão de 20 participantes ([GRP-01](grp-01-propostas.md#tamanho-da-resposta)).
+- **Um organizador real** (autenticado pelo Telegram) e **participantes declarados por ele**, sem conta própria; tudo é "declarado pelo organizador" ([DEC-01 D1/D2](decisoes-conversacionais.md)). Limite padrão de 20 participantes ([GRP-01](grp-01-propostas.md#tamanho-da-resposta)).
 - Cada participante tem estados distintos para restrições e teto: **não informado**, **a confirmar**, **nenhum** ou **declarado** ([DATA-01](data-01-compra.md)).
 - **Uma compra ativa, uma loja, um endereço** por organizador.
 - Com o acesso por senha (opt-in), cada pessoa admitida tem seu próprio organizador, vínculo e conversa ([acesso-bot-senha](acesso-bot-senha.md)).
@@ -178,17 +180,18 @@ sequenceDiagram
 | Propostas coletivas | Até 4 planos de uma loja, cobertura por pessoa, custos e rateio em centavos, reparo de teto coletivo | Na main ([GRP-01](grp-01-propostas.md)) |
 | Sacola simulada | Proposta escolhida gravada na compra; qualquer mudança no grupo marca "precisa revalidar" | Na main |
 | Revisão | Lista de bloqueios: total desconhecido, entrega não informada, faixa de preço, teto a confirmar, mínimo da loja, cobertura parcial, restrição sem confirmação | Na main |
-| Aprovação simulada por botão | Clique humano preso a versão e hash; exibiria "SACOLA SIMULADA APROVADA — PEDIDO NÃO ENVIADO" | **Não implementada** ([D8](decisoes-conversacionais.md); [proposta](grp-01-propostas.md#contrato-proposto-para-aprovação-simulada-buy-01--api-01--não-implementado)) |
-| Carrinho real no iFood | `createCart`/`addItemToCart` com confirmação humana | **Fora da demo**; F7 legada desligada; CART-01 não está na main |
-| Envio do pedido / pagamento | `submitOrder` | **Bloqueado** no gateway, nas rotas e no lint |
+| Preparar o carrinho real (`PREPARE_CART`) | Confirmação humana de uso único, presa à revisão (itens, opções, pessoas, conta, loja, endereço, versão/hash, prazo, custos conhecidos e desconhecidos); só então `createCart`/`addItemToCart` | **Decisão adotada** ([DEC-01 D8](decisoes-conversacionais.md)); **código em PR rascunho** [#46](https://github.com/Modo-Escuro/api-backend/pull/46), desligado; botões no Telegram (BOT-03) pendentes |
+| Aprovação do pedido | Outra autorização (`SUBMIT_ORDER`, BUY-01), com custo completo confirmado | **Futuro**; não habilitado |
+| Envio do pedido / pagamento | `submitOrder`, `setCartPayment` | **Proibidos** neste incremento; bloqueados no gateway, nas rotas e no lint |
 
 ### Separação entre confirmação humana e envio de pedido
 
-Três coisas diferentes, que o sistema nunca confunde:
+Quatro coisas diferentes, que o sistema nunca confunde:
 
 1. **Login no iFood** — prova quem é o organizador. *Não aprova compra.*
 2. **Confirmação humana de mudanças rígidas** — remover uma alergia, rebaixar um teto, encerrar a compra. O agente transforma esses pedidos em pendência; ele nunca marca a confirmação sozinho ([AI-02](ai-02-agente.md#política-do-servidor)).
-3. **Aprovação da compra e envio** — na demo, a rota de aprovação responde `ACTION_UNAVAILABLE` e `submitOrder` é inacessível. Uma aprovação futura teria de estar presa à versão e ao hash da revisão atual; qualquer mudança a invalidaria ([DEC-01 D8](decisoes-conversacionais.md)).
+3. **Preparar o carrinho real** — decisão adotada: só depois de uma confirmação humana específica (`PREPARE_CART`), de uso único e presa à versão e ao hash da revisão; qualquer mudança a invalida. O código está no PR #46, ainda não mergeado; na `main`, a rota `/purchase-approvals` responde `ACTION_UNAVAILABLE` ([DEC-01](decisoes-conversacionais.md)).
+4. **Aprovar e enviar o pedido** — outra autorização, futura (BUY-01/BUY-02). `submitOrder` e pagamento são proibidos neste incremento.
 
 ```mermaid
 flowchart LR
@@ -197,9 +200,9 @@ flowchart LR
   M["Modelo Gemini"] -->|propõe ações| V{Servidor valida}
   V -->|aceita| S
   V -->|rígido ou ambíguo| PD[Pendência / pergunta]
-  S --> R[Revisão da sacola simulada]
-  R -.->|aprovação: não implementada| AP[Aprovação simulada]
-  AP -.->|bloqueado DEC-01 D8| SUB[submitOrder]
+  S --> R[Revisão da composição<br/>hoje: sacola simulada]
+  R -.->|confirmação humana específica<br/>PR #46, não mergeado| AP[Preparar carrinho real<br/>PREPARE_CART]
+  AP -.->|proibido neste incremento| SUB[Enviar pedido e pagar]
 ```
 
 ---
@@ -212,7 +215,7 @@ A informação de um pedido coletivo chega aos poucos e fora de ordem: alguém l
 
 ### Decisões de experiência no Telegram
 
-Decisões já implementadas no bot (`main@9314c72`), com a justificativa registrada nos documentos do repositório:
+Decisões já implementadas no bot (`main@d239edd`), com a justificativa registrada nos documentos do repositório:
 
 | Decisão | Por quê | Fonte |
 | --- | --- | --- |
@@ -223,10 +226,10 @@ Decisões já implementadas no bot (`main@9314c72`), com a justificativa registr
 | `/andamento`, `/interromper` e `/retomar` | Dar controle e visibilidade quando a API demora ou a entrega falha | [BOT-01](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/bot-01-fila-duravel.md) |
 | **Retomada** do grupo depois do login, sem repetir a mensagem anterior nem mostrar proposta antiga | Trocar ou reconectar a conta não deve fazer o organizador recomeçar, nem reaproveitar preços de outra conta | [BOT-02](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/bot-02-retomada-contexto.md) |
 | Texto simples, sem formatação, dividido em partes de até 3.500 caracteres | Funciona em qualquer cliente e não quebra emojis | [BOT-01](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/bot-01-fila-duravel.md) |
-| Toda resposta da conversa termina lembrando que **nenhum pedido é enviado** | Evitar que o organizador confunda sacola simulada com pedido | `conversation_view.py` do bot |
+| Respostas com proposta ou revisão terminam com "Sacola simulada. Nenhum pedido é enviado pelo Ailo." | Evitar que o organizador confunda a composição revisada com pedido | `conversation_view.py` do bot |
 | Fala do modelo marcada como "Assistente:"; referências internas omitidas | O texto do modelo nunca vira confirmação; IDs técnicos não aparecem | `conversation_view.py` do bot |
 
-**Em PR (bot #15, depende da API #45):** menu persistente de botões (Conectar iFood, Minha conexão, Verificar conexão, Acompanhar, Retomar conversa, Interromper, Ajuda, Sair da demo), entrada da senha sem comando, grupo apresentado uma vez como "Certo! Seu grupo ficou assim:", perguntas de rotina uma de cada vez e login concluído sem segundo clique. Motivo registrado: pedido do usuário por respostas mais amigáveis e navegação sem digitar comandos ([conversa por botões](https://github.com/Modo-Escuro/telegram-bot/blob/codex/bot-02-ensaio-operacional/docs/conversa-por-botoes.md)). Ainda requer ensaio online.
+**Na main do bot desde 18/10 (#15 e `4f47406`), sem deploy registrado:** o assistente se apresenta como **Ailo** ("Olá! Eu sou o Ailo, seu assistente de compras. Vamos organizar seu pedido juntos?"); menu persistente de botões (Conectar iFood, Minha conexão, Verificar conexão, Acompanhar, Retomar conversa, Interromper, Ajuda, Sair da demo); entrada da senha sem comando; grupo apresentado uma vez ("Certo! Seu grupo ficou assim:"); perguntas de rotina uma de cada vez; indicador nativo "digitando" durante o processamento; e, opcional e desligada por padrão, **mensagem de voz** transcrita pela Groq e mostrada como "Ouvi: …" para o organizador conferir antes de seguir. Motivo registrado: pedido do usuário por respostas mais amigáveis e navegação sem digitar comandos ([conversa por botões](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/conversa-por-botoes.md), [Ailo e voz](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/ailo-voz.md)). A nova experiência ainda requer ensaio online.
 
 ### Redução da carga de coordenação
 
@@ -283,8 +286,7 @@ As perguntas são escolhidas pelo servidor a partir do campo que falta; o texto 
 
 | Interface | Onde | Uso | Estado |
 | --- | --- | --- | --- |
-| **Bot Telegram** (interface da demo) | [telegram-bot](https://github.com/Modo-Escuro/telegram-bot) `main@9314c72` | Entrada por senha, login com botão, conversa do grupo, propostas, revisão | Login ensaiado online (17/10); conversa ativada em produção (18/10); ensaio humano completo pendente |
-| **Bot Telegram com menu de botões** | Bot PR #15 (+ API PR #45) | Mesmo fluxo, com teclado persistente e textos mais curtos | **Em PR**; não demonstrar como pronto antes do merge e deploy |
+| **Bot Telegram — assistente Ailo** (interface da demo) | [telegram-bot](https://github.com/Modo-Escuro/telegram-bot) `main@d239edd` | Entrada por senha, login, conversa do grupo (texto e, se habilitada, voz), propostas, revisão; menu de botões | Login ensaiado online (17/10, versão anterior); conversa ativada em produção em 18/10 na versão `9314c72`; **versão Ailo sem deploy registrado**; ensaio humano completo pendente |
 | **Página do navegador do OAuth** | Página de autorização do iFood + retorno da API | Autorizar o acesso à conta | Ensaiada online |
 | **Página web de diagnóstico** | `src/web/App.tsx` da API (Vite, `:5173`) | Status de autenticação e busca de teste, para desenvolvimento | Na main; **não é interface da demo** |
 
@@ -292,22 +294,22 @@ Não há aplicação web para o organizador. As telas abaixo são **sequências 
 
 ### Sequência de telas
 
-Nenhuma captura foi incluída neste documento. Imagens de exemplo não substituem capturas reais; cada tela está marcada como **pendente**, com instruções no [Anexo B](#anexo-b--capturas-e-informações-pendentes) e no [storyboard do vídeo](pitch-hackathon.md#storyboard-do-vídeo). Os textos entre aspas são mensagens reais, conferidas no código: servidor em `src/server/agent/render.ts` (API) e apresentação em `src/telegram_bot/conversation_view.py` e `runner.py` (bot `main`).
+Nenhuma captura foi incluída neste documento. Imagens de exemplo não substituem capturas reais; cada tela está marcada como **pendente**, com instruções no [Anexo B](#anexo-b--capturas-e-informações-pendentes) e no [storyboard do vídeo](pitch-hackathon.md#storyboard-do-vídeo). Os textos entre aspas são mensagens reais, conferidas no código: servidor em `src/server/agent/render.ts` (API) e apresentação em `src/telegram_bot/conversation_view.py`, `runner.py` e `connections.py` (bot `main@d239edd`, versão Ailo).
 
-| # | Tela | O que aparece na versão `main` do bot | Captura |
+| # | Tela | O que aparece na versão Ailo (`main` do bot) | Captura |
 | --- | --- | --- | --- |
-| T1 | Entrada e conexão | `/start` com "Olá! Sou o bot Compra com Contexto…"; `/entrar`; `/conectar` → botão **Abrir login do iFood**; após o navegador, a mesma mensagem passa a mostrar a conta mascarada e **Confirmar conexão**; `/verificar` | **Pendente** (fluxo de login ensaiado em 17/10) |
+| T1 | Entrada e conexão | Menu com **Entrar na demo** → senha em mensagem privada → "Olá! Eu sou o Ailo, seu assistente de compras. Vamos organizar seu pedido juntos? …" → **Conectar iFood** → botão **Abrir login do iFood** → autorização no navegador → "Pronto, sua conta iFood está conectada!" | **Pendente** (novo retorno sem segundo clique ainda não ensaiado online) |
 | T2 | Conversa inicial | Mensagem do organizador: "Somos Ana e Bia. Ana é alérgica a amendoim. Bia não tem restrições. Teto do grupo de R$ 180. Preferimos o mais barato." | **Pendente** |
-| T3 | Grupo, restrições e orçamento | "Grupo informado:" · "• Ana: Alergia: amendoim (obrigatória)" · "• Bia: Sem restrições alimentares" · "Orçamento: R$ 180,00." · perguntas do que falta como "Falta esclarecer: …" · "Conversa em preparação. Nenhum pedido é enviado por este bot." | **Pendente** |
-| T4 | Correção | "Na verdade, o teto do grupo é no máximo R$ 150." → grupo repetido com "Orçamento: R$ 150,00." e a alergia preservada | **Pendente** |
+| T3 | Grupo, restrições e orçamento | "Certo! Seu grupo ficou assim:" · "• Ana: Alergia: amendoim (obrigatória)" · "• Bia: Sem restrições alimentares" · "Orçamento do grupo: R$ 180,00 (máximo)." · no máximo uma pergunta de rotina por vez | **Pendente** |
+| T4 | Correção | "Na verdade, o teto do grupo é no máximo R$ 150." → grupo com "Orçamento do grupo: R$ 150,00 (máximo)." e a alergia preservada | **Pendente** |
 | T5 | Sugestões | "Sugere pizza" → para cada proposta: "Proposta informativa." · "Custo desconhecido; revisão/aprovação indisponível." · "Proposta N: itens (pessoas): preço; entrega …. Soma dos preços observados: R$ X — não é o total (…)" · "Há participante sem atendimento verificado." quando houver | **Pendente** (exige conta iFood conectada; usa MCP real) |
-| T6 | Revisão da sacola | "Quero a proposta 2" → "Revisão informativa." · "Pendência: Total do pedido desconhecido: a taxa de serviço só aparece no carrinho." · "Pendência: Sacola simulada: aprovação e pedido ainda não estão disponíveis nesta etapa." · "Sacola simulada: …" | **Pendente** |
+| T6 | Revisão da composição (sacola simulada) | "Quero a proposta 2" → "Revisão informativa." · "Custo desconhecido; revisão/aprovação indisponível." · "Pendência: Total do pedido desconhecido: a taxa de serviço só aparece no carrinho." · "Pendência: Sacola simulada: aprovação e pedido ainda não estão disponíveis nesta etapa." · "Sacola simulada: …" · "Sacola simulada. Nenhum pedido é enviado pelo Ailo." | **Pendente** |
 | T7 | Pedido de compra | "Pode pedir" → explicação de que a aprovação humana é necessária e não existe nesta etapa; nenhum pedido criado | **Pendente** |
-| T8 | Retomada após login | "Retomada informativa da organização do grupo." com o grupo salvo, sem proposta antiga | **Pendente** (relato do usuário de que funcionou) |
+| T8 | Retomada após login | "Vamos continuar de onde paramos? Retomada informativa do grupo salvo." · "Seu grupo continua aqui:" com o grupo salvo, sem proposta antiga | **Pendente** (relato do usuário de que a retomada funcionou na versão anterior) |
 
-Na versão `main`, o orçamento aparece duas vezes (resumo do servidor com ponto decimal, "R$ 150.00 (máximo)", e linha do bot com vírgula, "R$ 150,00"). A PR #15 do bot remove essa repetição. Ao gravar, usar a versão efetivamente implantada e não misturar capturas das duas.
+A versão anterior (`9314c72`, a que está em produção segundo o último registro) mostra "Grupo informado:", o orçamento duas vezes e comandos com barra. **Gravar a versão efetivamente implantada** e não misturar capturas das duas.
 
-**Carrinho e confirmação:** não há tela de carrinho real nem de aprovação na demo. Não exibir a frase "SACOLA SIMULADA APROVADA — PEDIDO NÃO ENVIADO" como funcionalidade: ela é requisito da D8, ainda não implementado.
+**Carrinho e confirmação:** a tela de confirmação para preparar o carrinho real (BOT-03) **ainda não existe** no bot, e o código da API está no PR #46. Não gravar nem descrever essa etapa como pronta.
 
 ---
 
@@ -372,7 +374,7 @@ Entrega parcial ([ops-02-operacao](ops-02-operacao.md)): logs JSON com allowlist
 - **Hono + TypeScript strict** em Node ≥ 22.13; schemas `zod` estritos nas bordas; `domain/*` é puro (sem rede), testado com fixtures reais sanitizadas.
 - **SQLite nativo** (`node:sqlite`) para turnos e compra; migração apenas para frente; banco em volume persistente.
 - **OAuth 2.1 com PKCE S256 e PAR** contra `id.ifood.com.br`; `redirect_uri` comparado literalmente pelo servidor de autorização; tokens por vínculo, gravados com tmp + fsync + rename; nunca em resposta, UI ou log. Falha de rede ⇒ `UNAVAILABLE`; refresh recusado ⇒ `RECONNECT_REQUIRED` ([OPS-01](ops-01-persistencia.md), [bot-api](bot-api.md)).
-- **Validação atual:** em `main@f3b8b55`, Linux, Node 22.23.1: **941 testes aprovados em 56 arquivos**, typecheck e lint aprovados (execução de 18/10/2026 para esta entrega). CI do projeto roda Ubuntu/Windows × Node 22.13/24.
+- **Validação atual:** em `main@8a6dadc` (após o merge do #45), Linux, Node 22.23.1: **941 testes aprovados em 56 arquivos**, typecheck e lint aprovados (execução de 18/10/2026 para esta entrega). CI do projeto roda Ubuntu/Windows × Node 22.13/24.
 
 ### Bot Telegram (telegram-bot)
 
@@ -383,7 +385,7 @@ Fonte: [arquitetura](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/
 - **Limites:** até 10 mensagens pendentes por conversa, corpo de até 16 KiB, 5 s por chamada HTTP, até 3 tentativas automáticas (5/10/20 s) antes de exigir `/retomar`.
 - **Acesso por senha:** HMAC da versão da senha (a senha não é guardada), sessão de 24 h, até 5 tentativas por conta e 100 por janela de 15 min, até 100 sessões; cada usuário tem diretório, fila e cliente próprios.
 - **Privacidade:** o bot não guarda texto de resposta, snapshot, URL de login, `confirmationId` ou tokens; corpos pendentes expiram em 24 h e metadados em 7 dias (D7).
-- **Testes:** 177 testes (7 HTTP contra as rotas reais da API em loopback, com Gemini e OAuth sintéticos) no registro de ativação; 185 na PR #15. Números informados nos registros da equipe; não foram reexecutados para esta entrega.
+- **Testes:** 177 testes (7 HTTP contra as rotas reais da API em loopback, com Gemini e OAuth sintéticos) no registro de ativação; 185 na PR #15, mais os testes de voz e de interface da versão Ailo. Números informados nos registros da equipe; não foram reexecutados para esta entrega.
 
 ### Implantação registrada
 
@@ -391,9 +393,9 @@ Fonte: [arquitetura](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/
 | --- | --- | --- |
 | 17/10/2026 | Bot online na Railway com volume `/data`; login iFood concluído pelo usuário; backend confirmou `CONNECTED`, sessão operacional e verificação `OK` | [estado atual do bot](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/estado-atual.md) |
 | 18/10/2026 | `tools/list` autenticado do MCP executado pelo usuário no Console Railway; healthcheck da API com armazenamento em volume | [INT-01](int-01-audit.md) |
-| 18/10/2026, 06:49 | Bot `9314c72` com conversa habilitada (1 instância de polling, sem erros no log); API `28edd06` com runtime e Gemini ativos, SQLite íntegro, F7 e sessão global desligadas; backups dos SQLite e vínculos feitos antes | [registro de ativação na PR #15 do bot](https://github.com/Modo-Escuro/telegram-bot/pull/15) |
+| 18/10/2026, 06:49 | Bot `9314c72` com conversa habilitada (1 instância de polling, sem erros no log); API `28edd06` com runtime e Gemini ativos, SQLite íntegro, F7 e sessão global desligadas; backups dos SQLite e vínculos feitos antes | [registro de ativação](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/ensaio-bot02-operacional.md) |
 
-Configuração do modelo nessa ativação: `CONVERSATION_MODEL_MAX_REQUESTS=100`, `…_PER_CONVERSATION=40`, reserva de US$ 0,50, timeout de 15 s, 2.048 tokens de saída. A `main` atual da API (`f3b8b55`) inclui commits posteriores, como a OPS-02, **sem deploy registrado**. O checklist humano do ensaio (coleta e correção com Gemini, retomada após login, isolamento entre duas contas) está **desmarcado** no registro.
+Configuração do modelo nessa ativação: `CONVERSATION_MODEL_MAX_REQUESTS=100`, `…_PER_CONVERSATION=40`, reserva de US$ 0,50, timeout de 15 s, 2.048 tokens de saída. Commits posteriores das duas `main` (OPS-02 #38, retorno natural #45, DEC-01 revisada #43, versão Ailo do bot) **não têm deploy registrado**. O checklist humano do ensaio (coleta e correção com Gemini, retomada após login, isolamento entre duas contas) está **desmarcado** no registro.
 
 ### Ferramentas MCP utilizadas
 
@@ -406,15 +408,15 @@ Configuração do modelo nessa ativação: `CONVERSATION_MODEL_MAX_REQUESTS=100`
 | `getUser` | Só `includeProfileData=false`, para a identidade mascarada na confirmação do vínculo | Não |
 | `createCart`, `addItemToCart`, `submitOrder`, pagamento, cupons | **Não chamadas.** Bloqueadas no gateway, nas rotas e por regra de lint | — |
 
-### Carrinho: sacola simulada × integração real (CART-01)
+### Carrinho: o que está na main × carrinho real (CART-01)
 
-| | Sacola simulada (demo) | Carrinho real (CART-01) |
+| | Composição na main (sacola simulada) | Carrinho real confirmado (CART-01) |
 | --- | --- | --- |
-| Onde está | Na main da API ([GRP-01](grp-01-propostas.md)); apresentada pelo bot `main` | Não está na main de nenhum repositório. Segundo as PRs [API #43](https://github.com/Modo-Escuro/api-backend/pull/43) e [bot #16](https://github.com/Modo-Escuro/telegram-bot/pull/16) (rascunhos, só documentação), a implementação existe apenas em checkout local `codex/cart-01-confirmed-writes`, não publicado |
-| Chamadas ao iFood | Nenhuma escrita | Preparar carrinho (`PREPARE_CART`: `createCart`/`addItemToCart`) mediante confirmação humana específica, separada de uma futura aprovação de pedido (proposta do #43/#16, ainda não adotada) |
-| Decisão | DEC-01 D8 na `main`: sacola 100% simulada, MCP só leitura | Segundo o [épico #6](https://github.com/Modo-Escuro/telegram-bot/issues/6), a equipe **aprovou** preparar carrinho real após confirmação humana específica; a DEC-01 revisada que registra isso está no #43 (rascunho). Ativação bloqueada pela INT-02 (issue #40: saídas reais e reconciliação) |
-| Estado | Disponível na demo | **Em implementação**, não demonstrável: código só local; CART-01, BUY-01, BUY-02, INT-02 e BOT-03 abertas (8 de 23 tarefas abertas no épico) |
-| Envio e pagamento | Inexistentes | Proibidos também na proposta do #43 |
+| Onde está | Na main da API ([GRP-01](grp-01-propostas.md)); apresentada pelo bot | PR rascunho [#46](https://github.com/Modo-Escuro/api-backend/pull/46) (`codex/cart-01-confirmed-writes`), com 983 testes aprovados segundo o PR; não mergeado |
+| Chamadas ao iFood | Nenhuma escrita | `createCart`/`addItemToCart` só após `PREPARE_CART`; intenção, confirmação de uso único e `cartId` persistidos no SQLite; resultado desconhecido bloqueia novas escritas |
+| Decisão | Etapa técnica, não entrega alternativa ([DEC-01](decisoes-conversacionais.md)) | **Escopo vigente** desde o merge do #43: carrinho real somente após confirmação humana específica |
+| Estado | Disponível na demo | **Não demonstrável:** desligado por padrão (`IFOOD_CONFIRMED_CART_WRITES_ENABLED=false`), sem botões no Telegram (BOT-03) e sem validação de saídas reais (INT-02 #40) |
+| Envio e pagamento | Inexistentes | Proibidos neste incremento; aprovação de pedido é outra autorização futura (BUY-01/BUY-02) |
 | Código legado | — | F7 (PR #4) desligada por `IFOOD_CART_ENABLED=false`; parsers testados só com saídas sintéticas ([INT-01](int-01-audit.md)) |
 
 ### Segurança, idempotência e observabilidade
@@ -429,7 +431,7 @@ Configuração do modelo nessa ativação: `CONVERSATION_MODEL_MAX_REQUESTS=100`
 
 | Decisão | Motivo |
 | --- | --- |
-| MCP somente leitura e sacola simulada (D8) | Sem saídas de carrinho observadas, sem chave de idempotência e sem reconciliação confiável, escrita real teria risco de pedido duplicado ou desconhecido |
+| Carrinho real só com confirmação humana específica; envio e pagamento proibidos (D8 revisada) | Sem saídas de carrinho observadas, sem chave de idempotência e sem reconciliação confiável, qualquer escrita precisa de confirmação de uso único, intenção durável e bloqueio de resultado desconhecido; enviar pedido ficaria arriscado demais |
 | Alergia sem evidência bloqueia (D6) | O MCP não expõe alérgenos; "não informado" não pode virar "não contém" |
 | Ordenação estrita por prioridade declarada (D9) | Explicável e previsível; score ponderado escondia trocas |
 | Centavos inteiros (DOM-01) | Rateio exato e sem erro de ponto flutuante |
@@ -440,12 +442,12 @@ Configuração do modelo nessa ativação: `CONVERSATION_MODEL_MAX_REQUESTS=100`
 
 - Total exato sempre desconhecido (taxa de serviço ausente) ⇒ aprovação sempre bloqueada nesta etapa.
 - Alergias quase sempre "a verificar" (sem dados de alérgeno).
-- Aprovação simulada por botão não implementada; ações por botão dependem de eventos `CALLBACK` ainda não aceitos pelo contrato v1.
+- Preparação do carrinho real fora da `main` (PR #46) e sem botões no Telegram; ações por botão na conversa dependem de eventos `CALLBACK` ainda não aceitos pelo contrato v1.
 - Metas D10 (p95 ≤ 10 s ponta a ponta com MCP real, 5 demos seguidas) **sem evidência registrada**.
 - Busca de planos limitada (8 opções por pessoa, 240 combinações); não garante o ótimo, e a explicação diz isso.
 - Orçamento do modelo e métricas por processo; zeram ao reiniciar.
 - Último deploy registrado é o de 18/10, 06:49 (API `28edd06`); versões posteriores e o ensaio humano da conversa completa não estão registrados.
-- A StRS prevê fechamento do carrinho pelo MCP no hackathon (RS27); a demo para antes disso por decisão (D8), e a banca pode esperar mais ([risco R1 da DEC-01](decisoes-conversacionais.md#riscos)).
+- A StRS prevê fechamento do carrinho pelo MCP no hackathon (RS27); o fechamento externo continua pendente, e a banca pode esperar mais ([estado remoto/local](estado-remoto-local.md)).
 
 ---
 
@@ -489,18 +491,18 @@ Entregáveis: **E1** negócio · **E2** desenho · **E3** experiência · **E4**
 | --- | --- | --- | --- | --- |
 | E1 Negócio | DEC-01, GRP-01 | StRS v0.2 (stakeholders, RN01–RN07), plano conversacional | Necessidades por papel na StRS | Valor comercial não medido; StRS em validação |
 | E2 Desenho | AI-02, GRP-01, bot-api, conversa v1 | Arquitetura, BOT-01, BOT-02, login | Login ensaiado online; ativação em produção | Ensaio humano da jornada completa |
-| E3 Experiência | AI-02 (política), DEC-01 D5/D6/D9 | Login (botão, edição de mensagem), BOT-01 (fila, comandos), conversa por botões (PR #15) | Decisões implementadas no código dos dois lados | Sem teste formal com usuários |
+| E3 Experiência | AI-02 (política), DEC-01 D5/D6/D9 | Login (link de uso único, retorno natural), BOT-01 (fila, comandos), conversa por botões e Ailo | Decisões implementadas no código dos dois lados | Sem teste formal com usuários |
 | E4 Interface | `render.ts` (textos do servidor) | `conversation_view.py`, `runner.py`, `connections.py` | Textos reais no código | **Nenhuma captura real ainda** |
 | E5 Técnico | Todos os docs técnicos da API | Arquitetura, BOT-01/02, acesso por senha, Railway | 941 testes da API; 177–185 do bot; registro de ativação | Versões posteriores a `28edd06` sem deploy registrado |
 | E6 Feedback MCP | pricing-audit, INT-01, DOM-01, fixtures | `baseline/contracts/*` (ferramentas capturadas), estado atual (login) | `tools/list` autenticado, fixtures reais de erro | Saídas de carrinho nunca observadas |
 
-### A.2 — Documentos do telegram-bot (`main@9314c72`, salvo indicação)
+### A.2 — Documentos do telegram-bot (`main@d239edd`)
 
 | Documento | Finalidade | Atualização | E1 | E2 | E3 | E4 | E5 | E6 | Lacuna / observação |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| [README](https://github.com/Modo-Escuro/telegram-bot/blob/main/README.md) | Apresentação do bot | 18/10 | ○ | ○ | | | ○ | | **Desatualizado:** diz que conversa, participantes e sacola estão pendentes |
-| [estado-atual](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/estado-atual.md) | Evidência online do login | 18/10 | | ● | | ○ | ● | ○ | Snapshot de 17/10; cita API "sem volume" (corrigido depois pela OPS-01) |
-| [arquitetura](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/arquitetura.md) | Módulos e fronteiras | 18/10 | | ● | ○ | | ● | | Diz que o cliente de conversa "não está conectado ao runner" — superado pela BOT-01 |
+| [README](https://github.com/Modo-Escuro/telegram-bot/blob/main/README.md) | Apresentação do bot | 18/10 | ○ | ○ | | | ○ | | Atualizado pelo #16; ainda diz que o CART-01 "permanece local" (publicado depois no PR #46 da API) |
+| [estado-atual](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/estado-atual.md) | Evidência online do login | 18/10 | | ● | | ○ | ● | ○ | Snapshot de 17/10, marcado como histórico (inclusive "API sem volume") |
+| [arquitetura](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/arquitetura.md) | Módulos e fronteiras | 18/10 | | ● | ○ | | ● | | — |
 | [login-ifood](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/login-ifood.md) | Passo a passo do login | 18/10 | | ● | ● | ● | ○ | | — |
 | [bot-01-fila-duravel](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/bot-01-fila-duravel.md) | Texto livre, fila, comandos | 18/10 | | ● | ● | ○ | ● | | — |
 | [bot-02-retomada-contexto](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/bot-02-retomada-contexto.md) | Retomada do grupo após login | 18/10 | | ● | ● | ○ | ● | | Ensaio humano pendente |
@@ -508,23 +510,26 @@ Entregáveis: **E1** negócio · **E2** desenho · **E3** experiência · **E4**
 | [acesso-senha](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/acesso-senha.md) | Entrada por senha e isolamento | 18/10 | | ○ | ○ | ○ | ● | | — |
 | [cliente-conversa](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/cliente-conversa.md) | Cliente v1.0 e schemas fixados | 18/10 | | | | | ● | | — |
 | [contrato-conversa-proposto](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/contrato-conversa-proposto.md) | Proposta v0 | 18/10 | | ○ | | | ○ | | Histórico; v1.0 da API prevalece |
-| [plano-conversacional](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/plano-conversacional.md), [backlog](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/backlog-conversacional.md), [kanban](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/kanban.md) | Plano e tarefas | 18/10 | ○ | ○ | | | ○ | | Kanban mostra 22 tarefas abertas; PR #16 propõe 15 fechadas / 8 abertas |
+| [plano-conversacional](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/plano-conversacional.md), [backlog](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/backlog-conversacional.md), [kanban](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/kanban.md) | Plano e tarefas | 18/10 | ○ | ○ | | | ○ | | 23 tarefas: 15 fechadas, 8 abertas (CART-01, BUY-01/02, OPS-02, INT-02, BOT-03, QA-01, FUT-01) |
 | [decisoes-conversacionais](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/decisoes-conversacionais.md) | Decisões abertas iniciais | 18/10 | ○ | | ○ | | | | DEC-01 da API prevalece |
 | [plano-demo](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/plano-demo.md), [regras-preservadas](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/regras-preservadas.md) | Roteiro e regras herdadas | 17–18/10 | ○ | ○ | ○ | | | | Partes históricas |
 | [deploy-railway](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/deploy-railway.md), [executar-bot](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/executar-bot.md) | Operação e execução local | 17–18/10 | | | | | ● | | — |
 | [StRS v0.2](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/baseline/stakeholder-requirements-specification.md) | Requisitos dos stakeholders | 17/10 | ● | ○ | ● | | | ○ | Em validação; prevê fechamento do carrinho (RS27) |
 | [baseline/contracts](https://github.com/Modo-Escuro/telegram-bot/tree/main/docs/baseline/contracts) | Ferramentas MCP capturadas | 17/10 | | | | | ○ | ○ | Cópias históricas |
 | [evidencias/login-ifood-2026-10-17.json](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/evidencias/login-ifood-2026-10-17.json) | Evidência sanitizada do login | 17/10 | | | | | ● | | — |
-| `ensaio-bot02-operacional.md`, `conversa-por-botoes.md`, `evidencias/bot02-activation-2026-10-18.json` | Ativação em produção, roteiro humano, menu de botões | 18/10 | | ● | ● | ● | ● | | **Só na PR #15** (`codex/bot-02-ensaio-operacional`), não na `main` |
+| [ensaio-bot02-operacional](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/ensaio-bot02-operacional.md), [evidência de ativação](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/evidencias/bot02-activation-2026-10-18.json) | Ativação em produção e roteiro do ensaio humano | 18/10 | | ● | ○ | ● | ● | | Checklist humano desmarcado |
+| [conversa-por-botoes](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/conversa-por-botoes.md), [ailo-voz](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/ailo-voz.md) | Menu, Ailo, digitação e voz | 18/10 | | ○ | ● | ● | ● | | Sem deploy registrado; voz desligada por padrão |
+| [estado-remoto-local](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/estado-remoto-local.md) | SHAs e escopo vigente | 18/10 | | | | | ● | | Retrato anterior ao PR #46 |
 
 ### A.3 — Documentos do api-backend
 
 | Documento | Finalidade | Atualização | E1 | E2 | E3 | E4 | E5 | E6 | Lacuna / observação |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| [decisoes-conversacionais](decisoes-conversacionais.md) (DEC-01) | Decisões D1–D10 da demo | 18/10 | ● | ● | ● | ○ | ● | ○ | PR #43 (rascunho) propõe revisar D8 para carrinho real |
+| [decisoes-conversacionais](decisoes-conversacionais.md) (DEC-01) | Decisões D1–D10 vigentes | 18/10 | ● | ● | ● | ○ | ● | ○ | Revisada pelo #43: carrinho real só com confirmação humana; a versão anterior (sacola simulada) segue preservada por link |
+| [estado-remoto-local](estado-remoto-local.md), [login-retorno-natural](login-retorno-natural.md) | Retrato de SHAs/escopo; login sem segundo clique | 18/10 | | ● | ● | ○ | ● | | Retrato anterior ao PR #46 |
 | [plano-conversacional](plano-conversacional.md) | Tarefas, estado por evidência Git, gates | 18/10 | ○ | ○ | | | ● | | Auditoria referencia `dc448f9`; não cita #38/#41 já mergeados |
 | [requirements](requirements.md) | Recorte histórico de recomendação (FR-1..9) | 18/10 | ○ | ○ | ○ | ○ | ○ | | Histórico; ressalvas vigentes no topo |
-| [grp-01-propostas](grp-01-propostas.md) | Propostas coletivas e sacola simulada | 18/10 | ● | ● | ● | ○ | ● | ○ | Proposta de aprovação simulada não implementada |
+| [grp-01-propostas](grp-01-propostas.md) | Propostas coletivas e composição a sincronizar pela CART-01 | 18/10 | ● | ● | ● | ○ | ● | ○ | — |
 | [ai-02-agente](ai-02-agente.md) | Vocabulário de ações e política do servidor | 18/10 | | ● | ● | | ● | | — |
 | [ai-01-montagem-ensaio](ai-01-montagem-ensaio.md) | Montagem Gemini, limites, roteiro BOT-02, rodada real | 18/10 | | ○ | ○ | ○ | ● | | Roteiro BOT-02 sem resultado online registrado |
 | [ai-01-result](ai-01-result.md) | Escolha do Gemini e números da rodada | 18/10 | | | | | ● | | — |
@@ -551,11 +556,10 @@ Entregáveis: **E1** negócio · **E2** desenho · **E3** experiência · **E4**
 
 1. [ranking.md](ranking.md) abre com "RANK-03 implementada localmente na branchBruna … sem commit/integração novos", mas a RANK-03 está na main pelo PR #34.
 2. [f7-validation.md](f7-validation.md) diz "PR #4 em rascunho, sem merge"; o F7 foi incorporado depois (ver [docs/README](README.md)).
-3. O README e a [arquitetura](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/arquitetura.md) do bot listam a conversa de compras como pendente ou desconectada; o código está na `main` do bot (PRs #10/#11) e foi ativado em produção em 18/10. O ensaio humano completo não está registrado.
+3. O README do bot e o [estado remoto/local](estado-remoto-local.md) dizem que o CART-01 "permanece local"; o código foi publicado depois no PR rascunho #46.
 4. [plano-conversacional.md](plano-conversacional.md) lista `feat/ops-02` e `codex/run-01-finalizacao` como não integradas; ambas foram mergeadas depois (#38, #41).
 5. Texto de configuração de tokens do Gemini: 800 tokens em [ai-01-result](ai-01-result.md) (rodada #35) e 2048 em [ai-01-montagem-ensaio](ai-01-montagem-ensaio.md) (valor vigente). Ambos estão corretos para seu momento.
-6. O [estado atual do bot](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/estado-atual.md) diz que a API está "sem volume"; a [INT-01](int-01-audit.md) e o registro de ativação de 18/10 mostram armazenamento em volume.
-7. O registro de ativação (PR #15 do bot) e a `main` da API divergem: produção em `28edd06`, `main` em `f3b8b55`.
+6. O retrato de deploy mais recente (bot `9314c72`, API `28edd06`) é anterior às `main` atuais (bot `d239edd`, API `8a6dadc`): a versão Ailo e o retorno natural do login não têm deploy registrado.
 
 ---
 
@@ -565,25 +569,25 @@ Entregáveis: **E1** negócio · **E2** desenho · **E3** experiência · **E4**
 
 Todas as capturas da conversa vêm do **bot Telegram em produção** (telegram-bot). Usar **somente dados sintéticos** (nomes Ana/Bia, nenhuma pessoa real) e borrar e-mail, telefone, endereço e a conta mascarada. Não montar imagens: se a captura não puder ser feita, deixar o espaço marcado como pendente.
 
-**Qual versão gravar.** Conferir o commit implantado do bot e da API antes de gravar e anotar na legenda. Se as PRs bot #15 e API #45 forem mergeadas e implantadas antes da gravação, gravar a versão com menu de botões; caso contrário, gravar a `main` atual (comandos com barra). Não misturar as duas versões no mesmo vídeo ou conjunto de capturas.
+**Qual versão gravar.** Conferir o commit implantado do bot e da API antes de gravar e anotar na legenda. O roteiro abaixo assume a versão **Ailo** (bot `d239edd` ou posterior, com API que inclua o #45); se o serviço ainda estiver em `9314c72`/`28edd06`, usar os comandos com barra e o botão **Confirmar conexão**. Não misturar versões no mesmo vídeo ou conjunto de capturas.
 
 | # | Captura | Origem | Pré-requisito | Como obter |
 | --- | --- | --- | --- | --- |
-| C1 (T1) | Entrada e login: `/entrar` → `/conectar` → navegador → mensagem editada com conta mascarada → **Confirmar conexão** → `/verificar` | Bot + página do iFood | Conta iFood **de teste** do evento; não desconectar uma conta só para gravar | Executar o fluxo; capturar 3 mensagens do bot e a página de retorno |
+| C1 (T1) | Entrada e login: **Entrar na demo** → senha → boas-vindas do Ailo → **Conectar iFood** → **Abrir login do iFood** → navegador → "Pronto, sua conta iFood está conectada!" | Bot + página do iFood | Conta iFood **de teste** do evento; não desconectar uma conta só para gravar | Capturar boas-vindas, botão de login e confirmação de conexão; borrar a conta |
 | C2–C4 (T2–T4) | Conversa inicial, grupo e correção | Bot | Conversa ativa (já ativada em 18/10) | Enviar as frases do roteiro abaixo, aguardando cada resposta |
 | C5 (T5) | Propostas | Bot (leitura **real** do MCP) | Vínculo operacional | Enviar "Sugere pizza" |
-| C6 (T6) | Revisão da sacola simulada | Bot | C5 concluída | Enviar "Quero a proposta 2" |
+| C6 (T6) | Revisão da composição (sacola simulada) | Bot | C5 concluída | Enviar "Quero a proposta 2" |
 | C7 (T7) | "Pode pedir" | Bot | C6 concluída | Enviar "Pode pedir" e capturar a explicação |
 | C8 (T8) | Retomada após login | Bot | Grupo salvo | `/verificar` com sessão operacional |
 | C9 | `GET /api/ops/status` mostrando `purchase.capable: false` e `submission: DISABLED` | API | Deploy que inclua a OPS-02 (não registrado ainda) | Chamada autenticada; recortar só o bloco `purchase` |
 
-Frases do roteiro (do [ensaio operacional do bot](https://github.com/Modo-Escuro/telegram-bot/pull/15)): "Somos Ana e Bia. Ana é alérgica a amendoim. Bia não tem restrições. Teto do grupo de R$ 180. Preferimos o mais barato." → "Na verdade, o teto do grupo é no máximo R$ 150." → "Sugere pizza" → "Quero a proposta 2" → "Pode pedir".
+Frases do roteiro (do [ensaio operacional do bot](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/ensaio-bot02-operacional.md)): "Somos Ana e Bia. Ana é alérgica a amendoim. Bia não tem restrições. Teto do grupo de R$ 180. Preferimos o mais barato." → "Na verdade, o teto do grupo é no máximo R$ 150." → "Sugere pizza" → "Quero a proposta 2" → "Pode pedir".
 
 **Plano B de capturas (3 a 5):** C3 (grupo com alergia e orçamento), C4 (correção preservando a alergia), C5 (proposta com "não é o total"), C6 (revisão com pendências e "nenhum pedido é enviado") e, se houver espaço, C1 (botão de confirmação da conta). Ver também o [storyboard do vídeo](pitch-hackathon.md#storyboard-do-vídeo).
 
 ### Informações pendentes
 
-- [ ] Versões efetivamente implantadas da API e do bot (commit) e flags ativas no dia da apresentação (último registro: bot `9314c72`, API `28edd06`).
+- [ ] Versões efetivamente implantadas da API e do bot (commit) e flags ativas no dia da apresentação (último registro: bot `9314c72`, API `28edd06`; as `main` atuais não têm deploy registrado).
 - [ ] Ensaio humano ponta a ponta Telegram → API → Gemini → MCP real, registrado de forma sanitizada (o checklist do ensaio operacional está desmarcado).
 - [ ] Gravação do vídeo da demonstração (60–85 s) e das capturas do plano B.
 - [ ] Nomes dos integrantes e distribuição de falas no pitch.
@@ -592,9 +596,10 @@ Frases do roteiro (do [ensaio operacional do bot](https://github.com/Modo-Escuro
 
 | PR | Efeito na apresentação se mergeado e implantado | Enquanto aberto |
 | --- | --- | --- |
-| [bot #15](https://github.com/Modo-Escuro/telegram-bot/pull/15) | Menu de botões, textos mais curtos, registro de ativação na `main` do bot | Gravar com comandos; citar o registro de ativação como "na PR #15" |
-| [API #45](https://github.com/Modo-Escuro/api-backend/pull/45) | Login sem segundo clique no Telegram | O passo de login inclui o botão **Confirmar conexão** |
-| [API #43](https://github.com/Modo-Escuro/api-backend/pull/43), [bot #16](https://github.com/Modo-Escuro/telegram-bot/pull/16) | Revisão da DEC-01 para preparar carrinho real com confirmação humana | Apresentar só a sacola simulada (D8) |
+| [bot #15](https://github.com/Modo-Escuro/telegram-bot/pull/15) — **mergeado** | Menu de botões, Ailo, textos mais curtos | Só aparece no vídeo depois do deploy |
+| [API #45](https://github.com/Modo-Escuro/api-backend/pull/45) — **mergeado** | Login conclui no navegador, sem segundo clique | Só vale no vídeo depois do deploy; ensaio online pendente |
+| [API #43](https://github.com/Modo-Escuro/api-backend/pull/43), [bot #16](https://github.com/Modo-Escuro/telegram-bot/pull/16) — **mergeados** | DEC-01 revisada: carrinho real só com confirmação humana | Textos desta entrega já atualizados |
+| [API #46](https://github.com/Modo-Escuro/api-backend/pull/46) — **rascunho** | Preparar carrinho real (`PREPARE_CART`) na API | Não demonstrar; citar como "em revisão" |
 | [API #29](https://github.com/Modo-Escuro/api-backend/pull/29) | Nenhum (substituído pelo #30, já mergeado) | Sem impacto |
 
 - [ ] Metas D10: p95 ponta a ponta e 5 demos seguidas — medir ou declarar como não medidas.
@@ -635,9 +640,68 @@ Para um PDF único com o pitch, concatenar antes: `cat docs/entrega-hackathon.md
 
 ## Anexo E — Fontes utilizadas
 
-- **Repositório:** `Modo-Escuro/api-backend@f3b8b55` — [CLAUDE.md](../CLAUDE.md), [package.json](../package.json), [.env.example](../.env.example), `src/server/**` (rotas em `app.ts`, `routes/*.ts`; mensagens em `agent/render.ts`; rota de aprovação em `routes/conversation.ts`), `fixtures/*`.
+- **Repositório:** `Modo-Escuro/api-backend@8a6dadc` (primeira versão desta entrega sobre `f3b8b55`) — [CLAUDE.md](../CLAUDE.md), [package.json](../package.json), [.env.example](../.env.example), `src/server/**` (rotas em `app.ts`, `routes/*.ts`; mensagens em `agent/render.ts`; rota de aprovação em `routes/conversation.ts`), `fixtures/*`.
 - **Documentos:** todos os listados no [Anexo A](#anexo-a--matriz-de-cobertura-da-documentação).
-- **Bot (`telegram-bot@9314c72`):** README, `AGENTS.md`, toda a pasta `docs/` (inclusive baseline StRS e evidências) e, no código, `runner.py`, `connections.py`, `conversation_view.py`, `menu.py` (PR #15).
-- **Branches não mergeadas do bot lidas:** `codex/bot-02-ensaio-operacional` (PR #15: ativação, ensaio, menu de botões) e `codex/revisao-escopo-cart01` (PR #16).
-- **PRs da API:** #25 (DEC-01), #26 (OPS-01), #27 (RUN-01), #30/#34 (ranking), #31 (DOM-01), #32 (DATA-01), #33 (AI-02), #35/#36 (AI-01), #37 (GRP-01), #38 (OPS-02), #39 (senha), #41 (RUN-01 testes), #42/#44 (docs) — mergeados; #43, #45, #29 — abertos. **PRs do bot:** #10/#11/#13/#14 mergeados; #15 e #16 abertos.
-- **Verificação própria desta entrega:** `npm test` (941/941), `npm run typecheck`, `npm run lint` na API em `f3b8b55`, Linux, Node 22.23.1, 18/10/2026. A suíte do bot não foi reexecutada; os números citados vêm dos registros da equipe. Nenhuma chamada ao iFood, ao Gemini ou ao Telegram foi feita para esta entrega.
+- **Bot (`telegram-bot@d239edd`; primeira leitura em `9314c72`):** README, `AGENTS.md`, toda a pasta `docs/` (inclusive baseline StRS e evidências) e, no código, `runner.py`, `connections.py`, `conversation_view.py`, `menu.py`, `voice.py`.
+- **PR rascunho da API lido:** #46 (CART-01, descrição do PR); o código não foi auditado para esta entrega.
+- **PRs da API:** #25 (DEC-01), #26 (OPS-01), #27 (RUN-01), #30/#34 (ranking), #31 (DOM-01), #32 (DATA-01), #33 (AI-02), #35/#36 (AI-01), #37 (GRP-01), #38 (OPS-02), #39 (senha), #41 (RUN-01 testes), #42/#44 (docs), #43 (DEC-01 revisada), #45 (retorno natural) — mergeados; #46 (CART-01) e #29 — abertos. **PRs do bot:** #10/#11/#13/#14/#15/#16 mergeados.
+- **Verificação própria desta entrega:** `npm test` (941/941), `npm run typecheck`, `npm run lint` na API em `f3b8b55` e novamente após integrar `8a6dadc`, Linux, Node 22.23.1, 18/10/2026. A suíte do bot não foi reexecutada; os números citados vêm dos registros da equipe. Nenhuma chamada ao iFood, ao Gemini ou ao Telegram foi feita para esta entrega.
+
+---
+
+## Anexo F — Checklist operacional do ensaio humano
+
+Executar antes de gravar o vídeo, na conversa privada do bot em produção, **sem iniciar outro polling** e com dados fictícios. Registrar só versões, horário, aprovado/reprovado e motivo sanitizado. Base: [roteiro do ensaio do bot](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/ensaio-bot02-operacional.md) e [roteiro BOT-02 da API](ai-01-montagem-ensaio.md#roteiro-operacional-bot-02).
+
+**1. Versões e configuração**
+- [ ] Commit implantado do bot: ______ (esperado `d239edd` ou posterior para a versão Ailo).
+- [ ] Commit implantado da API: ______ (com o #45 para o login sem segundo clique).
+- [ ] Backup dos SQLite do bot e dos vínculos e banco da API feito **antes** de qualquer redeploy ([OPS-01](ops-01-persistencia.md)).
+- [ ] API: `CONVERSATION_RUNTIME_ENABLED=true`, `CONVERSATION_MODEL_ENABLED=true`, limite de chamadas e reserva de gasto definidos; `IFOOD_CART_ENABLED=false`; `DEV_GLOBAL_SESSION=false`.
+- [ ] Bot: `TELEGRAM_CONVERSATION_ENABLED=true`; `TELEGRAM_VOICE_ENABLED=false` (voz fora da demo); uma única instância de polling.
+
+**2. Login**
+- [ ] Entrar na demo pela senha (a mensagem da senha é apagada por melhor esforço).
+- [ ] **Conectar iFood** → **Abrir login do iFood** → autorizar a conta **de teste** no navegador.
+- [ ] Bot informa "Pronto, sua conta iFood está conectada!" sem pedir segundo clique (ou, na versão antiga, mostra **Confirmar conexão** com conta mascarada).
+- [ ] **Verificar conexão** confirma sessão operacional.
+
+**3. Conversa, restrições e orçamento**
+- [ ] Mensagem 1 (grupo Ana/Bia, alergia, teto R$ 180, mais barato) → grupo com "Alergia: amendoim (obrigatória)", "Sem restrições alimentares" e orçamento R$ 180,00 (máximo).
+- [ ] Mensagem 2 ("no máximo R$ 150") → orçamento R$ 150,00 e alergia preservada.
+- [ ] Teto vago ("uns R$ 150") gera pergunta, não valor aceito.
+
+**4. Sugestões e revisão**
+- [ ] "Sugere pizza" → até 4 propostas com "Soma dos preços observados… não é o total", ou aviso honesto de que não há opção.
+- [ ] Nenhuma proposta atribui à Ana item sem evidência sobre amendoim.
+- [ ] "Quero a proposta 2" → "Revisão informativa." com as pendências e "Sacola simulada. Nenhum pedido é enviado pelo Ailo."
+- [ ] "Pode pedir" → explicação, sem pedido nem carrinho criado.
+
+**5. Retomada, isolamento e falhas**
+- [ ] **Verificar conexão** com grupo salvo → "Vamos continuar de onde paramos?" com o grupo atual, sem proposta antiga.
+- [ ] Uma segunda conta Telegram admitida não vê o grupo da primeira.
+- [ ] **Acompanhar** mostra a fila; **Retomar conversa** não cria nova intenção.
+- [ ] (Opcional, só em ambiente de teste) iFood indisponível gera aviso de indisponibilidade, sem logout.
+
+**6. Evidências**
+- [ ] Registro sanitizado (versões, horário, resultado por item) anexado ao ensaio do bot ou a uma issue.
+- [ ] Capturas C1–C8 do [Anexo B](#anexo-b--capturas-e-informações-pendentes) salvas, com conta e dados pessoais borrados.
+- [ ] Vídeo de 80 s gravado conforme o [storyboard](pitch-hackathon.md#storyboard-do-vídeo).
+- [ ] Nenhum token, URL de login, e-mail, telefone, endereço ou ID Telegram em telas, vídeo ou registros.
+
+Mapa cena × tela: cena 1 → T1; cena 2 → T2 e T3; cena 3 → T4; cena 4 → T5; cena 5 → T6. T7 (Pode pedir) e T8 (retomada) só como capturas.
+
+---
+
+## Anexo G — Textos a atualizar depois de merges e deploys
+
+Os PRs #43 e #45 da API e #15/#16 do bot **já foram mergeados** e os textos desta entrega foram atualizados para eles. O que ainda depende de eventos futuros:
+
+| Evento | Atualizar |
+| --- | --- |
+| Deploy das `main` atuais (versão Ailo + #45) | README (Deploy e limitações); entrega 01 (tabela de viabilidade, linha Operacional), 04 (estado das interfaces e nota da versão anterior), 05 (Implantação registrada), Anexo B (versão a gravar), Anexo F (versões); pitch (evidência 3 e frase "desde ontem de manhã") |
+| Ensaio humano concluído (Anexo F) | README (Limitações); entrega 02 (Evidências por passo) e 05; pitch (pergunta 5, evidência 3, que passa a ser "jornada ensaiada") |
+| Novo retorno do login ensaiado online | README (linha do login); entrega 02 passo 1 e T1 |
+| Merge do PR #46 (CART-01) | README (tabelas e Fronteira atual); entrega 02 (tabela de etapas, item 3 da separação, diagrama), 05 (Carrinho), Anexo G; pitch (Regra de honestidade, pergunta 1). **Continuar** dizendo "não demonstrável" até existir a confirmação no Telegram (BOT-03) e a validação de saídas reais (INT-02) |
+| Ativação da escrita confirmada (`IFOOD_CONFIRMED_CART_WRITES_ENABLED=true`) | Só após INT-02 e BOT-03; exige nova revisão de todos os textos de "fronteira" e do storyboard |
+| Voz habilitada em produção | README (linha da voz); entrega 03; pitch (pergunta 11 e regras de edição do vídeo) |

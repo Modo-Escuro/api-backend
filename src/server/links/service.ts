@@ -425,6 +425,19 @@ export class IfoodLinkService {
     return { expiresAt: iso(a.confirmationExpiresAt)!, identity: a.identity };
   }
 
+  /** A autorização humana no navegador conclui o vínculo, nunca uma compra.
+   * O organizador e a confirmação vêm exclusivamente da tentativa validada.
+   * Replays continuam recusados por handleCallback, sem nova troca de código.
+   */
+  async completeBrowserAuthorization(q: { state?: string; code?: string; error?: string; browserSecret?: string | null }) {
+    const result = await this.handleCallback(q);
+    const id = this.attemptIdForState(q.state);
+    const attempt = id ? this.attempts.get(id) : undefined;
+    if (!attempt?.confirmationId) throw new LinkError('ATTEMPT_USED', 'Use o login mais recente no Telegram.', 410);
+    const confirmed = await this.confirm(attempt.organizerId, attempt.confirmationId);
+    return { identity: result.identity, status: confirmed.status };
+  }
+
   private async fetchIdentity(auth: IfoodAuth): Promise<AccountIdentity> {
     const s = this.sessionFactory(auth);
     try {

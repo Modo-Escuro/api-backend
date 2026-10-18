@@ -14,7 +14,7 @@ Roteiro falado para o Hackathon SEMCOMP × iFood 2026. A banca do pitch avalia *
 
 **Corte aos 4:15:** se o slide 5 ainda não tiver terminado, pular direto para a frase final do slide 6.
 
-**Regra de honestidade:** o vídeo mostra **sacola simulada**. Não dizer que o pedido foi feito, que o carrinho foi criado no iFood ou que a aprovação por botão funciona. Ela não está implementada.
+**Regra de honestidade:** o vídeo mostra a composição revisada como **sacola simulada**. A decisão do projeto é preparar o carrinho real só depois de uma confirmação humana, mas esse código está em revisão (PR #46) e não está no ar. Não dizer que o pedido foi feito, que o carrinho foi criado no iFood ou que a confirmação de carrinho já funciona.
 
 ## Distribuição de falas
 
@@ -31,8 +31,8 @@ A equipe preenche os nomes. Com menos pessoas, uma assume mais de um papel.
 | # | Tempo | Slide | Objetivo | Texto de tela | Orientação visual |
 | --- | --- | --- | --- | --- | --- |
 | 1 | 0:00–0:40 | **O problema** | Fazer a banca sentir o conflito | "Quem tem alergia mesmo?" · "Meu limite é R$ 40" · "Alguém fecha aí?" | Três balões de chat (ilustração, identificada como tal) e, ao lado, Ana 🥜⚠️ e Bia ✅ com a mesma pizza |
-| 2 | 0:40–1:15 | **A solução** | Mostrar o produto em uma frase | **Problema → Solução → Benefício**: coordenação manual → agente no Telegram que lembra de cada pessoa → ninguém esquecido, conta clara, humano no controle | Três colunas com ícones; nada de arquitetura |
-| 3 | 1:15–2:40 | **Demo** | Provar a experiência | Selo fixo: "Gravação real · dados fictícios · sacola simulada · nenhum pedido enviado" | Vídeo de 80 s com legendas (ver storyboard) |
+| 2 | 0:40–1:15 | **A solução** | Mostrar o produto em uma frase | **Problema → Solução → Benefício**: coordenação manual → Ailo, assistente no Telegram que lembra de cada pessoa → ninguém esquecido, conta clara, humano no controle | Três colunas com ícones; nada de arquitetura |
+| 3 | 1:15–2:40 | **Demo** | Provar a experiência | Selo fixo: "Gravação real · dados fictícios · nenhum pedido enviado" | Vídeo de 80 s com legendas (ver storyboard) |
 | 4 | 2:40–3:40 | **É viável hoje** | Provar viabilidade com evidências | "Login real no iFood" · "IA testada: 16/16" · "No ar desde 18/10" | Diagrama de 4 caixas: Telegram → Nosso servidor (regras) → Gemini (entende) / iFood (ofertas, só leitura) |
 | 5 | 3:40–4:20 | **Por que é diferente** | Diferenciais e benefícios | "Cada pessoa avaliada" · "Desconhecido não vira zero" · "Nada é comprado sem você" | Três cartões grandes |
 | 6 | 4:20–4:30 | **Encerramento** | Frase memorável | "Compra com Contexto: o grupo inteiro atendido, ninguém esquecido." | Logo, QR para o repositório |
@@ -64,7 +64,7 @@ flowchart LR
 
 ### Slide 2 — A solução (0:40–1:15) · Apresentador A · ~70 palavras
 
-> O Compra com Contexto é um assistente no Telegram que organiza a compra do grupo no iFood.
+> O Compra com Contexto traz o Ailo, um assistente no Telegram que organiza a compra do grupo no iFood.
 > Você conversa normalmente: quem vai comer, as alergias, quanto dá para gastar. Ele lembra de cada pessoa, busca ofertas reais e monta propostas mostrando quem está atendido e quem não está.
 > E quando falta informação, ele avisa em vez de arriscar.
 > No fim, a decisão é sempre sua.
@@ -73,9 +73,9 @@ flowchart LR
 
 ### Slide 3 — Demonstração em vídeo (1:15–2:40) · Apresentador B
 
-Fala de abertura (1:15–1:20, ~12 palavras):
+Fala de abertura (1:15–1:18, ~7 palavras, enquanto o vídeo começa):
 
-> Isto é uma gravação do bot que está no ar, com dados fictícios.
+> Gravação real do Ailo, com dados fictícios.
 
 Durante o vídeo, B narra por cima, em voz calma, seguindo as legendas. Fala de ~110 palavras distribuída nas cenas do [storyboard](#storyboard-do-vídeo):
 
@@ -86,11 +86,11 @@ Durante o vídeo, B narra por cima, em voz calma, seguindo as legendas. Fala de 
 > Escolho a proposta 2. Ela vira uma sacola de revisão com as pendências visíveis.
 > E nenhum pedido é enviado. Quem decide é sempre uma pessoa.
 
-**Transição:** "E isso já roda hoje." *(B passa para C.)*
+*(B passa para C ao fim do vídeo, sem fala de transição; C abre o slide 4.)*
 
 ### Slide 4 — Viabilidade (2:40–3:40) · Apresentador C · ~120 palavras
 
-> O que torna isso viável hoje são três provas.
+> E isso já roda hoje. São três provas.
 > Primeira: o login real com a conta iFood funcionou pelo Telegram, com a pessoa confirmando a conta num botão.
 > Segunda: testamos a inteligência artificial, o Gemini, com o modelo de verdade. Em dezesseis situações de teste, incluindo doze críticas, como alergia, valor ambíguo e tentativa de manipulação, ele acertou todas.
 > Terceira: o bot e o nosso servidor estão no ar desde ontem de manhã, com a IA ligada e limite de gasto.
@@ -103,7 +103,7 @@ Durante o vídeo, B narra por cima, em voz calma, seguindo as legendas. Fala de 
 > Três coisas nos diferenciam.
 > Cada pessoa é avaliada com as próprias restrições: a alergia da Ana não elimina as opções da Bia, e ninguém é excluído em silêncio.
 > O que a gente não sabe, a gente diz: alergia sem informação fica "a verificar", e taxa desconhecida nunca vira zero.
-> E nada é comprado sem uma pessoa decidir.
+> E nada vai para o carrinho do iFood sem você confirmar; o pedido, nunca sozinho.
 > Para quem organiza, é menos coisa para lembrar, menos risco e menos tempo no chat.
 
 **Transição:** C devolve para A.
@@ -118,35 +118,44 @@ Durante o vídeo, B narra por cima, em voz calma, seguindo as legendas. Fala de 
 
 | Bloco | Palavras faladas (medidas) | Tempo estimado (130 ppm) | Janela |
 | --- | --- | --- | --- |
-| Slide 1 + transição | 80 | 0:37 | 0:40 |
-| Slide 2 + transição | 68 | 0:31 | 0:35 |
-| Slide 3 | 12 de abertura + vídeo de 80 s (narração de ~97 palavras dentro do vídeo) + transição de 4 | 1:27 | 1:25 |
-| Slide 4 | 121 | 0:56 | 1:00 |
-| Slide 5 | 72 | 0:33 | 0:40 |
+| Slide 1 + transição | 85 | 0:39 | 0:40 |
+| Slide 2 + transição | 70 | 0:32 | 0:35 |
+| Slide 3 | 7 de abertura (falados sobre o início do vídeo) + **vídeo integral de 80 s** | 1:23 | 1:25 |
+| Slide 4 (inclui a transição "E isso já roda hoje") | 120 | 0:55 | 1:00 |
+| Slide 5 | 79 | 0:36 | 0:40 |
 | Slide 6 | 14 | 0:06 | 0:10 |
-| **Total** | | **~4:13** | **4:30** |
+| Trocas de apresentador e de slide (A→B, B→C, C→A, ~2 s cada) | — | 0:06 | — |
+| **Total** | | **~4:19** | **4:30** |
 
-A folga de ~20 s cobre trocas de apresentador e pausas naturais; a narração do vídeo (~97 palavras em 80 s ≈ 73 ppm) deixa espaço para respirar. Se o ensaio passar de 4:35, cortar nesta ordem: (1) a frase "E quando falta informação…" do slide 2; (2) a última frase do slide 5; (3) a frase "Como funciona…" do slide 4, mantendo só as três provas.
+O total de **~4:19 já inclui os 80 s inteiros do vídeo, as falas de transição e as trocas de apresentador**. A folga de ~11 s até 4:30 (e ~21 s até 4:40) cobre pausas naturais. A narração do vídeo (~97 palavras em 80 s ≈ 73 ppm) é falada por cima das cenas e não soma tempo. Se o vídeo final passar de 80 s, cortar o mesmo tempo da cena 4 (espera) ou da cena 1. Se o ensaio passar de 4:35, cortar nesta ordem: (1) a frase "E quando falta informação…" do slide 2; (2) a última frase do slide 5; (3) a frase "Como funciona…" do slide 4, mantendo só as três provas.
 
 ## Storyboard do vídeo
 
-**Duração:** 80 s (máximo 85 s). **Formato:** gravação de tela do Telegram no celular ou no Telegram Desktop, 1080p, com legendas grandes na parte inferior. **Dados:** participantes fictícios (Ana e Bia); conta iFood **de teste** do evento; leitura **real** do iFood (MCP) na cena 4. Se a cena 4 não puder ser gravada com o MCP real, não substituir por imagem montada: encerrar o vídeo na cena 3 e dizer "as sugestões exigem a conta conectada; aqui está a captura do ensaio", **somente se houver captura real**.
+**Duração:** exatamente 80 s. **Formato:** gravação de tela do Telegram (celular ou Telegram Desktop), 1080p, legendas grandes na parte inferior, sem música alta. **Dados:** participantes fictícios (Ana e Bia); conta iFood **de teste** do evento; leitura **real** do iFood na cena 4. **Versão:** Ailo (bot `d239edd` ou posterior, API com o #45). Se o serviço ainda estiver em bot `9314c72`/API `28edd06`, os textos mudam (ver nota abaixo da tabela) e o login inclui o botão **Confirmar conexão**.
 
-**Versão a gravar:** a implantada no dia (anotar os commits). Se as PRs bot #15 e API #45 estiverem no ar, gravar com o menu de botões; senão, com os comandos da `main`. Não misturar versões.
+Antes de gravar: conta já conectada (o login completo fica nas capturas C1, não no vídeo), conversa sem grupo salvo e notificações desligadas. Gravar cada cena separadamente e montar depois.
 
-| Cena | Tempo | Na tela | Legenda | Captura real necessária |
-| --- | --- | --- | --- | --- |
-| 0 | 0:00–0:04 | Cartão de abertura | "Gravação real do bot · dados fictícios · sacola simulada · nenhum pedido é enviado" | — |
-| 1 | 0:04–0:12 | Conversa já conectada: resposta de `/ifood` ou "Minha conexão" mostrando conta conectada (identidade borrada) | "Conta iFood de teste conectada pelo login oficial" | C1 (estado conectado) |
-| 2 | 0:12–0:30 | Digitar: "Somos Ana e Bia. Ana é alérgica a amendoim. Bia não tem restrições. Teto do grupo de R$ 180. Preferimos o mais barato." → resposta com o grupo: "Ana: Alergia: amendoim (obrigatória)", "Bia: Sem restrições alimentares", orçamento | "Uma mensagem: pessoas, alergia, orçamento e prioridade" | C2, C3 |
-| 3 | 0:30–0:42 | Digitar: "Na verdade, o teto do grupo é no máximo R$ 150." → grupo atualizado com R$ 150 e alergia mantida | "Correção sem recomeçar; a alergia continua" | C4 |
-| 4 | 0:42–0:62 | Digitar: "Sugere pizza" → espera (cortada) → propostas: "Proposta informativa", itens por pessoa, "Soma dos preços observados… não é o total" | "Ofertas reais do iFood · quem é atendido · o total real só aparece no carrinho" + selo "espera cortada" se houver corte | C5 |
-| 5 | 0:62–0:76 | Digitar: "Quero a proposta 2" → "Revisão informativa" com "Pendência: Total do pedido desconhecido…" e "Sacola simulada: aprovação e pedido ainda não estão disponíveis…" | "Revisão com tudo que falta confirmar" | C6 |
-| 6 | 0:76–0:80 | Cartão final | "Nenhum pedido é enviado. Quem decide é sempre uma pessoa." | — |
+| Cena | Tempo | Ação | Texto que deve aparecer (código atual) | Legenda | Captura |
+| --- | --- | --- | --- | --- | --- |
+| 0 | 0:00–0:04 | Cartão de abertura | — | "Gravação real · dados fictícios · nenhum pedido é enviado" | — |
+| 1 | 0:04–0:10 | Tocar **Minha conexão** | "Pronto, sua conta iFood está conectada!" (conta borrada) | "Conta iFood de teste conectada pelo login oficial" | C1 |
+| 2 | 0:10–0:28 | Enviar: "Somos Ana e Bia. Ana é alérgica a amendoim. Bia não tem restrições. Teto do grupo de R$ 180. Preferimos o mais barato." | Indicador "digitando…" → "Certo! Seu grupo ficou assim:" · "• Ana: Alergia: amendoim (obrigatória)" · "• Bia: Sem restrições alimentares" · "Orçamento do grupo: R$ 180,00 (máximo)." | "Uma mensagem: pessoas, alergia, orçamento e prioridade" | C2, C3 |
+| 3 | 0:28–0:40 | Enviar: "Na verdade, o teto do grupo é no máximo R$ 150." | Grupo com "Orçamento do grupo: R$ 150,00 (máximo)." e a alergia mantida | "Correção sem recomeçar; a alergia continua" | C4 |
+| 4 | 0:40–1:02 | Enviar: "Sugere pizza" (cortar a espera) | "Proposta informativa." · "Custo desconhecido; revisão/aprovação indisponível." · "Proposta 1: … Soma dos preços observados: R$ … — não é o total (…)" · "Sacola simulada. Nenhum pedido é enviado pelo Ailo." | "Ofertas reais do iFood · quem é atendido · o total real só aparece no carrinho" + selo "espera cortada" | C5 |
+| 5 | 1:02–1:16 | Enviar: "Quero a proposta 2" | "Revisão informativa." · "Pendência: Total do pedido desconhecido: a taxa de serviço só aparece no carrinho." · "Pendência: Sacola simulada: aprovação e pedido ainda não estão disponíveis nesta etapa." | "Revisão com tudo que falta confirmar" | C6 |
+| 6 | 1:16–1:20 | Cartão final | — | "Nenhum pedido é enviado. Quem decide é sempre uma pessoa." | — |
 
-**Regras de edição:** cortes de espera devem ser sinalizados ("espera cortada"); não acelerar a fala do bot; não editar texto das mensagens; borrar conta, e-mail, telefone e endereço; não incluir "Pode pedir" se não couber no tempo (fica para o Q&A). Se alguma cena não funcionar no dia da gravação, **remover a cena**, não simulá-la.
+**Versão anterior (`9314c72`):** a resposta da cena 2 começa com "Grupo informado:", o orçamento aparece duas vezes ("R$ 180.00 (máximo)" e "Orçamento: R$ 180,00.") e as respostas terminam com "Conversa em preparação. Nenhum pedido é enviado por este bot."; não há menu nem indicador "digitando".
 
-**Capturas para o plano B (3 a 5),** tiradas da mesma gravação: C3 (grupo), C4 (correção), C5 (proposta), C6 (revisão) e, opcionalmente, C1 (botão de confirmação da conta). Detalhes no [Anexo B da entrega](entrega-hackathon.md#anexo-b--capturas-e-informações-pendentes).
+**Regras de edição:**
+- Sinalizar cortes de espera com "espera cortada"; não acelerar nem editar o texto das mensagens.
+- Borrar conta, e-mail, telefone e endereço.
+- "Pode pedir" (C7) e a retomada após login (C8) ficam fora do vídeo; usar no Q&A.
+- Não gravar voz: a função está desligada por padrão e não foi testada com áudio real.
+- Se a cena 4 não trouxer propostas (iFood indisponível ou nenhuma loja compatível), **não simular**: gravar a resposta real e trocar a legenda para "o Ailo avisa quando não encontra opção segura", ou remover a cena e reduzir o vídeo.
+- Se alguma cena não funcionar no dia, remover a cena e ajustar o tempo, nunca montar uma tela.
+
+**Capturas para o plano B (3 a 5),** tiradas da mesma sessão: C3 (grupo), C4 (correção), C5 (proposta), C6 (revisão) e, opcionalmente, C1 (conta conectada). Detalhes no [Anexo B da entrega](entrega-hackathon.md#anexo-b--capturas-e-informações-pendentes); checklist do ensaio no [Anexo F](entrega-hackathon.md#anexo-f--checklist-operacional-do-ensaio-humano).
 
 ## Evidências de viabilidade selecionadas
 
@@ -156,7 +165,7 @@ No máximo três no pitch. Cada uma com o que **prova** e o que **não prova**, 
 | --- | --- | --- | --- | --- |
 | 1 | Login real com a conta iFood pelo Telegram, confirmado por botão (17/10/2026) | A integração de identidade com o iFood funciona de ponta a ponta | Busca, sacola ou compra | [estado atual do bot](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/estado-atual.md) |
 | 2 | Gemini real: 16/16 tarefas, 12/12 críticas, respostas sempre no formato exigido; p95 de 3,2 s; ~US$ 0,015 na rodada | O modelo entende o grupo em português dentro das regras | Comportamento com usuários reais; é amostra pequena com dados fictícios | [AI-01](ai-01-result.md) |
-| 3 | Bot e API ativados na nuvem em 18/10, 06:49, com IA ligada e limites de gasto | O serviço roda fora da máquina da equipe | Que a jornada inteira foi ensaiada por um humano (checklist pendente) | [registro na PR #15 do bot](https://github.com/Modo-Escuro/telegram-bot/pull/15) |
+| 3 | Bot e API ativados na nuvem em 18/10, 06:49, com IA ligada e limites de gasto | O serviço roda fora da máquina da equipe | Que a jornada inteira foi ensaiada por um humano (checklist pendente) | [registro de ativação do bot](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/ensaio-bot02-operacional.md) |
 
 **Se o vídeo for gravado no serviço em produção com o MCP real,** ele próprio passa a ser a evidência mais forte. Nesse caso, o slide 4 pode dizer: "o vídeo que vocês viram é o serviço no ar, com ofertas reais do iFood".
 
@@ -198,7 +207,7 @@ O vídeo é o plano principal (arquivo local, sem internet). Não fazer demonstr
 Respostas de 20 a 40 s (≈ 45–90 palavras). Responder a pergunta primeiro, depois o detalhe.
 
 **1. Por que vocês não fecham o pedido no iFood? (A)**
-> Foi uma decisão consciente. As ferramentas de carrinho do iFood ainda não informam o formato da resposta nem têm proteção contra pedido duplicado: se a conexão cair na hora de enviar, ninguém sabe se o pedido foi feito. Preferimos uma sacola simulada correta a um pedido real arriscado. O produto já separa a revisão da aprovação. A próxima etapa, já aprovada pela equipe e em implementação, é preparar o carrinho real só depois de uma confirmação humana específica, ainda sem enviar o pedido.
+> Decidimos ir até o carrinho real, mas só depois de uma confirmação específica do organizador, e nunca enviar o pedido sozinhos. O motivo: as ferramentas de carrinho do iFood ainda não informam o formato da resposta nem têm proteção contra pedido duplicado; se a conexão cair, ninguém sabe se algo foi feito. Essa preparação com confirmação está em revisão no código. O que vocês viram no vídeo para na revisão, sem escrever no iFood.
 
 **2. Quem pagaria por isso? Qual é o modelo de negócio? (A)**
 > A gente vê isso como uma funcionalidade do próprio iFood, não como app separado: pedidos de grupo tendem a ter valor maior, e reduzir a coordenação pode transformar vários pedidos individuais, ou um pedido adiado, num pedido só. É uma hipótese: não medimos conversão. O próximo passo seria testar com grupos reais.
@@ -210,7 +219,7 @@ Respostas de 20 a 40 s (≈ 45–90 palavras). Responder a pergunta primeiro, de
 > A IA não decide nada. Ela só sugere ações de uma lista fechada, como "registrar alergia" ou "mudar orçamento", e o servidor confere cada uma contra as regras. Alergia é sempre obrigatória, e remover uma restrição exige confirmação de uma pessoa. Testamos casos de manipulação, inclusive texto malicioso vindo do cardápio. Numa auditoria achamos um caso em que a IA podia liberar alguém sem confirmação, e corrigimos.
 
 **5. Isso funciona de verdade ou é protótipo? (C)**
-> O login real com o iFood funcionou pelo Telegram, e o bot e o servidor estão no ar com a IA ligada. A conversa foi testada com o Gemini real em situações fictícias. O ensaio completo por uma pessoa, do início até a sacola, é o que estamos registrando agora *[atualizar se o ensaio for concluído antes do pitch]*. Não é um produto em produção para o público.
+> O login real com o iFood funcionou pelo Telegram, e o bot e o servidor estão no ar com a IA ligada. A conversa foi testada com o Gemini real em situações fictícias. O ensaio completo por uma pessoa, do início até a revisão, é o que estamos registrando agora *[atualizar se o ensaio for concluído antes do pitch]*. A preparação do carrinho real ainda está em revisão. Não é um produto em produção para o público.
 
 **6. Por que o Gemini? Quanto custa? (C)**
 > Testamos no nosso caso: o Gemini 3.8 Flash acertou 16 de 16 situações, incluindo as 12 críticas, com resposta em cerca de 3 segundos. A rodada inteira custou cerca de um centavo e meio de dólar, pela tabela do Google. Além disso, há limite de chamadas e de gasto: se estourar, o sistema para antes de chamar a IA, sem perder nada.
@@ -227,7 +236,10 @@ Respostas de 20 a 40 s (≈ 45–90 palavras). Responder a pergunta primeiro, de
 **10. Escala para grupos grandes? (C)**
 > A demo vai até 20 pessoas por compra. Testamos a resposta com até 100, e o limite está documentado. A busca de combinações também é limitada, e o sistema avisa quando pode existir opção fora das quatro mostradas, em vez de fingir que achou a melhor.
 
-**11. O que vocês aprenderam com o MCP do iFood? (C)**
+**11. Dá para mandar áudio em vez de digitar? (B)**
+> O Ailo já tem isso implementado: transcreve a mensagem de voz e mostra "Ouvi: …" para a pessoa conferir antes de seguir. Está desligado por padrão e só foi testado com áudio sintético, então não mostramos na demo.
+
+**12. O que vocês aprenderam com o MCP do iFood? (C)**
 > Que a qualidade do dado pesa mais que a escolha da IA. A falta de alérgenos e de taxa de serviço e preços ambíguos afetaram mais o produto do que qualquer modelo. Documentamos catorze pontos, cada um com evidência, impacto e sugestão ao iFood.
 
 ## Checklist de ensaio
@@ -235,7 +247,8 @@ Respostas de 20 a 40 s (≈ 45–90 palavras). Responder a pergunta primeiro, de
 Executar com cronômetro visível. Marcar no cronômetro: **0:40, 1:15, 2:40, 3:40, 4:15 (corte), 4:20, 4:30**.
 
 - [ ] Nomes preenchidos na distribuição de falas.
-- [ ] Vídeo gravado (≤ 85 s), legendado, com dados fictícios e conta borrada; commits do bot e da API anotados.
+- [ ] Versão implantada conferida (bot e API) antes de gravar; storyboard ajustado se não for a versão Ailo.
+- [ ] Vídeo gravado com 80 s, legendado, com dados fictícios e conta borrada; commits do bot e da API anotados.
 - [ ] Vídeo testado no notebook da apresentação e no pendrive.
 - [ ] Slide reserva com 3–5 capturas reais pronto e oculto.
 - [ ] Rodada 1: ____ · Rodada 2: ____ · Rodada 3: ____ (alvo 4:25–4:35; nenhuma acima de **4:40**).
@@ -243,9 +256,9 @@ Executar com cronômetro visível. Marcar no cronômetro: **0:40, 1:15, 2:40, 3:
 - [ ] Ensaio do corte: simular atraso e saltar para o slide 6 aos 4:15.
 - [ ] Ensaio do plano B: falhar o vídeo e trocar para as capturas em ≤ 5 s.
 - [ ] Versão de 3 minutos ensaiada uma vez (≤ 2:50).
-- [ ] Perguntas 1–11 respondidas em voz alta, cada uma ≤ 40 s.
+- [ ] Perguntas 1–12 respondidas em voz alta, cada uma ≤ 40 s.
 - [ ] Frase "desde ontem de manhã" ajustada à data real; pergunta 5 atualizada conforme o ensaio humano.
-- [ ] Nenhuma fala afirma pedido enviado, carrinho criado, aprovação funcionando ou número de vendas.
+- [ ] Nenhuma fala afirma pedido enviado, carrinho criado, confirmação de carrinho funcionando, voz ativa ou número de vendas.
 - [ ] Nenhum token, e-mail, telefone, endereço ou conta visível no vídeo e nas capturas.
 
 ## Margem de segurança

@@ -9,11 +9,11 @@ O produto é formado por dois repositórios que funcionam juntos:
 | **[api-backend](https://github.com/Modo-Escuro/api-backend)** (este) | Cérebro e autoridade: login iFood, agente Gemini, regras de restrição e orçamento, propostas, persistência e acesso ao MCP | Node 22 + TypeScript + Hono, SQLite |
 | **[telegram-bot](https://github.com/Modo-Escuro/telegram-bot)** | Interface do organizador: recebe mensagens, mostra respostas e botões, guarda a fila de mensagens; não tem regras de compra nem tokens iFood | Python 3.12, long polling, SQLite |
 
-> **Fronteira da demo ([DEC-01 D8](docs/decisoes-conversacionais.md)):** o MCP do iFood é usado **somente para leitura**. A sacola é **simulada**; nenhum carrinho real é criado e nenhum pedido é enviado. Login não aprova compra.
+> **Fronteira atual.** Decisão vigente ([DEC-01 D8](docs/decisoes-conversacionais.md)): carrinho real **somente após confirmação humana específica** do organizador; envio de pedido e pagamento proibidos. Código na `main`: o MCP é usado **somente para leitura** e a composição escolhida é uma **sacola simulada** — a preparação do carrinho real está no PR rascunho [#46](https://github.com/Modo-Escuro/api-backend/pull/46), desligada por padrão. Login não aprova compra. Detalhes em [estado remoto/local](docs/estado-remoto-local.md).
 
 - **Entregáveis do hackathon:** [docs/entrega-hackathon.md](docs/entrega-hackathon.md)
 - **Roteiro do pitch:** [docs/pitch-hackathon.md](docs/pitch-hackathon.md)
-- **Índice técnico:** [docs/README.md](docs/README.md) · [Plano vigente](docs/plano-conversacional.md)
+- **Índice técnico:** [docs/README.md](docs/README.md) · [Plano vigente](docs/plano-conversacional.md) · [Estado remoto/local](docs/estado-remoto-local.md) · [Decisões vigentes](docs/decisoes-conversacionais.md)
 
 ## Problema e proposta de valor
 
@@ -23,26 +23,25 @@ O Compra com Contexto transforma essa coordenação em uma conversa. O organizad
 
 ## Funcionalidades e estado
 
-Estado conferido em 18/10/2026: API `main@f3b8b55` e bot `main@9314c72`. "Na main" significa código integrado; **não** implica deploy ou flag ativa.
+Estado conferido em 18/10/2026: API `main@8a6dadc` e bot `main@d239edd`. "Na main" significa código integrado; **não** implica deploy ou flag ativa.
 
 | Funcionalidade | Estado | Referência |
 | --- | --- | --- |
-| Login iFood (OAuth 2.1 + PKCE + PAR) vinculado ao Telegram, com confirmação por botão e identidade mascarada | Na main (API e bot); **ensaiado online** em 17/10/2026 | [bot-api](docs/bot-api.md), [login no bot](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/login-ifood.md) |
-| Conversa por texto livre no Telegram, com fila durável, `/andamento`, `/interromper`, `/retomar` e retomada do grupo após o login | Na main do bot; opt-in (`TELEGRAM_CONVERSATION_ENABLED`). **Ativada em produção** em 18/10/2026 junto com o Gemini na API (`28edd06`), conforme registro na [PR #15 do bot](https://github.com/Modo-Escuro/telegram-bot/pull/15); ensaio humano completo ainda não registrado | [BOT-01](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/bot-01-fila-duravel.md), [BOT-02](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/bot-02-retomada-contexto.md) |
+| Login iFood (OAuth 2.1 + PKCE + PAR) vinculado ao Telegram | Na main (API e bot). **Ensaiado online** em 17/10/2026 na versão com botão de confirmação. Desde o PR [#45](https://github.com/Modo-Escuro/api-backend/pull/45), o retorno do navegador conclui o vínculo sem segundo clique; esse novo retorno ainda não foi ensaiado online | [bot-api](docs/bot-api.md), [retorno natural](docs/login-retorno-natural.md), [login no bot](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/login-ifood.md) |
+| Conversa por texto livre no Telegram, com fila durável, `/andamento`, `/interromper`, `/retomar` e retomada do grupo após o login | Na main do bot; opt-in (`TELEGRAM_CONVERSATION_ENABLED`). **Ativada em produção** em 18/10/2026 junto com o Gemini (bot `9314c72`, API `28edd06`), conforme o [registro de ativação](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/ensaio-bot02-operacional.md); ensaio humano completo ainda não registrado | [BOT-01](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/bot-01-fila-duravel.md), [BOT-02](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/bot-02-retomada-contexto.md) |
 | Entrada na demo por senha, com conversa e vínculo isolados por conta Telegram | Na main (API #39, bot #13/#14); opt-in | [acesso-bot-senha](docs/acesso-bot-senha.md), [acesso no bot](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/acesso-senha.md) |
-| Menu de botões e respostas mais curtas no bot | **Em PR** ([bot #15](https://github.com/Modo-Escuro/telegram-bot/pull/15)) | — |
+| Assistente **Ailo**: menu de botões, respostas mais curtas, indicador "digitando" | Na main do bot (#15 e `4f47406`); **sem deploy registrado** | [conversa por botões](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/conversa-por-botoes.md), [Ailo](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/ailo-voz.md) |
+| Mensagens de voz transcritas (Groq `whisper-large-v3-turbo`), com "Ouvi: …" para conferência | Na main do bot; **desligada por padrão** (`TELEGRAM_VOICE_ENABLED=false`); testada só com áudio sintético | [Ailo e voz](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/ailo-voz.md) |
 | Vínculos persistentes, backup e restauração | Na main | [OPS-01](docs/ops-01-persistencia.md) |
 | Recomendação explicada (`/api/evaluate`): busca, `getItem`, restrições tri-estado, preço composto, ranking D9 | Na main | [RANK-03](docs/rank-03-contrato-v2.md), [pricing-audit](docs/pricing-audit.md) |
 | Dinheiro em centavos inteiros, limites locais e rateio exato | Na main | [DOM-01](docs/dom-01-centavos-limites.md) |
 | Conversa durável (turnos idempotentes, fila, recuperação após queda) | Na main; opt-in, desligada por padrão | [RUN-01](docs/runtime-turnos.md) |
 | Compra, participantes e restrições persistidos com versão e exclusão em 24 h | Na main | [DATA-01](docs/data-01-compra.md) |
 | Agente com vocabulário fechado de ações, sobre Gemini 3.8 Flash | Na main; opt-in separado; avaliado só com dados sintéticos | [AI-02](docs/ai-02-agente.md), [AI-01](docs/ai-01-montagem-ensaio.md) |
-| Propostas coletivas com cobertura por pessoa e sacola simulada | Na main | [GRP-01](docs/grp-01-propostas.md) |
+| Propostas coletivas com cobertura por pessoa e composição escolhida (sacola simulada, sem escrita no iFood) | Na main | [GRP-01](docs/grp-01-propostas.md) |
 | Logs sanitizados, métricas, orçamento do modelo, status operacional | Na main (parcial) | [OPS-02](docs/ops-02-operacao.md) |
-| Aprovação da sacola simulada por botão ("SACOLA SIMULADA APROVADA — PEDIDO NÃO ENVIADO") | **Não implementada**; rota responde `ACTION_UNAVAILABLE` | [DEC-01 D8](docs/decisoes-conversacionais.md), [GRP-01](docs/grp-01-propostas.md#contrato-proposto-para-aprovação-simulada-buy-01--api-01--não-implementado) |
-| Callback OAuth que conclui o vínculo sem segundo clique | **Em PR** ([#45](https://github.com/Modo-Escuro/api-backend/pull/45)); o bot correspondente está na PR #15 | — |
-| Carrinho real (CART-01) com confirmação humana | **Em implementação, não disponível:** aprovado pela equipe segundo o [épico #6](https://github.com/Modo-Escuro/telegram-bot/issues/6); documentação em rascunho ([API #43](https://github.com/Modo-Escuro/api-backend/pull/43), [bot #16](https://github.com/Modo-Escuro/telegram-bot/pull/16)); código não publicado; ativação depende da INT-02. F7 legada desligada (`IFOOD_CART_ENABLED=false`) | [F7](docs/f7-cart-checkout.md), [INT-01](docs/int-01-audit.md) |
-| Envio de pedido e pagamento | **Fora da demo**; bloqueados no gateway, nas rotas e no lint | [DEC-01 D8](docs/decisoes-conversacionais.md) |
+| Preparar carrinho real no iFood após confirmação humana (`PREPARE_CART`, CART-01) | **Decisão adotada** na DEC-01 ([#43](https://github.com/Modo-Escuro/api-backend/pull/43), mergeado). **Código em PR rascunho** [#46](https://github.com/Modo-Escuro/api-backend/pull/46), desligado por padrão (`IFOOD_CONFIRMED_CART_WRITES_ENABLED=false`); botões no Telegram (BOT-03) e validação de saídas reais (INT-02 #40) pendentes. **Não disponível na demo** | [DEC-01](docs/decisoes-conversacionais.md), [estado remoto/local](docs/estado-remoto-local.md) |
+| Aprovação de pedido, envio e pagamento | **Proibidos** neste incremento; `/purchase-approvals` responde `ACTION_UNAVAILABLE`; bloqueados no gateway, nas rotas e no lint. F7 legada desligada (`IFOOD_CART_ENABLED=false`) | [DEC-01](docs/decisoes-conversacionais.md), [F7](docs/f7-cart-checkout.md), [INT-01](docs/int-01-audit.md) |
 
 ## Arquitetura
 
@@ -136,11 +135,11 @@ Todas as variáveis estão comentadas em [.env.example](.env.example). Nunca com
 ### Telegram, iFood MCP, OAuth e Gemini
 
 1. **Pareamento bot ↔ API:** no bot, `BACKEND_BASE_URL` = `PUBLIC_BASE_URL` da API, `BACKEND_API_TOKEN` = `BOT_API_TOKEN` e `TELEGRAM_ALLOWED_USER_ID` dentro de `ALLOWED_ORGANIZER_IDS`. Para o modo senha: `TELEGRAM_ACCESS_PASSWORD` no bot e `BOT_PASSWORD_ACCESS_ENABLED=true` na API. Guias do bot: [execução local](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/executar-bot.md) e [Railway](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/deploy-railway.md). Rode **uma única** instância de polling por token.
-2. **Vínculo iFood:** no bot, `/conectar` gera um link; o organizador autoriza no navegador, confere a identidade mascarada e confirma por botão; `/verificar` confere a sessão. Contrato completo em [docs/bot-api.md](docs/bot-api.md).
+2. **Vínculo iFood:** no bot, **Conectar iFood** (ou `/conectar`) gera um link de uso único; o organizador autoriza no navegador e o retorno já conclui o vínculo ([retorno natural](docs/login-retorno-natural.md)); o bot acompanha e avisa "Pronto, sua conta iFood está conectada!". **Verificar conexão** (`/verificar`) confere a sessão. O botão **Confirmar conexão** continua como recuperação para tentativas antigas. Não compartilhar o link: quem o abrir primeiro vincula a conta. Contrato completo em [docs/bot-api.md](docs/bot-api.md).
 3. **Conversa:** na API, `CONVERSATION_RUNTIME_ENABLED=true`, banco em volume persistente e `BOT_TELEGRAM_ID` (ID numérico do bot, não o token); no bot, `TELEGRAM_CONVERSATION_ENABLED=true`. Sem modelo habilitado, novos eventos retornam `UNAVAILABLE` ([RUN-01](docs/runtime-turnos.md)).
 4. **Gemini:** só é instalado com `CONVERSATION_MODEL_ENABLED=true` **e** modelo, chave e limite explícitos. A chave sozinha não ativa nada; não há fallback ([AI-01](docs/ai-01-montagem-ensaio.md)).
 
-Comandos do bot na `main`: `/start`, `/entrar` (modo senha), `/conectar`, `/confirmar`, `/ifood`, `/verificar`, `/cancelar`, `/desconectar`, `/andamento`, `/interromper`, `/retomar`, `/sair`, `/ajuda`, além de texto livre para a conversa.
+Na `main` do bot, o assistente se apresenta como **Ailo** e oferece um menu persistente: Conectar iFood, Minha conexão, Verificar conexão, Acompanhar, Retomar conversa, Interromper, Ajuda e Sair da demo (no modo senha, "Entrar na demo"). Os comandos com barra continuam aceitos por compatibilidade. Texto livre (e voz, se habilitada) segue para a conversa.
 
 ## Testes e avaliações
 
@@ -156,7 +155,7 @@ AI_EVAL_GEMINI_API_KEY=... npm run ai:demo:gemini
 AI_EVAL_GEMINI_API_KEY=... npm run eval:agent -- --live
 ```
 
-Resultados registrados das rodadas reais com Gemini (dados sintéticos) estão em [ai-01-result.md](docs/ai-01-result.md) e [ai-01-montagem-ensaio.md](docs/ai-01-montagem-ensaio.md#validação-com-gemini-real-18102026-segunda-rodada). Os números de testes citados nos documentos são históricos de cada PR. Conferência mais recente: `main@f3b8b55`, Linux, Node 22.23.1, 18/10/2026 — 941 testes aprovados em 56 arquivos, typecheck e lint aprovados.
+Resultados registrados das rodadas reais com Gemini (dados sintéticos) estão em [ai-01-result.md](docs/ai-01-result.md) e [ai-01-montagem-ensaio.md](docs/ai-01-montagem-ensaio.md#validação-com-gemini-real-18102026-segunda-rodada). Os números de testes citados nos documentos são históricos de cada PR. Conferência mais recente: árvore desta branch com `main@8a6dadc` integrada, Linux, Node 22.23.1, 18/10/2026 — 941 testes aprovados em 56 arquivos, typecheck e lint aprovados.
 
 ## Persistência, segurança e observabilidade
 
@@ -168,14 +167,14 @@ Resultados registrados das rodadas reais com Gemini (dados sintéticos) estão e
 
 ## Deploy e limitações
 
-A API e o bot rodam na Railway, cada um com volume `/data`. Último registro de deploy encontrado (18/10/2026, 06:49): bot `9314c72` com conversa habilitada e API `28edd06` com runtime e Gemini ativos, F7 e sessão global desligadas ([evidência na PR #15 do bot](https://github.com/Modo-Escuro/telegram-bot/pull/15)). Commits posteriores da `main` (por exemplo OPS-02, #38) não têm deploy registrado. Antes de qualquer redeploy, **preserve vínculos e SQLite** ([OPS-01](docs/ops-01-persistencia.md)). Merge não comprova deploy nem flags ativas.
+A API e o bot rodam na Railway, cada um com volume `/data`. Último registro de deploy encontrado (18/10/2026, 06:49): bot `9314c72` com conversa habilitada e API `28edd06` com runtime e Gemini ativos, F7 e sessão global desligadas ([registro de ativação](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/ensaio-bot02-operacional.md)). Commits posteriores das duas `main` (OPS-02 #38, retorno natural #45, Ailo e menu do bot) **não têm deploy registrado**. Antes de qualquer redeploy, **preserve vínculos e SQLite** ([OPS-01](docs/ops-01-persistencia.md)). Merge não comprova deploy nem flags ativas.
 
 Limitações conhecidas:
 
 - O catálogo não expõe taxa de serviço: o **total exato é sempre desconhecido** e a aprovação fica bloqueada.
 - O MCP não informa alérgenos: alergias quase sempre ficam "a verificar" e bloqueiam o item para quem as declarou.
 - Parte dos itens tem semântica de preço ambígua; nesses casos é exibida uma faixa ([pricing-audit](docs/pricing-audit.md)).
-- Aprovação simulada por botão ainda não implementada; metas D10 (p95 ≤ 10 s, 5 demos seguidas) sem evidência registrada.
+- Preparação do carrinho real ainda não está na `main` (PR #46); aprovação de pedido, envio e pagamento são proibidos neste incremento. Metas de latência e de demos seguidas sem evidência registrada.
 - A conversa completa no bot em produção (coleta → sugestões com MCP real → sacola simulada) ainda não tem ensaio humano registrado; há apenas relato do usuário de que a retomada funcionou.
 - Orçamento do modelo e métricas são por processo e zeram ao reiniciar.
 
