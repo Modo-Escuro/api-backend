@@ -6,7 +6,7 @@
 
 Implementada a infraestrutura de aceite, fila, execução limitada, consulta, cancelamento local e recuperação em SQLite real. As rotas v1 estão registradas no aplicativo. A ativação é explícita e permanece **desligada por padrão**. Nenhum schema da API-01 foi alterado.
 
-`index.ts` ainda não instala processador de domínio/IA. Mesmo ao ativar a infraestrutura, novos eventos retornam **503 UNAVAILABLE** até que AI-02 (com o modelo da AI-01) forneça um `TurnProcessor` confiável no servidor. O domínio da DATA-01 já está integrado ao armazenamento ([data-01-compra](data-01-compra.md)). Replays e consultas de operações existentes continuam possíveis. Não existe resposta fictícia de sucesso, chamada de LLM/MCP ou compra neste incremento.
+`index.ts` ainda não instala processador de domínio/IA. Mesmo ao ativar a infraestrutura, novos eventos retornam **503 UNAVAILABLE** até que o processador da AI-02 ([ai-02-agente](ai-02-agente.md)) seja instalado com o provedor de modelo da AI-01. O domínio da DATA-01 já está integrado ao armazenamento ([data-01-compra](data-01-compra.md)). Replays e consultas de operações existentes continuam possíveis. Não existe resposta fictícia de sucesso, chamada de LLM/MCP ou compra neste incremento.
 
 DATA-01 representa participantes/restrições/origem, valida patches e conserva o acordo da compra no mesmo banco (schema v2), gravando domínio e snapshot na mesma transação. OPS-01 permanece responsável pelo volume e preservação dos vínculos existentes. O armazenamento de snapshots da RUN-01 não substitui esse domínio nem comprova que a migração operacional foi feita. A integração real com o bot também precisa da outbox/acompanhamento restantes da BOT-01.
 

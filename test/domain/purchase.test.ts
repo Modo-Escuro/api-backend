@@ -243,6 +243,17 @@ describe('regressões da auditoria', () => {
     expect(applyPatch(s, [{ op: 'REMOVE_PARTICIPANT', participantId: ana!.participantId, humanConfirmed: true }], ctx('evt-3')).state.participants).toHaveLength(1);
   });
 
+  it('bug 1 (AI-02): remover participante com teto MANDATORY ou pergunta de restrição pendente exige confirmação', () => {
+    const s = seeded();
+    const bia = s.participants[1]!;
+    const capped = applyPatch(s, [{ op: 'SET_LIMIT', target: bia.participantId, value: { amountCents: 5000, kind: 'MANDATORY' } }], ctx('evt-3')).state;
+    expect(code(() => applyPatch(capped, [{ op: 'REMOVE_PARTICIPANT', participantId: bia.participantId }], ctx('evt-4')))).toBe('REQUIRES_HUMAN_CONFIRMATION');
+    const caio = applyPatch(s, [{ op: 'ADD_PARTICIPANT', displayName: 'Caio' }], ctx('evt-5')).state.participants[2]!;
+    const withCaio = applyPatch(s, [{ op: 'ADD_PARTICIPANT', displayName: 'Caio' }], ctx('evt-5')).state;
+    const unclear = applyPatch(withCaio, [{ op: 'MARK_UNCLEAR', target: caio.participantId, field: 'RESTRICTIONS', question: 'Alergia?' }], ctx('evt-6')).state;
+    expect(code(() => applyPatch(unclear, [{ op: 'REMOVE_PARTICIPANT', participantId: caio.participantId }], ctx('evt-7')))).toBe('REQUIRES_HUMAN_CONFIRMATION');
+  });
+
   it('bug 1 (teto): tirar ou rebaixar teto MANDATORY exige confirmação; mudar o valor não', () => {
     const s = seeded();
     expect(code(() => applyPatch(s, [{ op: 'SET_LIMIT', target: 'GROUP', value: 'NONE' }], ctx()))).toBe('REQUIRES_HUMAN_CONFIRMATION');
