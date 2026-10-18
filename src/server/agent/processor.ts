@@ -76,7 +76,7 @@ export function createAgentProcessor(opts: AgentOptions): TurnProcessor {
     const parsed = AgentProposalSchema.safeParse(raw);
     if (!parsed.success) fail('MODEL_OUTPUT_INVALID');
 
-    const plan = planActions(ctx.purchase, parsed.data, (change) => ctx.previewDomain(change), linkId);
+    const plan = planActions(ctx.purchase, parsed.data, (change) => ctx.previewDomain(change), linkId, ctx.event.input.text);
     const pending = [...plan.notes, ...missingQuestions(plan.state)];
     const snapshot = renderSnapshot(ctx.snapshot, plan.state, plan.applied, pending);
     return {

@@ -26,6 +26,12 @@ const fold = (s: string) => s.normalize('NFD').replace(/[\p{M}\p{Cf}]/gu, '').tr
 /** Acima disto (R$ 100 mil) o valor é tratado como implausível: na prática equivaleria a "sem teto" sem ninguém dizer. */
 export const MAX_PLAUSIBLE_LIMIT_CENTS = 10_000_000;
 const UNCLEAR_NOTE = 'Não entendi um ponto da sua mensagem. Pode reformular?';
+/**
+ * "Sem teto" só vale se a PRÓPRIA mensagem humana disser isso explicitamente. A proposta do modelo sozinha não basta:
+ * sem uma destas expressões no texto do usuário, o servidor pergunta em vez de remover o teto.
+ */
+export const EXPLICIT_NO_LIMIT = /\bsem (?:teto|limite|orcamento|restricao de (?:valor|preco|orcamento))\b|\bnao (?:tem|ha|existe|temos|precisa de) (?:teto|limite|orcamento)\b|\bqualquer valor\b|\bpode gastar o que (?:for preciso|quiser)\b/;
+export const hasExplicitNoLimit = (message: string) => EXPLICIT_NO_LIMIT.test(fold(message));
 
 /** Perguntas geradas pelo servidor (nunca o texto do modelo). */
 function question(field: 'RESTRICTIONS' | 'LIMIT' | 'PRIORITY', who: string | null): string {
@@ -72,7 +78,9 @@ type Preview = (change: DomainChange) => PurchaseState | null;
  * Planeja as operações a partir da proposta. `preview` é `TurnContext.previewDomain` (mesmo cálculo do commit);
  * `linkId` vem do vínculo autenticado e entra em toda pré-visualização para o resultado bater com o commit.
  */
-export function planActions(purchase: PurchaseState | null, proposal: AgentProposal, preview: Preview, linkId: string | null): Plan {
+export function planActions(
+  purchase: PurchaseState | null, proposal: AgentProposal, preview: Preview, linkId: string | null, message: string,
+): Plan {
   const ops: DomainOp[] = [];
   const applied: string[] = [];
   const notes: string[] = [];
@@ -190,7 +198,14 @@ export function planActions(purchase: PurchaseState | null, proposal: AgentPropo
       }
       case 'SET_NO_LIMIT': {
         const t = target(a.target);
-        if (t) tryApply([{ op: 'SET_LIMIT', target: t.id, value: 'NONE' }], `Sem teto para ${t.label}.`, `Tirar o teto de ${t.label}`);
+        if (!t) break;
+        if (!hasExplicitNoLimit(message)) {
+          // Sem declaração explícita do usuário: pergunta (UNCLEAR), não remove o teto.
+          tryApply([{ op: 'MARK_UNCLEAR', target: t.id, field: 'LIMIT', question: question('LIMIT', t.id === 'GROUP' ? null : t.label) }],
+            `Não removi o teto de ${t.label}: preciso que você confirme.`, `Registrar a pergunta sobre o teto de ${t.label}`);
+          break;
+        }
+        tryApply([{ op: 'SET_LIMIT', target: t.id, value: 'NONE' }], `Sem teto para ${t.label}.`, `Tirar o teto de ${t.label}`);
         break;
       }
       case 'SET_PRIORITY':

@@ -7,8 +7,10 @@ import { buildModelInput, missingQuestions, planActions, REVIEW_NOTE } from '../
 
 const ctx = { seed: 'escopo-teste', eventId: 'evt-9' };
 const previewFor = (purchase: PurchaseState | null) => (change: DomainChange) => nextPurchase(purchase, change, ctx).state;
-const plan = (purchase: PurchaseState | null, actions: AgentAction[], linkId: string | null = null) =>
-  planActions(purchase, AgentProposalSchema.parse({ actions }), previewFor(purchase), linkId);
+const plan = (purchase: PurchaseState | null, actions: AgentAction[], linkId: string | null = null, message = '') =>
+  planActions(purchase, AgentProposalSchema.parse({ actions }), previewFor(purchase), linkId, message);
+/** Mensagem humana real passando pelo modelo determinístico e pela política. */
+const say = (purchase: PurchaseState | null, message: string) => plan(purchase, interpret(message).actions, null, message);
 
 function seeded(): PurchaseState {
   const r = plan(null, interpret('Somos Ana, Bia e Caio. Ana é alérgica a amendoim. Teto de R$ 180. Preferimos o mais barato.').actions);
@@ -49,7 +51,7 @@ describe('segurança D5', () => {
   it('remover alergia, "não tem restrição" com alergia, tirar teto rígido e remover quem tem alergia viram pendência; nada muda', () => {
     const s = seeded();
     for (const msg of ['tira a alergia da Ana', 'A Ana não tem restrição', 'sem teto', 'remove a Ana da compra']) {
-      const r = plan(s, interpret(msg).actions);
+      const r = say(s, msg);
       expect(r.ops).toEqual([]);
       expect(r.notes.join(' ')).toMatch(/confirmação explícita/);
     }
@@ -109,7 +111,7 @@ describe('pedido, encerramento e recusa', () => {
   });
   it('encerrar/cancelar exige confirmação; recusa vira orientação', () => {
     expect(plan(seeded(), interpret('cancela a compra').actions).notes[0]).toMatch(/confirmação explícita/);
-    const refused = planActions(seeded(), { actions: [], refusal: true }, previewFor(seeded()), null);
+    const refused = planActions(seeded(), { actions: [], refusal: true }, previewFor(seeded()), null, '');
     expect(refused.notes[0]).toMatch(/Não posso ajudar/);
   });
 });
@@ -170,7 +172,7 @@ describe('regressões da auditoria AI-02', () => {
   });
 
   it('bug 3: recusa descarta todas as ações', () => {
-    const r = planActions(seeded(), AgentProposalSchema.parse({ refusal: true, actions: [{ action: 'ADD_PARTICIPANT', name: 'Eva' }, { action: 'SET_NO_LIMIT', target: 'GROUP' }] }), previewFor(seeded()), null);
+    const r = planActions(seeded(), AgentProposalSchema.parse({ refusal: true, actions: [{ action: 'ADD_PARTICIPANT', name: 'Eva' }, { action: 'SET_NO_LIMIT', target: 'GROUP' }] }), previewFor(seeded()), null, 'sem teto');
     expect(r.ops).toEqual([]);
     expect(r.applied).toEqual([]);
   });
@@ -193,5 +195,33 @@ describe('regressões da auditoria AI-02', () => {
     expect(r.ops).toEqual([]);
     expect(r.state!.groupLimit).toMatchObject({ value: { amountCents: 18000 } });
     expect(r.notes[0]).toMatch(/fora do esperado/);
+  });
+});
+
+describe('origem humana explícita para "sem teto"', () => {
+  const unclearGroup = () => {
+    const s = applyPatch(null, [{ op: 'ADD_PARTICIPANT', displayName: 'Ana' }], ctx).state;
+    return { ...applyPatch(s, [{ op: 'MARK_UNCLEAR', target: 'GROUP', field: 'LIMIT', question: 'Qual o teto?' }], { ...ctx, eventId: 'e-u' }).state, version: 1 };
+  };
+
+  it('modelo propõe "sem teto" mas a mensagem não diz isso: não remove, pergunta', () => {
+    for (const message of ['tanto faz', 'pode ser o que achar melhor', 'ok', 'subiu o preço']) {
+      const r = plan(unclearGroup(), [{ action: 'SET_NO_LIMIT', target: 'GROUP' }], null, message);
+      expect(r.state!.groupLimit.state).toBe('UNCLEAR');
+      expect(r.ops.every((o) => o.op !== 'SET_LIMIT')).toBe(true);
+      expect(r.applied.join(' ')).toMatch(/preciso que você confirme/);
+    }
+  });
+
+  it('com declaração explícita na mensagem, o teto ambíguo vira "sem teto"', () => {
+    for (const message of ['Não temos teto', 'sem limite de valor', 'pode ser qualquer valor', 'Sem orçamento definido']) {
+      const r = plan(unclearGroup(), [{ action: 'SET_NO_LIMIT', target: 'GROUP' }], null, message);
+      expect(r.state!.groupLimit.state).toBe('NONE');
+    }
+  });
+
+  it('teto rígido continua exigindo confirmação mesmo com a frase explícita', () => {
+    expect(say(seeded(), 'sem teto').notes.join(' ')).toMatch(/confirmação explícita/);
+    expect(seeded().groupLimit.state).toBe('DECLARED');
   });
 });

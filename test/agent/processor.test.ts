@@ -181,6 +181,25 @@ describe('AI-02 com RUN-01 + DATA-01 (SQLite real)', () => {
 });
 
 describe('AI-02 pela rota HTTP do contrato v1', () => {
+  it('produção sem provedor AI-01: runtime ligado sem processador responde 503 e não grava nada', async () => {
+    const env = setup();
+    const dir = temporary();
+    const store = new TurnStore(dir.file);
+    const runtime = new TurnRuntime(store); // como no index.ts hoje: sem processor
+    const cfg = { ...env.cfg, conversationRuntime: { dbFile: dir.file, botId: '900001' } };
+    const app = createApp(new IfoodAuth(cfg, env.as.fetch, { tokenFile: null }), { config: cfg, links: env.links, conversations: runtime });
+    const headers = { authorization: `Bearer ${BOT_TOKEN}`, 'x-telegram-user-id': ORG_A, 'x-telegram-chat-id': ORG_A, 'content-type': 'application/json' };
+    try {
+      const res = await app.request(`/api/bot/v1/conversations/${ORG_A}/events`, { method: 'POST', headers,
+        body: JSON.stringify(msg(1, 'Somos Ana', 0, { organizerId: ORG_A, botId: '900001', conversationId: ORG_A })) });
+      expect(res.status).toBe(503);
+      expect(await res.json()).toMatchObject({ error: { code: 'UNAVAILABLE', recovery: 'POLL_OPERATION' } });
+      expect(store.db.prepare('SELECT count(*) AS n FROM operations').get()!['n']).toBe(0);
+    } finally {
+      runtime.stop(); dir.clean();
+    }
+  });
+
   it('POST /events → operação → GET snapshot, com vínculo real do organizador', async () => {
     const env = setup();
     const linked = await connectAndConfirm(env, ORG_A);

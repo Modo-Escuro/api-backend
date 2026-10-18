@@ -49,6 +49,7 @@ Não há ação de loja, endereço, item, carrinho, aprovação, confirmação h
 | Alergia proposta como preferência | Registrada como obrigatória |
 | Remover alergia/restrição, "não tem restrição" com restrição obrigatória, tirar/rebaixar teto rígido, remover quem tem restrição obrigatória | Pendência "precisa de confirmação explícita"; nada muda (o agente nunca marca `humanConfirmed`) |
 | Valor sem indicação de teto máximo × referência | Pergunta; o teto fica `UNCLEAR` (nunca "sem teto") |
+| "Sem teto" proposto pelo modelo | Só é aplicado se a **própria mensagem do usuário** contiver uma declaração explícita ("sem teto", "não temos limite", "qualquer valor"...); senão vira pergunta. Teto rígido continua exigindo confirmação humana |
 | "Pode pedir" | Explica que a revisão/aprovação por botão é necessária e ainda não existe nesta etapa; nenhuma aprovação, `OUTCOME` ou `REVIEW` |
 | Encerrar/cancelar a compra | Pendência: apaga dados (D7) e exige confirmação humana |
 | Recusa do modelo | Todas as ações da proposta são descartadas; orientação sobre o que o agente pode registrar |
@@ -73,6 +74,7 @@ Logs do agente: só códigos (`MODEL_TIMEOUT`, `MODEL_OUTPUT_INVALID`, ...), nun
 
 ## Integração e dependências
 
+- **Produção hoje:** `index.ts` cria o runtime sem processador; com `CONVERSATION_RUNTIME_ENABLED=true`, eventos novos recebem 503 `UNAVAILABLE` e nada é gravado (teste em `test/agent/processor.test.ts`). O modelo determinístico não é importado fora de testes.
 - **AI-01 (#15):** escolhe e implementa o provedor real de `ConversationModel` e as metas da D10. Até lá, o runtime
   de produção continua sem processador (eventos novos → 503), e o modelo determinístico só roda em testes.
   Instalação: `new TurnRuntime(store, { processor: createAgentProcessor({ model, linkOf: async (org) => (await links.status(org)).linkId }) })`.
