@@ -1,5 +1,5 @@
 // POST /api/evaluate — avaliação read-only (sem ranking, sem carrinho).
-// Contrato do bot: dinheiro em CENTAVOS inteiros na entrada e na saída; conversão explícita aqui (domínio é BRL decimal).
+// Contrato do bot: dinheiro em CENTAVOS inteiros na entrada e na saída; domínio também em centavos; BRL apenas na fronteira MCP.
 
 import type { Context, Hono } from 'hono';
 import { z } from 'zod';
@@ -7,7 +7,7 @@ import { ALLERGENS, DIETARY } from '../domain/constraints.js';
 import { SORTS } from '../mcp/types.js';
 import { EvaluateInputError, type EvaluateOutcome, type EvaluateRequest } from '../services/evaluate.js';
 import { evaluateView } from '../services/evaluate-view.js';
-import { evaluateViewCents, fromCents } from '../services/cents.js';
+import { evaluateViewCents } from '../services/cents.js';
 
 /** Centavos inteiros (≤ R$ 10.000,00). */
 const cents = z.number().int().positive().max(1_000_000);
@@ -42,6 +42,14 @@ export const EvaluateBody = z
       })
       .strict()
       .optional(),
+    // Alvos flexíveis são avaliados localmente; nunca filtram a busca.
+    softLimits: z.object({
+      maxDistanceKm: z.number().positive().max(100).optional(),
+      maxDeliveryTimeMinutes: z.number().int().positive().max(300).optional(),
+      maxDeliveryFeeCents: z.number().int().min(0).max(100_000).optional(),
+      minRating: z.number().min(0).max(5).optional(),
+      onlyWithPromotion: z.boolean().optional(),
+    }).strict().optional(),
     limits: z
       .object({
         maxPages: z.number().int().min(1).max(3).optional(),
@@ -59,18 +67,22 @@ export const EvaluateBody = z
 
 type Body = z.infer<typeof EvaluateBody>;
 
-/** Converte o corpo do bot (centavos) para a requisição do domínio (BRL decimal). */
+/** Preserva centavos no domínio; só renomeia campos do contrato HTTP. */
 export function toDomainRequest(b: Body): EvaluateRequest {
-  const { budget, refinements, ...rest } = b;
+  const { budget, refinements, softLimits, ...rest } = b;
   const req: EvaluateRequest = { ...(rest as Omit<EvaluateRequest, 'budget' | 'refinements'>) };
   if (budget) {
     req.budget = {};
-    if (budget.maxItemPriceCents !== undefined) req.budget.maxItemPrice = fromCents(budget.maxItemPriceCents);
-    if (budget.maxOrderTotalCents !== undefined) req.budget.maxOrderTotal = fromCents(budget.maxOrderTotalCents);
+    if (budget.maxItemPriceCents !== undefined) req.budget.maxItemPrice = budget.maxItemPriceCents;
+    if (budget.maxOrderTotalCents !== undefined) req.budget.maxOrderTotal = budget.maxOrderTotalCents;
   }
   if (refinements) {
     const { maxDeliveryFeeCents, ...r } = refinements;
-    req.refinements = { ...r, ...(maxDeliveryFeeCents !== undefined ? { maxDeliveryFee: fromCents(maxDeliveryFeeCents) } : {}) };
+    req.refinements = { ...r, ...(maxDeliveryFeeCents !== undefined ? { maxDeliveryFee: maxDeliveryFeeCents } : {}) };
+  }
+  if (softLimits) {
+    const { maxDeliveryFeeCents, ...r } = softLimits;
+    req.softLimits = { ...r, ...(maxDeliveryFeeCents !== undefined ? { maxDeliveryFee: maxDeliveryFeeCents } : {}) };
   }
   return req;
 }

@@ -18,9 +18,9 @@ describe('normalizeSearchOffers (fixtures reais)', () => {
 
   it('promoção: base = promo ?? unit, desconto e % calculados', () => {
     const tomate = r.items.find((i) => val(i.itemName) === '1 pizza 22cm + 1 Tomatinho Doce')!;
-    expect(tomate.price).toMatchObject({ basePrice: 33.9, hasPromotion: true, discountPerUnit: 10, discountPercent: 23, anomaly: null });
+    expect(tomate.price).toMatchObject({ basePrice: 3390, hasPromotion: true, discountPerUnit: 1000, discountPercent: 23, anomaly: null });
     const semPromo = r.items.find((i) => val(i.itemName) === 'Combo 2 Pizzas')!;
-    expect(semPromo.price).toMatchObject({ basePrice: 79.99, hasPromotion: false, discountPerUnit: 0 });
+    expect(semPromo.price).toMatchObject({ basePrice: 7999, hasPromotion: false, discountPerUnit: 0 });
   });
 
   it('loja: avaliação arredondada (float32), contagem, entrega efetiva', () => {
@@ -52,7 +52,7 @@ describe('ausente ≠ null ≠ vazio', () => {
     raw.merchant.ratingCount = 'muitos';
     const n = normalizeListingItem(raw);
     expect(n.price.promotionalUnitPrice.state).toBe('ABSENT');
-    expect(n.price.basePrice).toBe(78);
+    expect(n.price.basePrice).toBe(7800);
     expect(n.merchant.isOpen.state).toBe('NULL');
     expect(n.merchant.rating.value.state).toBe('ABSENT');
     expect(n.merchant.rating.count.state).toBe('INVALID');
@@ -77,8 +77,8 @@ describe('ausente ≠ null ≠ vazio', () => {
 describe('normalizeItemDetail (fixtures reais)', () => {
   it('pizza: promo do getItem (65) diferente da listagem (78), grupo obrigatório 2–2', () => {
     const d = normalizeItemDetail(rawItem('Promoção pizza grande'));
-    expect(d.price).toMatchObject({ basePrice: 65, discountPerUnit: 13, discountPercent: 17 });
-    expect(val(d.merchantMinimumOrderAmount)).toBe(30);
+    expect(d.price).toMatchObject({ basePrice: 6500, discountPerUnit: 1300, discountPercent: 17 });
+    expect(val(d.merchantMinimumOrderAmount)).toBe(3000);
     const g = val(d.optionGroups)![0]!;
     expect(g).toMatchObject({ required: true, issues: [] });
     expect(val(g.minSelections)).toBe(2);
