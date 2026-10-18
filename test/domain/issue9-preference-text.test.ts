@@ -35,14 +35,14 @@ function candidate(name: string, opts: CandidateOpts = {}): RankCandidate {
     d.optionGroups = present([]);
   }
   if (opts.equalize) {
-    l.merchant.rating = { value: present(4.5), count: present(100) };
+    l.merchant.rating = { value: present(4.5), rawValue: present(4.5), count: present(100) };
     l.merchant.distanceKm = present(1);
     l.merchant.delivery = present({
       deliveryMethodId: present('DEFAULT'),
       mode: present('DELIVERY'),
-      fee: present(4.9),
-      promotionalFee: present(4.9),
-      effectiveFee: 4.9,
+      fee: present(490),
+      promotionalFee: present(490),
+      effectiveFee: 490,
       etaMinutes: { min: present(30), max: present(30) },
     });
   }
@@ -190,19 +190,19 @@ describe('issue #9 — Caso F: configuração alternativa revalidada (nunca apli
     expect(alt.addedOption.name).toBe('Bacon crocante vegano');
     expect(alt.selection.some((s) => s.optionId === optionId(item('Maria salada Veg'), 'Bacon crocante vegano'))).toBe(true);
     expect(alt.configuration.status).toBe('VALID');
-    expect(alt.pricing.unitTotalRange.min).toBeCloseTo(33.9, 2);
+    expect(alt.pricing.unitTotalRange.min).toBe(3390);
     expect(alt.reasons.join(' ')).toMatch(/não aplicada/);
     expect(alt.reasons.join(' ')).toMatch(/configuração avaliada e o preço permanecem os mesmos/);
     // A configuração avaliada continua sendo a mínima, com o preço antigo.
     expect(rec.reasons.join(' ')).toMatch(/configuração alternativa revalidada/);
     expect(c.evaluation.pricing.selected).toBeNull();
-    expect(c.evaluation.pricing.minimumConfigurable!.unitTotalRange.min).toBeCloseTo(29.9, 2);
+    expect(c.evaluation.pricing.minimumConfigurable!.unitTotalRange.min).toBe(2990);
   });
 
   it('teto de orçamento que rejeita a alternativa impede a proposta (configuração avaliada segue elegível)', () => {
-    const c = candidate('Maria salada Veg', { budget: { maxItemPrice: 30 } }); // mínima 29.90 cabe; +bacon 33.90 não
+    const c = candidate('Maria salada Veg', { budget: { maxItemPrice: 3000 } }); // mínima 29.90 cabe; +bacon 33.90 não
     expect(c.evaluation.eligible).toBe(true);
-    const rec = recOf(c, { likedIngredients: ['bacon'] }, { restrictions: [], budget: { maxItemPrice: 30 } });
+    const rec = recOf(c, { likedIngredients: ['bacon'] }, { restrictions: [], budget: { maxItemPrice: 3000 } });
     expect(rec.alternativeConfiguration).toBeNull();
   });
 

@@ -157,8 +157,9 @@ Relacionada às issues #8 (RANK-01) e #9 (RANK-02).
 - Sem teto, preço incerto da proposta continua em faixa (ex.: `R$ 29.90–? (preço incerto)`), com escalares
   `unitTotal`, `itemsSubtotal` e `estimatedTotal` nulos. Ausência/null de `additionalPrice` não viram zero;
   zero informado é um preço conhecido. Os estados dos campos normalizados são preservados.
-- Exemplo com fixture e frete sintético zero: duas unidades de Maria salada Veg custam 59,80; com bacon
-  vegano de 4 por unidade, a alternativa custa 67,80. Teto 65 impede a sugestão, teto 68 permite.
+- Exemplo com fixture e frete sintético zero: duas unidades de Maria salada Veg têm subtotal de itens 59,80; com bacon
+  vegano de 4 por unidade, o subtotal passa a 67,80. Com a DOM-01 integrada, a taxa de serviço
+  ausente mantém o total completo desconhecido: nenhum teto de pedido autoriza essa sugestão.
 
 Regressões offline em `test/domain/ranking-budget-regressions.test.ts`: preferência cara ou viável,
 ausência de opção preferida, preço desconhecido, mínimo separado do selecionado, coerência de evidência/preço,
@@ -170,3 +171,23 @@ Validação desta correção (2026-10-18, Linux, Node v24.14.1, npm 11.11.0):
 `npm run typecheck`, `npm run lint` e `npm test` passaram; 550 testes em 34 arquivos, incluindo
 14 novas regressões. O Node emite aviso de SQLite experimental. As falhas de permissões POSIX relatadas
 anteriormente no Windows não ocorreram neste ambiente; nenhum teste foi removido ou enfraquecido.
+
+
+## 11. Integração com DOM-01 e DATA-01
+
+Após a atualização da main, dinheiro do domínio e da API está em centavos inteiros.
+A normalização converte BRL somente na entrada MCP; a projeção HTTP apenas acrescenta os nomes
+`*Cents`, sem multiplicar por 100 novamente. O ranking formata centavos como reais na explicação;
+pontos médios de preço são representados em centavos inteiros.
+
+Limites obrigatórios locais, configuração desconhecida e disponibilidade ausente continuam bloqueando.
+`preferences` e `softLimits` coexistem na requisição, sem transformar preferências em filtros obrigatórios.
+A seleção preferida e sugestões opcionais com overflow são descartadas sem perder a configuração original segura.
+
+A DOM-01 distingue subtotal de itens + entrega do total completo: taxa de serviço ausente mantém
+`estimatedTotalRange.max = null`, `estimatedTotal = null` e orçamento do pedido `UNKNOWN`.
+As regressões de quantidade verificam os subtotais conhecidos e esse bloqueio, sem inventar serviço gratuito.
+O teste de preço conhecido/zero por unidade continua separado do teto do pedido completo.
+
+Os registros de validação anteriores descrevem os commits anteriores à integração; a validação da resolução
+inclui as suítes de ranking, DOM-01, DATA-01 e runtime em conjunto.

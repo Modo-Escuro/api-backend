@@ -30,6 +30,7 @@ import { blockedOptions, findTermMention, normalizeText, preferenceAvoidedOption
 import { validateSelection, type ConfigValidation, type OptionSelection } from './configuration.js';
 import { computePrice, type PriceBreakdown } from './pricing.js';
 import { val } from './fields.js';
+import { formatCents } from './money.js';
 import type { NormalizedItemDetail, NormalizedListingItem } from './normalize.js';
 
 // ---------------- classificação (segurança antes de qualquer pontuação) ----------------
@@ -196,7 +197,7 @@ export const MAX_RECOMMENDATIONS = 4;
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const round4 = (v: number) => Math.round(v * 10000) / 10000;
 const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
-const brl = (v: number) => `R$ ${v.toFixed(2)}`;
+const brl = formatCents;
 const km = (v: number) => `${Math.round(v * 100) / 100} km`;
 
 /** Folga relativa ao limite informado: 1 = sem consumo do limite, 0 = no limite. Limite 0 ⇒ só vazio serve. */
@@ -291,7 +292,7 @@ function pricePoint(c: RankCandidate): {
   const discountPercent = p.unit.discountPercent;
   if (min !== null && max !== null && max > min) {
     return {
-      value: round4((min + max) / 2),
+      value: min + Math.floor((max - min) / 2),
       limitation: `preço em faixa ${brl(min)}–${brl(max)}; usado o ponto médio da faixa (só o carrinho confirma)`,
       discountPercent,
       source,
@@ -369,7 +370,12 @@ function proposeAlternative(
       const selection: OptionSelection[] = [...chosen, { optionId: o.optionId, quantity: 1 }];
       const configuration = validateSelection(d, selection, blocked, avoided);
       if (configuration.status !== 'VALID') continue;
-      const pricing = computePrice({ detail: d, listing: c.listing, selection, quantity, kind: 'SELECTED' });
+      let pricing: PriceBreakdown;
+      try { pricing = computePrice({ detail: d, listing: c.listing, selection, quantity, kind: 'SELECTED' }); }
+      catch (error) {
+        if (!(error instanceof RangeError)) throw error;
+        continue; // Proposta sem preço seguro não interrompe a recomendação original.
+      }
       // A proposta expõe faixas, nunca um escalar derivado de preço incerto.
       if (pricing.status !== 'ESTIMATED') {
         pricing.unitTotal = null;

@@ -26,7 +26,7 @@ const opt = (n: number, name: string, price: number): NormalizedOption => ({
   optionGroupId: uuid(900),
   name: present(name),
   description: present(''),
-  additionalPrice: present(price),
+  additionalPrice: present(price * 100),
 });
 const group = (options: NormalizedOption[]): NormalizedOptionGroup => ({
   optionGroupId: uuid(900),
@@ -62,7 +62,7 @@ describe('issue #8 — preferência opcional nunca bloqueia', () => {
     expect(pref.blockers).toEqual([]);
     expect(pref.selection!.options.map((o) => o.optionId)).toEqual([bacon.optionId]);
     expect(pref.pricing.minimumConfigurable).not.toBeNull();
-    expect(pref.pricing.minimumConfigurable!.unitTotal).toBeCloseTo((d.price.basePrice ?? 0) + 3, 6);
+    expect(pref.pricing.minimumConfigurable!.unitTotal).toBeCloseTo((d.price.basePrice ?? 0) + 300, 6);
     expect(prefWarnings(pref.warnings).length).toBeGreaterThan(0);
     expect(codes(pref.warnings)).toContain('PREFERENCE_NOT_MET'); // gap registra aviso, não bloqueio
 
@@ -82,15 +82,15 @@ describe('issue #8 — preferência opcional nunca bloqueia', () => {
     const pref = evaluate(d, l, [VEGAN_PREF]);
     expect(pref.eligible).toBe(true);
     expect(pref.selection!.options.map((o) => o.optionId)).toEqual([veg.optionId]); // prefere vegetal
-    expect(pref.pricing.selected!.unitTotal).toBeCloseTo(base + 5, 6);
-    expect(pref.pricing.minimumConfigurable!.unitTotal).toBeCloseTo(base + 3, 6);
+    expect(pref.pricing.selected!.unitTotal).toBeCloseTo(base + 500, 6);
+    expect(pref.pricing.minimumConfigurable!.unitTotal).toBeCloseTo(base + 300, 6);
     expect(pref.configuration!.status).toBe('VALID');
     expect(codes(pref.blockers)).not.toContain('CONFIG_PREFERENCE_OPTION');
 
     // sem preferência, vale a mais barata (bacon) — a preferência só desemprega
     const none = evaluate(d, l, []);
     expect(none.selection!.options.map((o) => o.optionId)).toEqual([bacon.optionId]);
-    expect(none.pricing.minimumConfigurable!.unitTotal).toBeCloseTo(base + 3, 6);
+    expect(none.pricing.minimumConfigurable!.unitTotal).toBeCloseTo(base + 300, 6);
   });
 
   it('C: preferência nunca torna inelegível um candidato base elegível', () => {

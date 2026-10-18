@@ -40,18 +40,18 @@ function candidate(name: string, opts: CandidateOpts = {}): RankCandidate {
     d.optionGroups = present([]); // sem opções obrigatórias ⇒ unitTotal === preço-base
   }
   if (opts.equalize) {
-    l.merchant.rating = { value: present(4.5), count: present(100) };
+    l.merchant.rating = { value: present(4.5), rawValue: present(4.5), count: present(100) };
     l.merchant.distanceKm = present(1);
     l.merchant.delivery = present({
       deliveryMethodId: present('DEFAULT'),
       mode: present('DELIVERY'),
-      fee: present(4.9),
-      promotionalFee: present(4.9),
-      effectiveFee: 4.9,
+      fee: present(490),
+      promotionalFee: present(490),
+      effectiveFee: 490,
       etaMinutes: { min: present(30), max: present(30) },
     });
   }
-  if (opts.dropRating) l.merchant.rating = { value: ABSENT, count: ABSENT };
+  if (opts.dropRating) l.merchant.rating = { value: ABSENT, rawValue: ABSENT, count: ABSENT };
   const evaluation = evaluateCandidate({ listing: l, detail: d, serverFilters: opts.serverFilters ?? [] }, { restrictions: opts.restrictions ?? [], budget: opts.budget });
   return { evaluation, listing: l, detail: d };
 }
@@ -98,7 +98,7 @@ describe('classifyBlockers — segurança alimentar antes de qualquer pontuaçã
   });
 
   it('5. acima do orçamento obrigatório é BLOCKED', () => {
-    const c = candidate('Promoção pizza grande', { budget: { maxItemPrice: 60 } }); // faixa real 65–143
+    const c = candidate('Promoção pizza grande', { budget: { maxItemPrice: 6000 } }); // faixa real 65–143
     expect(c.evaluation.blockers.map((b) => b.code)).toContain('OVER_ITEM_BUDGET');
     expect(category(c)).toBe('BLOCKED');
     expect(rankCandidates([c]).recommendations).toEqual([]);

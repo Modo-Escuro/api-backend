@@ -35,9 +35,6 @@ export function mapField<T, U>(f: Field<T>, fn: (v: T) => U): Field<U> {
   return f.state === 'PRESENT' ? present(fn(f.value)) : f;
 }
 
-/** Arredonda para centavos (dinheiro em BRL decimal). */
-export const money = (v: number): number => Math.round((v + Number.EPSILON) * 100) / 100;
-
 /** Descrição curta do estado para avisos de UI. */
 export function describeMissing(name: string, f: Field<unknown>): string | null {
   switch (f.state) {

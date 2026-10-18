@@ -2,17 +2,27 @@
 import { randomBytes } from 'node:crypto';
 import { ContractError, type AdapterPrincipal } from '../contracts/guards.js';
 import type { ConversationEvent, Operation, Snapshot } from '../contracts/conversation.js';
-import { TurnStore, type CancelCommand, type Job } from './store.js';
+import { nextPurchase, type DomainChange, type PurchaseState } from '../domain/purchase.js';
+import { scopeKey, TurnStore, type CancelCommand, type Job } from './store.js';
 
 export interface TurnResult {
   snapshot: Snapshot;
   completeness: 'PARTIAL' | 'COMPLETE';
   paths: Operation['changes'][number]['paths'];
   cause?: 'USER' | 'DERIVED';
+  /**
+   * DATA-01: operações tipadas sobre a compra. O armazenamento recalcula o estado a partir do persistido,
+   * na mesma transação do snapshot; um estado pronto nunca é aceito.
+   */
+  domain?: DomainChange;
 }
 export interface TurnContext {
   event: ConversationEvent;
   snapshot: Snapshot;
+  /** DATA-01: compra ativa no momento do claim (cópia; alterações só via `domain` no resultado). */
+  purchase: PurchaseState | null;
+  /** Pré-visualiza exatamente o estado que o commit vai gravar (mesmos IDs), para montar o snapshot. */
+  previewDomain(change: DomainChange): PurchaseState | null;
   signal: AbortSignal;
   /** DEC-01 D8: demo somente leitura; esta barreira sempre rejeita escrita. */
   beforeExternalWrite(): void;
@@ -32,6 +42,9 @@ export class TurnRuntime {
   private readonly concurrency: number;
   private readonly intervalMs: number;
   private healthy = true;
+  private lastPurge = Number.NEGATIVE_INFINITY;
+  /** D7: intervalo entre varreduras de expiração (o banco é a fonte de verdade; perder uma varredura só atrasa). */
+  static readonly PURGE_INTERVAL_MS = 60_000;
 
   constructor(readonly store: TurnStore, private readonly options: RuntimeOptions = {}) {
     this.concurrency = options.concurrency ?? 2;
@@ -60,6 +73,11 @@ export class TurnRuntime {
     if (this.stopped) return;
     try {
       this.store.recover();
+      if (this.store.now() - this.lastPurge >= TurnRuntime.PURGE_INTERVAL_MS) {
+        this.lastPurge = this.store.now();
+        // Falha de expurgo não derruba a fila: o próximo ciclo tenta de novo (falhas por conversa já são isoladas).
+        try { this.store.purge(); } catch { /* sem logar caminho/identidade */ }
+      }
       if (!this.healthy) return;
       for (const slot of this.active.values()) {
         if (!this.store.heartbeat(slot.job)) {
@@ -86,6 +104,14 @@ export class TurnRuntime {
     try {
       const result = await this.options.processor!({
         event: structuredClone(job.event), snapshot: structuredClone(job.snapshot), signal: controller.signal,
+        purchase: structuredClone(job.purchase),
+        previewDomain: (change) => {
+          const next = nextPurchase(job.purchase, change, {
+            seed: scopeKey(job.principal), eventId: job.operation.eventId, maxParticipants: this.store.limits.maxParticipants,
+          }).state;
+          // Mesma versão que o commit vai gravar (versão do snapshot resultante).
+          return next && { ...next, version: job.snapshot.version + 1 };
+        },
         beforeExternalWrite: () => {
           // D8 não permite habilitar escrita nem por flag nem por aprovação fictícia.
           throw new ContractError('ACTION_UNAVAILABLE');

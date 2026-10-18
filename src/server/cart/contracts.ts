@@ -2,6 +2,7 @@
 // sem captura autenticada de cart; formatos não reconhecidos nunca viram preço confirmado.
 import { z } from 'zod';
 import { extractErrors } from '../mcp/errors.js';
+import { brlToCents } from '../domain/money.js';
 
 export class CartError extends Error {
   constructor(readonly code: string, message: string, readonly status: 400 | 403 | 404 | 409 | 410 | 502 | 503 = 409,
@@ -20,7 +21,10 @@ export const itemInput = z.object({ itemRef: ref, quantity: z.number().int().min
 const selectedOption = z.object({ optionId: id, quantity: z.number().int().positive() });
 const cartItem = z.object({ cartItemId: id, itemId: id, quantity: z.number().int().positive(),
   options: z.array(selectedOption), customerNote: z.string().optional() });
-const money = z.number().finite().nonnegative().refine((n) => Number.isSafeInteger(Math.round(n * 100)) && Math.abs(n * 100 - Math.round(n * 100)) < 0.000001);
+// Fronteira do adaptador legado: saídas BRL sintéticas viram centavos antes de qualquer cálculo.
+const money = z.number().finite().nonnegative().refine((n) => {
+  try { brlToCents(n); return true; } catch { return false; }
+}).transform(brlToCents);
 const totals = z.object({ subtotal: money, deliveryFee: money, serviceFee: money, discount: money, total: money });
 const snapshotSchema = z.object({ cartId: id, merchantId: id, addressId: id, items: z.array(cartItem),
   totals: totals.optional(),
@@ -69,8 +73,8 @@ export function parseSnapshot(raw: unknown): Snapshot {
 export function confirmedTotals(s: Snapshot) {
   const t = s.totals;
   if (!t) return { status: 'UNAVAILABLE' as const, values: null };
-  const values = { subtotalCents: Math.round(t.subtotal * 100), deliveryFeeCents: Math.round(t.deliveryFee * 100),
-    serviceFeeCents: Math.round(t.serviceFee * 100), discountCents: Math.round(t.discount * 100), totalCents: Math.round(t.total * 100) };
+  const values = { subtotalCents: t.subtotal, deliveryFeeCents: t.deliveryFee,
+    serviceFeeCents: t.serviceFee, discountCents: t.discount, totalCents: t.total };
   const expected = BigInt(values.subtotalCents) + BigInt(values.deliveryFeeCents) + BigInt(values.serviceFeeCents) - BigInt(values.discountCents);
   return { status: expected >= 0n && expected === BigInt(values.totalCents) ? 'CONSISTENT' as const : 'DIVERGENT' as const, values };
 }

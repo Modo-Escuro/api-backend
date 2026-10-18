@@ -160,7 +160,7 @@ Identidade da conta: `getUser` com `includeProfileData=false` (contrato observad
   `options.mandatory[].totalCents`, `confirmedTotalCents` (sempre `null`), etc.
 - Quando o preço é ambíguo (`status: "UNCERTAIN"`), `unitTotalCents`/`estimatedTotalCents` vêm `null` e só as faixas valem.
 - Mensagens (`blockers[].message`, `notes`) continuam em texto "R$ x.yz" para leitura humana.
-- Internamente o domínio usa BRL decimal; a conversão é feita só na borda (`src/server/services/cents.ts`).
+- O domínio também usa centavos inteiros; BRL do MCP é convertido na normalização. `src/server/services/cents.ts` só projeta os nomes do contrato, sem multiplicar novamente. Ver DOM-01 na seção 11.
 
 ## 8. Recomendações ranqueadas (`/api/evaluate` — F4)
 
@@ -196,8 +196,8 @@ Detalhe da implementação (pesos, critérios, política de dado ausente, testes
   ou `UNKNOWN` em qualquer teto impede a sugestão validada. Sem teto, preço aberto continua explicitamente
   incerto. Detalhes e regressões: `docs/ranking.md`, seção 10.
 - Garantias: restrição obrigatória vence qualquer pontuação (preço/promoção/avaliação preferência não compensam
-  bloqueio); empate é determinístico (score desc → ordem da busca → `itemId`); os textos de `ranking` não têm
-  dinheiro e passam intactos na saída em centavos (seção 7).
+  bloqueio); empate é determinístico (score desc → ordem da busca → `itemId`); os campos numéricos de `ranking` não incluem
+  valores monetários; os textos podem apresentar valores em reais formatados a partir de centavos e passam intactos (seção 7).
 
 Exemplo real (fixtures de teste, `query: "lanche vegano"`, `priority: "ECONOMY"`) — recorte:
 
@@ -279,3 +279,11 @@ Contrato legado, fora da demo [DEC-01 D8](decisoes-conversacionais.md): manter `
 Rotas em `/api/bot/cart` usam a mesma autenticação de adaptador deste documento, JSON estrito, centavos inteiros e vínculo operacional. O contrato completo de endpoints, corpos, respostas, estados e retries está em [f7-cart-checkout.md](f7-cart-checkout.md#endpoints-do-telegram).
 
 Fluxo: consultar `/catalog` com endereço da conta → escolher itemRef/opções → criar carrinho → consultar e selecionar entrega/pagamento/cupom → ler getCart → revisão informativa. O bot gera requestId por intenção e preserva em retries. Não inventar referências nem obter IDs da LLM. A revisão não oferece compra: approve/submit retornam CHECKOUT_DISABLED. RESULT_UNKNOWN exige reconciliação, nunca um novo requestId automático. Cartões não expõem tokens e a configuração real ainda depende da validação das saídas MCP; as correções #2/#3 já estão incorporadas. O catálogo devolve resultados parciais e erros sanitizados por candidato; tentativas de releitura com o mesmo requestId não repetem escritas confirmadas.
+
+## 11. DOM-01 — Limites locais e total parcial
+
+O domínio agora também calcula em centavos; campos HTTP `*Cents` mantêm a unidade, sem reconversão. `refinements` de prazo, distância, frete, nota e promoção são condições obrigatórias também verificadas localmente. O campo aditivo `softLimits` aceita os mesmos alvos, sem `sort`, como preferências: não filtra MCP e não bloqueia elegibilidade. Cada candidato expõe resultados em `limits`; campos de frete usam `*Cents`.
+
+Taxa de serviço não observada no catálogo é `service:{feeCents:null,status:UNKNOWN}`. `itemsAndDeliverySubtotalCents` contém apenas itens + entrega conhecidos. **Mudança semântica:** `estimatedTotalCents` não afirma mais esse subtotal como total completo; fica `null`, com limite superior desconhecido em `estimatedTotalRange`. Orçamento total só passa com todos os componentes relevantes conhecidos; mínimo acima do teto ainda reprova. Não reconstruir total com `null ?? 0` no cliente. Exemplos anteriores de total fechado sem taxa de serviço são históricos e substituídos por esta regra.
+
+Conversão BRL, precisão, faixas, rateio e limites de integração: [dom-01-centavos-limites.md](dom-01-centavos-limites.md).

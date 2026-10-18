@@ -15,7 +15,8 @@
 // Como o MCP não documenta a semântica e só o carrinho confirmaria, NÃO escolhemos: o preço vira uma faixa
 // [OPTIONS_ARE_PRICE com promo, BASE_PLUS_OPTIONS] e o status fica UNCERTAIN.
 
-import { money, val } from './fields.js';
+import { val } from './fields.js';
+import { cents as money, addCents, multiplyCents, formatCents } from './money.js';
 import { indexOptions, type NormalizedItemDetail, type NormalizedListingItem } from './normalize.js';
 import { cheapestRequiredSelection, type OptionSelection } from './configuration.js';
 
@@ -31,6 +32,7 @@ export type PriceFlag =
   /** promotionalUnitPrice > unitPrice. */
   | 'PRICE_ANOMALY';
 
+/** Faixa monetária em centavos; null é desconhecido, nunca zero. */
 export interface PriceRange {
   min: number | null;
   max: number | null;
@@ -60,6 +62,7 @@ export interface FromPricePattern {
   groupIds: string[];
 }
 
+/** Valores monetários em centavos inteiros, da normalização à view. */
 export interface PriceBreakdown {
   kind: PriceKind;
   currency: 'BRL';
@@ -91,6 +94,10 @@ export interface PriceBreakdown {
   fromPricePattern: FromPricePattern;
   totalDiscount: number;
   delivery: { fee: number | null; promotionalFeeApplied: boolean; source: 'searchOffers' | null };
+  /** Taxa de serviço não observada no catálogo; não é inferida nem completada com zero. */
+  service: { fee: null; status: 'UNKNOWN' };
+  /** Subtotal parcial, sem taxa de serviço; não é total do pedido. */
+  itemsAndDeliverySubtotal: number | null;
   estimatedTotal: number | null;
   estimatedTotalRange: PriceRange;
   minimumOrder: {
@@ -119,15 +126,14 @@ const CONFIRMATION = {
   reason: 'Total confirmado só existe no carrinho do iFood (fora do escopo do MVP); taxas de serviço e cupons não incluídos',
 };
 
-const EPS = 0.005;
-const near = (a: number, b: number) => Math.abs(a - b) < EPS;
+const near = (a: number, b: number) => a === b;
 const mulRange = (r: PriceRange, k: number): PriceRange => ({
-  min: r.min === null ? null : money(r.min * k),
-  max: r.max === null ? null : money(r.max * k),
+  min: r.min === null ? null : multiplyCents(r.min, k),
+  max: r.max === null ? null : multiplyCents(r.max, k),
 });
 const addRange = (r: PriceRange, v: number | null): PriceRange => ({
-  min: r.min === null || v === null ? null : money(r.min + v),
-  max: r.max === null || v === null ? null : money(r.max + v),
+  min: r.min === null || v === null ? null : addCents(r.min, v),
+  max: r.max === null || v === null ? null : addCents(r.max, v),
 });
 
 /** Detecta o padrão "unitPrice = Σ opções obrigatórias mínimas" (evidência de preço 'a partir de'). */
@@ -145,7 +151,7 @@ export function detectFromPricePattern(detail: NormalizedItemDetail): FromPriceP
     if (prices.some((p) => p === undefined) || prices.length < min) return none;
     const cheapest = (prices as number[]).sort((a, b) => a - b).slice(0, min).reduce((a, b) => a + b, 0);
     if (cheapest > 0) groupIds.push(g.optionGroupId);
-    sum += cheapest;
+    sum = addCents(sum, cheapest);
   }
   sum = money(sum);
   if (sum <= 0) return { ...none, requiredMinimumSum: sum };
@@ -156,7 +162,7 @@ export function detectFromPricePattern(detail: NormalizedItemDetail): FromPriceP
 }
 
 export function computePrice({ detail, listing, selection = [], quantity = 1, kind = 'SELECTED' }: PriceInput): PriceBreakdown {
-  if (!Number.isInteger(quantity) || quantity < 1) throw new RangeError(`quantidade inválida: ${quantity}`);
+  if (!Number.isSafeInteger(quantity) || quantity < 1) throw new RangeError(`quantidade inválida: ${quantity}`);
   if (listing && (listing.itemId !== detail.itemId || listing.merchant.merchantId !== detail.merchantId)) {
     throw new Error('listing e getItem referem-se a itens/lojas diferentes');
   }
@@ -179,7 +185,7 @@ export function computePrice({ detail, listing, selection = [], quantity = 1, ki
     const e = index.get(s.optionId);
     if (!e) throw new Error(`optionId não pertence a este item: ${s.optionId}`);
     const q = s.quantity ?? 1;
-    if (!Number.isInteger(q) || q < 1) throw new RangeError(`quantidade inválida para opção ${s.optionId}: ${q}`);
+    if (!Number.isSafeInteger(q) || q < 1) throw new RangeError(`quantidade inválida para opção ${s.optionId}: ${q}`);
     if (q > 1) {
       flags.add('OPTION_REPEAT_UNVERIFIED');
       notes.push(`"${val(e.option.name) ?? s.optionId}" ×${q}: cobrança de repetição não informada pelo iFood (assumido preço × quantidade)`);
@@ -196,14 +202,14 @@ export function computePrice({ detail, listing, selection = [], quantity = 1, ki
       name: val(e.option.name) ?? null,
       quantity: q,
       unitAdditionalPrice: unitAdd,
-      total: unitAdd === null ? null : money(unitAdd * q),
+      total: unitAdd === null ? null : multiplyCents(unitAdd, q),
     };
     (e.group.required ? mandatory : additional).push(priced);
   }
-  const sum = (xs: PricedOption[]) => money(xs.reduce((a, o) => a + (o.total ?? 0), 0));
+  const sum = (xs: PricedOption[]) => addCents(...xs.map((o) => o.total ?? 0));
   const mandatoryTotalPerUnit = sum(mandatory);
   const additionalTotalPerUnit = sum(additional);
-  const optionsSum = money(mandatoryTotalPerUnit + additionalTotalPerUnit);
+  const optionsSum = addCents(mandatoryTotalPerUnit, additionalTotalPerUnit);
   const missingPrice = flags.has('OPTION_PRICE_MISSING');
 
   // ---- interpretações
@@ -214,7 +220,7 @@ export function computePrice({ detail, listing, selection = [], quantity = 1, ki
   if (basePrice === null) {
     notes.push('Preço-base indisponível (getItem sem unitPrice/promotionalUnitPrice)');
   } else {
-    unitTotal = money(basePrice + optionsSum);
+    unitTotal = addCents(basePrice, optionsSum);
     const a: PriceRange = { min: unitTotal, max: missingPrice ? null : unitTotal };
     interpretations.push({ id: 'BASE_PLUS_OPTIONS', description: 'preço-base + Σ additionalPrice (regra documentada)', unitTotal: a });
     unitTotalRange = a;
@@ -237,16 +243,16 @@ export function computePrice({ detail, listing, selection = [], quantity = 1, ki
         min: a.min === null || b.min === null ? null : Math.min(a.min, b.min),
         max: a.max === null || b.max === null ? null : Math.max(a.max, b.max),
       };
-      const fmt = (v: number | null) => (v === null ? '?' : `R$ ${v.toFixed(2)}`);
+      const fmt = (v: number | null) => (v === null ? '?' : formatCents(v));
       notes.push(
-        `Semântica de preço ambígua: unitPrice (${pattern.matches === 'UNIT_PRICE' ? listPrice : promotionalPrice}) = Σ opções obrigatórias mínimas (${pattern.requiredMinimumSum}). ` +
+        `Semântica de preço ambígua: unitPrice (${fmt(pattern.matches === 'UNIT_PRICE' ? listPrice : promotionalPrice)}) = Σ opções obrigatórias mínimas (${fmt(pattern.requiredMinimumSum)}). ` +
           `Faixa ${fmt(unitTotalRange.min)}–${fmt(unitTotalRange.max)} por unidade; só o carrinho confirma.`,
       );
     }
   }
-  const itemsSubtotal = unitTotal === null ? null : money(unitTotal * quantity);
+  const itemsSubtotal = unitTotal === null ? null : multiplyCents(unitTotal, quantity);
   const itemsSubtotalRange = mulRange(unitTotalRange, quantity);
-  const totalDiscount = money(p.discountPerUnit * quantity);
+  const totalDiscount = multiplyCents(p.discountPerUnit, quantity);
 
   // ---- entrega (somente listagem; não confirmada)
   const dm = listing ? val(listing.merchant.delivery) : undefined;
@@ -254,8 +260,12 @@ export function computePrice({ detail, listing, selection = [], quantity = 1, ki
   if (!listing) notes.push('Taxa de entrega desconhecida (sem dados da listagem)');
   else if (fee === null) notes.push('Taxa de entrega não informada');
   else notes.push('Taxa de entrega da listagem (searchOffers) — pode mudar no carrinho');
-  const estimatedTotal = itemsSubtotal === null || fee === null ? null : money(itemsSubtotal + fee);
-  const estimatedTotalRange = addRange(itemsSubtotalRange, fee);
+  const itemsAndDeliverySubtotal = flags.size > 0 || itemsSubtotal === null || fee === null ? null : addCents(itemsSubtotal, fee);
+  const partialRange = addRange(itemsSubtotalRange, fee);
+  // Taxa de serviço ausente: preserva limite inferior conhecido, nunca garante teto do pedido.
+  const estimatedTotal = null;
+  const estimatedTotalRange = { min: partialRange.min ?? itemsSubtotalRange.min, max: null };
+  notes.push('Taxa de serviço desconhecida no catálogo; itens + entrega são subtotal parcial, não total completo');
 
   // ---- pedido mínimo (getItem é a fonte principal; listagem como fallback). Compara com o subtotal de itens.
   const minDetail = val(detail.merchantMinimumOrderAmount);
@@ -274,13 +284,13 @@ export function computePrice({ detail, listing, selection = [], quantity = 1, ki
       min: hi === null ? null : money(Math.max(0, amount - hi)),
       max: lo === null ? null : money(Math.max(0, amount - lo)),
     };
-    if (met === false) notes.push(`Abaixo do pedido mínimo: faltam R$ ${missingAmount.max!.toFixed(2)}`);
+    if (met === false) notes.push(`Abaixo do pedido mínimo: faltam ${formatCents(missingAmount.max!)}`);
     if (met === null && lo !== null) notes.push('Não é possível afirmar se o pedido mínimo é atingido (preço em faixa)');
   }
 
   const listingBase = listing?.price.basePrice ?? null;
   const differs = listingBase === null || basePrice === null ? null : listingBase !== basePrice;
-  if (differs) notes.push(`Preço da listagem (R$ ${listingBase!.toFixed(2)}) difere do getItem (R$ ${basePrice!.toFixed(2)}); vale o getItem`);
+  if (differs) notes.push(`Preço da listagem (${formatCents(listingBase!)}) difere do getItem (${formatCents(basePrice!)}); vale o getItem`);
 
   const flagList = [...flags];
   return {
@@ -313,6 +323,8 @@ export function computePrice({ detail, listing, selection = [], quantity = 1, ki
     },
     estimatedTotal,
     estimatedTotalRange,
+    itemsAndDeliverySubtotal,
+    service: { fee: null, status: 'UNKNOWN' },
     minimumOrder: { amount, source, met, missingAmount },
     listingComparison: { listingBasePrice: listingBase, detailBasePrice: basePrice, differs },
     notes,

@@ -1,14 +1,13 @@
-// Conversão explícita BRL decimal (domínio, CLAUDE.md) ↔ centavos inteiros (contrato do bot, docs/bot-api.md).
+// Projeção dos centavos do domínio para nomes *Cents do contrato do bot, sem multiplicar novamente.
 // Todo campo monetário do contrato do bot termina em `Cents`. Textos (notes/mensagens) continuam em "R$ x,yz".
 
+import { cents } from '../domain/money.js';
 import type { PriceRange } from '../domain/pricing.js';
 import type { candidateView, evaluateView } from './evaluate-view.js';
 
-/** Valores do domínio já estão arredondados a centavos; Math.round absorve o erro de ponto flutuante (32.9*100). */
-export const toCents = (v: number | null | undefined): number | null => (v === null || v === undefined ? null : Math.round(v * 100));
-export const fromCents = (c: number): number => c / 100;
+const centsValue = (v: number | null | undefined): number | null => v == null ? null : cents(v);
 
-const rangeCents = (r: PriceRange) => ({ minCents: toCents(r.min), maxCents: toCents(r.max) });
+const rangeCents = (r: PriceRange) => ({ minCents: centsValue(r.min), maxCents: centsValue(r.max) });
 
 type Candidate = ReturnType<typeof candidateView>;
 type PriceView = NonNullable<Candidate['pricing']['minimumConfigurable']>;
@@ -21,8 +20,8 @@ function priceCents(p: PriceView | null) {
     groupName: o.groupName,
     name: o.name,
     quantity: o.quantity,
-    unitAdditionalPriceCents: toCents(o.unitAdditionalPrice),
-    totalCents: toCents(o.total),
+    unitAdditionalPriceCents: centsValue(o.unitAdditionalPrice),
+    totalCents: centsValue(o.total),
   });
   return {
     kind: p.kind,
@@ -30,35 +29,37 @@ function priceCents(p: PriceView | null) {
     flags: p.flags,
     quantity: p.quantity,
     unit: {
-      listPriceCents: toCents(p.unit.listPrice),
-      promotionalPriceCents: toCents(p.unit.promotionalPrice),
-      basePriceCents: toCents(p.unit.basePrice),
+      listPriceCents: centsValue(p.unit.listPrice),
+      promotionalPriceCents: centsValue(p.unit.promotionalPrice),
+      basePriceCents: centsValue(p.unit.basePrice),
       promotionApplied: p.unit.promotionApplied,
-      discountPerUnitCents: toCents(p.unit.discountPerUnit),
+      discountPerUnitCents: centsValue(p.unit.discountPerUnit),
       discountPercent: p.unit.discountPercent,
     },
     options: {
       mandatory: p.options.mandatory.map(opt),
       additional: p.options.additional.map(opt),
-      mandatoryTotalPerUnitCents: toCents(p.options.mandatoryTotalPerUnit),
-      additionalTotalPerUnitCents: toCents(p.options.additionalTotalPerUnit),
+      mandatoryTotalPerUnitCents: centsValue(p.options.mandatoryTotalPerUnit),
+      additionalTotalPerUnitCents: centsValue(p.options.additionalTotalPerUnit),
     },
-    unitTotalCents: toCents(p.unitTotal),
+    unitTotalCents: centsValue(p.unitTotal),
     unitTotalRange: rangeCents(p.unitTotalRange),
     itemsSubtotalRange: rangeCents(p.itemsSubtotalRange),
-    estimatedTotalCents: toCents(p.estimatedTotal),
+    estimatedTotalCents: centsValue(p.estimatedTotal),
     estimatedTotalRange: rangeCents(p.estimatedTotalRange),
+    itemsAndDeliverySubtotalCents: centsValue(p.itemsAndDeliverySubtotal),
+    service: { feeCents: null, status: p.service.status },
     interpretations: p.interpretations.map((i) => ({ id: i.id, description: i.description, unitTotalRange: rangeCents(i.unitTotal) })),
-    delivery: { feeCents: toCents(p.delivery.fee), promotionalFeeApplied: p.delivery.promotionalFeeApplied, source: p.delivery.source },
+    delivery: { feeCents: centsValue(p.delivery.fee), promotionalFeeApplied: p.delivery.promotionalFeeApplied, source: p.delivery.source },
     minimumOrder: {
-      amountCents: toCents(p.minimumOrder.amount),
+      amountCents: centsValue(p.minimumOrder.amount),
       source: p.minimumOrder.source,
       met: p.minimumOrder.met,
       missingAmount: rangeCents(p.minimumOrder.missingAmount),
     },
     listingComparison: {
-      listingBasePriceCents: toCents(p.listingComparison.listingBasePrice),
-      detailBasePriceCents: toCents(p.listingComparison.detailBasePrice),
+      listingBasePriceCents: centsValue(p.listingComparison.listingBasePrice),
+      detailBasePriceCents: centsValue(p.listingComparison.detailBasePrice),
       differs: p.listingComparison.differs,
     },
     confirmation: { status: p.confirmation.status, totalCents: null, reason: p.confirmation.reason },
@@ -68,12 +69,18 @@ function priceCents(p: PriceView | null) {
 
 /** Genérico para preservar campos extras (ex.: `ranking` das recomendações) na saída em centavos. */
 function candidateCents<C extends Candidate>(c: C) {
-  const { listingPrice, pricing, ...rest } = c;
+  const { listingPrice, pricing, limits, ...rest } = c;
   return {
     ...rest,
+    limits: limits.map((check) => {
+      if (check.metric !== 'maxDeliveryFee') return check;
+      const observed = check.observed && typeof check.observed === 'object' ? rangeCents(check.observed) : null;
+      return { metric: 'maxDeliveryFeeCents', requirement: check.requirement, status: check.status,
+        limitCents: centsValue(check.limit as number), observed };
+    }),
     listingPrice: {
-      unitPriceCents: toCents(listingPrice.unitPrice),
-      promotionalUnitPriceCents: toCents(listingPrice.promotionalUnitPrice),
+      unitPriceCents: centsValue(listingPrice.unitPrice),
+      promotionalUnitPriceCents: centsValue(listingPrice.promotionalUnitPrice),
       definitive: listingPrice.definitive,
     },
     pricing: {

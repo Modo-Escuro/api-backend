@@ -116,7 +116,8 @@ describe('ranking no pipeline /api/evaluate (fixtures reais)', () => {
       const p = r.pricing.minimumConfigurable!;
       expect(Number.isInteger(p.unitTotalCents)).toBe(true);
       expect(Number.isInteger(p.unitTotalRange.minCents)).toBe(true);
-      expect(Number.isInteger(p.estimatedTotalRange.maxCents)).toBe(true);
+      expect(p.estimatedTotalRange.maxCents).toBeNull(); // serviço desconhecido impede teto completo
+      expect(Number.isInteger(p.estimatedTotalRange.minCents)).toBe(true);
     }
     for (const r of [...c.eligible, ...c.blocked, ...c.needsVerification]) expect(r.pricing.confirmedTotalCents).toBeNull();
 

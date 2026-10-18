@@ -20,7 +20,7 @@ describe('runEvaluation + view (fixtures reais)', () => {
     const brooks = byName(v.eligible, 'Vegano Brooks')!;
     expect(brooks.restrictions[0]).toMatchObject({ status: 'PASS', source: 'SERVER_FILTER', coversOptions: false });
     expect(brooks.restrictions[0]!.blockedOptions).toEqual([expect.objectContaining({ name: 'Nuggets de frango' })]);
-    expect(brooks.pricing.minimumConfigurable).toMatchObject({ status: 'ESTIMATED', estimatedTotal: 42.9 });
+    expect(brooks.pricing.minimumConfigurable).toMatchObject({ status: 'ESTIMATED', itemsAndDeliverySubtotal: 4290, estimatedTotal: null });
     expect(brooks.pricing.confirmedTotal).toBeNull();
 
     // Conflito filtro × descrição ("muçarela", "maionese") ⇒ UNKNOWN ⇒ bloqueado (obrigatória)
@@ -44,12 +44,12 @@ describe('runEvaluation + view (fixtures reais)', () => {
   });
 
   it('pizza com teto 100: faixa 65–143 preservada, orçamento não verificável ⇒ pendente de verificação', async () => {
-    const v = evaluateView(await runEvaluation({ query: 'pizza', restrictions: [], budget: { maxItemPrice: 100 } }, fake()));
+    const v = evaluateView(await runEvaluation({ query: 'pizza', restrictions: [], budget: { maxItemPrice: 10000 } }, fake()));
     const pizza = v.needsVerification.find((c) => c.item.name === 'Promoção pizza grande')!;
     expect(pizza.pricing.minimumConfigurable).toMatchObject({ status: 'UNCERTAIN', unitTotal: null, flags: ['AMBIGUOUS_OPTION_PRICING'] });
     expect(pizza.pricing.minimumConfigurable!.interpretations.map((i) => i.id)).toEqual(['BASE_PLUS_OPTIONS', 'OPTIONS_ARE_PRICE']);
     expect(pizza.blockers.map((b) => b.code)).toEqual(['ITEM_BUDGET_UNVERIFIED']);
-    expect(pizza.listingPrice).toEqual({ unitPrice: 78, promotionalUnitPrice: 78, definitive: false });
+    expect(pizza.listingPrice).toEqual({ unitPrice: 7800, promotionalUnitPrice: 7800, definitive: false });
     expect(v.summary.blockerCounts.ITEM_BUDGET_UNVERIFIED).toBeGreaterThan(0);
   });
 

@@ -16,15 +16,15 @@ describe('checkCap', () => {
 });
 
 describe('restrições obrigatórias precedem o resto', () => {
-  it('vegano real (filtro iFood, sem conflito) elegível com configuração mínima', () => {
+  it('dieta passa, mas teto do pedido não é verificável sem serviço conhecido', () => {
     const d = item('Vegano Brooks');
-    const e = evaluateCandidate({ listing: listingFor(d.itemId), detail: d, serverFilters: ['VEGAN'] }, { restrictions: [VEGAN], budget: { maxOrderTotal: 50 } });
-    expect(e.eligible).toBe(true);
+    const e = evaluateCandidate({ listing: listingFor(d.itemId), detail: d, serverFilters: ['VEGAN'] }, { restrictions: [VEGAN], budget: { maxOrderTotal: 5000 } });
+    expect(e.eligible).toBe(false);
     expect(e.selection?.source).toBe('MINIMUM_CONFIGURABLE');
-    expect(e.pricing.minimumConfigurable).toMatchObject({ status: 'ESTIMATED', estimatedTotal: 42.9 });
+    expect(e.pricing.minimumConfigurable).toMatchObject({ status: 'ESTIMATED', itemsAndDeliverySubtotal: 4290, estimatedTotal: null });
     expect(e.pricing.selected).toBeNull();
     expect(e.pricing.confirmedTotal).toBeNull();
-    expect(e.budget).toEqual({ itemPrice: null, orderTotal: 'PASS' });
+    expect(e.budget).toEqual({ itemPrice: null, orderTotal: 'UNKNOWN' });
   });
 
   it('obrigatória UNKNOWN (sem evidência) bloqueia', () => {
@@ -99,15 +99,15 @@ describe('orçamento e preço ambíguo', () => {
   const l = listingFor(d.itemId);
 
   it('faixa 65–143 com teto 100 ⇒ não verificável ⇒ bloqueia', () => {
-    const e = evaluateCandidate({ listing: l, detail: d, serverFilters: [] }, { restrictions: [], budget: { maxItemPrice: 100 } });
+    const e = evaluateCandidate({ listing: l, detail: d, serverFilters: [] }, { restrictions: [], budget: { maxItemPrice: 10000 } });
     expect(e.budget.itemPrice).toBe('UNKNOWN');
     expect(codes(e.blockers)).toEqual(['ITEM_BUDGET_UNVERIFIED']);
     expect(codes(e.warnings)).toContain('PRICE_AMBIGUOUS');
   });
 
   it('teto acima da faixa inteira ⇒ PASS; abaixo do mínimo ⇒ FAIL', () => {
-    expect(evaluateCandidate({ listing: l, detail: d, serverFilters: [] }, { restrictions: [], budget: { maxItemPrice: 150 } }).eligible).toBe(true);
-    const e = evaluateCandidate({ listing: l, detail: d, serverFilters: [] }, { restrictions: [], budget: { maxItemPrice: 60 } });
+    expect(evaluateCandidate({ listing: l, detail: d, serverFilters: [] }, { restrictions: [], budget: { maxItemPrice: 15000 } }).eligible).toBe(true);
+    const e = evaluateCandidate({ listing: l, detail: d, serverFilters: [] }, { restrictions: [], budget: { maxItemPrice: 6000 } });
     expect(codes(e.blockers)).toEqual(['OVER_ITEM_BUDGET']);
   });
 });
@@ -135,14 +135,14 @@ describe('configuração do usuário', () => {
 });
 
 describe('disponibilidade e detalhe', () => {
-  it('loja fechada bloqueia; isOpen ausente vira aviso', () => {
+  it('loja fechada ou sem disponibilidade conhecida bloqueia', () => {
     const d = item('Veggie Burger');
     const raw = fx('searchOffers-hamburguer-vegan.json').results.find((r: { itemId: string }) => r.itemId === d.itemId);
     raw.merchant.isOpen = false;
     expect(codes(evaluateCandidate({ listing: normalizeListingItem(raw), detail: d, serverFilters: [] }, { restrictions: [] }).blockers)).toEqual(['MERCHANT_CLOSED']);
     delete raw.merchant.isOpen;
     const e = evaluateCandidate({ listing: normalizeListingItem(raw), detail: d, serverFilters: [] }, { restrictions: [] });
-    expect(e).toMatchObject({ availability: 'UNKNOWN', eligible: true });
+    expect(e).toMatchObject({ availability: 'UNKNOWN', eligible: false });
   });
 
   it('sem getItem ⇒ não recomendável', () => {
