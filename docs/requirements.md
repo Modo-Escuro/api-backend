@@ -1,5 +1,11 @@
 # Requisitos — Compra com Contexto (SEMCOMP × iFood)
 
+## Estado deste documento
+
+Este é o recorte histórico de recomendação da API. O [plano vigente](plano-conversacional.md) amplia a entrega para conversa, grupo e fechamento aprovado, sem declarar essas capacidades implementadas. Preservam-se os IDs FR e o conteúdo histórico para rastreabilidade.
+
+Aplicar os invariantes atuais em qualquer implementação: UNKNOWN em restrição obrigatória bloqueia; não há opção de ignorar alergia/restrição obrigatória para viabilizar compra. Pontuação não supera elegibilidade. Trechos abaixo sobre ignorar restrição ou comparar PASS > UNKNOWN não autorizam flexibilização. Compra exige aprovação humana válida; dinheiro interno decimal será migrado para centavos em DOM-01. A StRS e o plano distinguem requisito, decisão aberta, proposta e implementação.
+
 Fonte da verdade do MVP. Escopo fechado: **recomendação explicada**, sem checkout.
 
 ## 1. Contexto e objetivo

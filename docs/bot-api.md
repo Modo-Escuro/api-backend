@@ -1,5 +1,7 @@
 # Contrato bot Telegram → api-backend (F3.5 — login iFood do organizador)
 
+**Atualização de contexto — 18/10/2026:** este arquivo descreve o contrato existente. [Plano de execução](plano-conversacional.md) e [contrato proposto de conversa](https://github.com/Modo-Escuro/telegram-bot/blob/codex/plano-conversacional/docs/contrato-conversa-proposto.md) especificam o trabalho futuro. Login online foi ensaiado com PUBLIC_BASE_URL HTTPS e callback /callback; referências localhost nos exemplos são de desenvolvimento, não obrigação para o usuário do serviço online. Bot usa BACKEND_BASE_URL e BACKEND_API_TOKEN; API usa BOT_API_TOKEN. Não há aprovação de compra neste contrato.
+
 Status: **implementado no api-backend** (2026-10-17). Decisões aceitas: confirmação por **botão** (sem código digitado),
 `BOT_API_TOKEN` + `X-Telegram-User-Id`, dinheiro em **centavos inteiros** no contrato do bot, demo com um organizador.
 Base: `telegram-bot/docs/login-ifood.md`. Login **não** aprova compra; não há operação de compra no backend.
@@ -92,7 +94,7 @@ Operações de conta (mesma autenticação; exigem vínculo confirmado **e** ope
 ```
 1. /start ou "Conectar":   POST /connect  → 201 { authorizationUrl, attempt.expiresAt }
    Mensagem com botão-URL "Abrir login do iFood" (authorizationUrl) + aviso:
-   "Abra no navegador DESTE computador (o mesmo do backend). O link vale 10 min."
+   "Abra o link no navegador e volte ao Telegram. O link vale 10 min. Em desenvolvimento localhost, use o computador do backend."
 2. Usuário faz login no navegador. A página final diz "volte ao Telegram e toque em Confirmar conexão".
 3. Bot consulta GET /status (botão "Verificar" ou polling curto, ex.: a cada 5 s por até 10 min):
    - AWAITING_AUTHORIZATION → continuar aguardando ("ainda não concluído" — um "já entrei" não comprova nada)
@@ -156,11 +158,11 @@ Identidade da conta: `getUser` com `includeProfileData=false` (contrato observad
 - Mensagens (`blockers[].message`, `notes`) continuam em texto "R$ x.yz" para leitura humana.
 - Internamente o domínio usa BRL decimal; a conversão é feita só na borda (`src/server/services/cents.ts`).
 
-## 8. Callback localhost
+## 8. Callback por ambiente
 
-Redirect registrado: **`http://localhost:8000`** (exato). Para a demo: Telegram Desktop e navegador **no computador do backend**.
-Abrir pelo celular não funciona (e é bloqueado). Para uso pelo celular seria preciso outro redirect cadastrado no iFood e
-`PUBLIC_BASE_URL` público — e então a proteção "mesma máquina" deixa de existir (restam navegador vinculado + confirmação).
+No desenvolvimento, `http://localhost:8000` exige cadastro exato e navegador no computador do backend.
+No serviço online, o ensaio usou `https://api-backend-production-9c4c.up.railway.app/callback`, com cadastro aprovado segundo o usuário e conexão operacional observada. PUBLIC_BASE_URL e IFOOD_REDIRECT_URI devem coincidir com o ambiente/cadastro; não substituir o HTTPS por defaults locais.
+Com origem pública, a proteção de loopback não se aplica; permanecem navegador vinculado por cookie e confirmação humana do organizador. Consulte o estado observado no bot; esta documentação não verifica continuamente o deploy.
 
 ## 9. Recorte da demo (não é isolamento multiusuário completo)
 
@@ -179,7 +181,7 @@ PUBLIC_BASE_URL=http://localhost:8000
 IFOOD_LINKS_DIR=.ifood-links
 
 # telegram-bot (sugestão de nomes; decisão do bot)
-BACKEND_URL=http://localhost:8000
-BOT_API_TOKEN=<o mesmo segredo>
+BACKEND_BASE_URL=http://localhost:8000
+BACKEND_API_TOKEN=<o mesmo segredo BOT_API_TOKEN da API>
 TELEGRAM_ALLOWED_USER_ID=<mesmo ID de ALLOWED_ORGANIZER_IDS>   # enviado como X-Telegram-User-Id
 ```
