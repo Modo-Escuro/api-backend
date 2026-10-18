@@ -64,12 +64,14 @@ export interface EvaluateRequest {
   quantity?: number;
   merchantType?: SearchOffersArgs['merchantType'];
   /** Repassados ao searchOffers (contexto: distância, tempo, avaliação, promoção, ordenação). */
-  refinements?: Pick<SearchRefinements, 'maxDistanceKm' | 'maxDeliveryTimeMinutes' | 'minRating' | 'onlyWithPromotion' | 'maxDeliveryFee' | 'sort'>;
+  refinements?: Pick<SearchRefinements, 'maxDistanceKm' | 'maxDeliveryTimeMinutes' | 'minRating' | 'onlyWithPromotion' | 'maxDeliveryFee' | 'sort' | 'merchantId'>;
   /** Prioridade declarada D9 e preferências flexíveis; nunca alteram elegibilidade. */
   preferences?: UserPreferences;
   /** Alvos flexíveis: não são filtros MCP nem bloqueiam elegibilidade. Frete em centavos. */
   softLimits?: CandidateLimits;
   limits?: Partial<EvaluateLimits>;
+  /** Política interna da exploração GRP-01; nunca recebida do modelo ou do corpo HTTP. */
+  detailPolicy?: { diversifyMerchants: boolean; allow(listing: NormalizedListingItem): boolean };
 }
 
 export class EvaluateInputError extends Error {
@@ -182,6 +184,7 @@ const MIN_CALL_MS = 1_000;
 // ---------------- pipeline ----------------
 
 export async function runEvaluation(req: EvaluateRequest, deps: EvaluateDeps, cache = new ItemCache()): Promise<EvaluateOutcome> {
+  req.signal?.throwIfAborted();
   const now = deps.now ?? Date.now;
   const t0 = now();
   const limits: EvaluateLimits = { ...DEFAULT_LIMITS, ...req.limits };
@@ -227,7 +230,9 @@ export async function runEvaluation(req: EvaluateRequest, deps: EvaluateDeps, ca
   const search: EvaluateOutcome['search'] = { pagesFetched: 0, hasMore: null, candidates: 0, duplicatesRemoved: 0, normalizationSkipped: [], pageErrors: [] };
   let interpretedQuery: string | null = null;
   let token: string | undefined;
+  const pageTokens = new Set<string>();
   for (let page = 1; page <= limits.maxPages; page++) {
+    req.signal?.throwIfAborted();
     if (remaining() < MIN_CALL_MS) {
       deadlineReached = true;
       break;
@@ -255,28 +260,45 @@ export async function runEvaluation(req: EvaluateRequest, deps: EvaluateDeps, ca
     interpretedQuery ??= val(norm.interpretedQuery) ?? null;
     for (const s of norm.skipped) search.normalizationSkipped.push({ page, ...s });
     for (const l of norm.items) {
-      if (seen.has(l.itemId)) {
+      const identity = `${l.merchant.merchantId}:${l.itemId}`;
+      if (seen.has(identity)) {
         search.duplicatesRemoved++;
         continue;
       }
-      seen.add(l.itemId);
+      seen.add(identity);
       if (listings.length < limits.maxCandidates) listings.push({ listing: l, page });
     }
     search.hasMore = val(norm.hasMore) ?? null;
     token = val(norm.nextPageToken);
     if (!token || search.hasMore === false || listings.length >= limits.maxCandidates) break;
+    if (pageTokens.has(token)) break; // cursor cíclico não autoriza repetir uma página
+    pageTokens.add(token);
   }
   search.candidates = listings.length;
 
   // ---- detalhamento: loja fechada não é detalhada; demais na ordem da busca até maxDetails
   const outcomes: DetailOutcome[] = listings.map(() => ({ status: 'SKIPPED_LIMIT' }));
   const toDetail: number[] = [];
-  listings.forEach(({ listing }, i) => {
+  let order = listings.map((_, i) => i);
+  if (req.detailPolicy?.diversifyMerchants) {
+    const byMerchant = new Map<string, number[]>();
+    order.forEach((i) => {
+      const merchant = listings[i]!.listing.merchant.merchantId;
+      byMerchant.set(merchant, [...(byMerchant.get(merchant) ?? []), i]);
+    });
+    order = [];
+    while ([...byMerchant.values()].some((indices) => indices.length)) {
+      for (const indices of byMerchant.values()) if (indices.length) order.push(indices.shift()!);
+    }
+  }
+  order.forEach((i) => {
+    const { listing } = listings[i]!;
     if (val(listing.merchant.isOpen) === false) outcomes[i] = { status: 'SKIPPED_CLOSED' };
-    else if (toDetail.length < limits.maxDetails) toDetail.push(i);
+    else if (toDetail.length < limits.maxDetails && (!req.detailPolicy || req.detailPolicy.allow(listing))) toDetail.push(i);
   });
 
   await mapLimit(toDetail, limits.concurrency, async (i) => {
+    req.signal?.throwIfAborted();
     const { listing } = listings[i]!;
     const args = { itemId: listing.itemId, merchantId: listing.merchant.merchantId, userLocation };
     const key = cache.key(args);

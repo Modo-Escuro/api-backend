@@ -2,6 +2,8 @@
 
 Issue: [#17 GRP-01](https://github.com/Modo-Escuro/api-backend/issues/17) · Base: [DATA-01](data-01-compra.md), [DOM-01](dom-01-centavos-limites.md), [ranking](ranking.md), [AI-02](ai-02-agente.md), [DEC-01](decisoes-conversacionais.md)
 
+Continuação de 18/10: [busca progressiva e diagnóstico](grp-01-busca-progressiva.md), publicada como PR complementar ao #47 já mergeado. Substitui a busca única abaixo por fases limitadas e consultas alimentares individuais, preservando a matriz por pessoa e as regras de composição.
+
 Gera até 4 propostas de compra para o grupo, com cobertura **por pessoa** e custo agregado, a partir de leituras
 MCP (`searchOffers`/`getItem`). A proposta escolhida vira uma **composição local versionada** gravada na compra, fonte única para preparar o carrinho real pela CART-01. A GRP-01 ainda não sincroniza essa composição com o iFood: não chama `createCart`/`addItemToCart`. Essa é uma lacuna de integração, não o escopo final. A escrita exige confirmação PREPARE_CART e INT-02; envio e pagamento seguem proibidos.
 

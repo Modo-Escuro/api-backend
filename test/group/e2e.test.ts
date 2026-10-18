@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ConversationEvent, Operation } from '../../src/server/contracts/conversation';
 import { DeterministicModel } from '../../src/server/agent/mock-model';
 import { createAgentProcessor } from '../../src/server/agent/processor';
+import type { ConversationModel } from '../../src/server/agent/model';
 import { linkedProposalProvider } from '../../src/server/services/group';
 import { TurnRuntime } from '../../src/server/turns/runtime';
 import { TurnStore } from '../../src/server/turns/store';
@@ -22,13 +23,13 @@ describe('GRP-01 ponta a ponta com AI-02 + DATA-01 + RUN-01', () => {
   afterEach(() => { cleanup.splice(0).forEach((f) => f()); vi.restoreAllMocks(); });
 
   type Provider = Parameters<typeof createAgentProcessor>[0]['proposals'];
-  async function world(custom?: (env: ReturnType<typeof setup>) => Provider, proposalsTimeoutMs?: number) {
+  async function world(custom?: (env: ReturnType<typeof setup>) => Provider, proposalsTimeoutMs?: number, model: ConversationModel = new DeterministicModel()) {
     const env = setup();
     await connectAndConfirm(env, ORG_A);
     await connectAndConfirm(env, ORG_B);
     const dir = temporary();
     const make = () => new TurnRuntime(new TurnStore(dir.file), { processor: createAgentProcessor({
-      model: new DeterministicModel(), linkOf: async (org) => (await env.links.status(org)).linkId,
+      model, linkOf: async (org) => (await env.links.status(org)).linkId,
       proposals: custom ? custom(env) : linkedProposalProvider(env.links), timeoutMs: 5_000,
       ...(proposalsTimeoutMs ? { proposalsTimeoutMs } : {}),
     }) });
@@ -57,6 +58,9 @@ describe('GRP-01 ponta a ponta com AI-02 + DATA-01 + RUN-01', () => {
 
   it('grupo → sugestões → escolha → mudança de teto → saída de participante, sem escrita no MCP', async () => {
     const w = await world();
+    // Este cenário continua sem catálogo alimentar classificado. A ampliação filtrada não pode
+    // reapresentar a fixture sem filtro como se fosse nova evidência de vegetarianismo.
+    w.env.mcp.searchPages.push({ results: [], hasMore: false });
     await w.send('Somos Ana, Bia e Caio. Ana não tem restrição. Bia é vegetariana. Caio é alérgico a leite');
     const s1 = w.domain();
     const [ana, bia, caio] = s1.participants.map((p: { participantId: string }) => p.participantId);
@@ -113,6 +117,27 @@ describe('GRP-01 ponta a ponta com AI-02 + DATA-01 + RUN-01', () => {
     w.restart();
     expect(w.domain()).toEqual(before);
     expect((await w.send('pode pedir')).snapshot!.phase).toBe('EDITING_CART');
+  });
+
+  it('Esvaziar sacola limpa somente a composição simulada e preserva contexto após reinício', async () => {
+    const w = await world();
+    await w.send('Somos Ana e Caio. Ana não tem restrição. Caio é alérgico a leite. Teto de R$ 180');
+    await w.send('Sugere pizza');
+    await w.send('Quero a proposta 1');
+    expect(w.domain().bag).toBeDefined();
+    const before = w.domain();
+    const reads = w.env.mcp.used.length;
+    const cleared = await w.send('Esvaziar sacola simulada');
+    expect(cleared.status).toBe('SUCCEEDED');
+    expect(w.domain().bag).toBeUndefined();
+    expect(w.domain().participants).toEqual(before.participants);
+    expect(w.domain().groupLimit).toEqual(before.groupLimit);
+    expect(cleared.snapshot!.blocks.some((b) => b.kind === 'REVIEW')).toBe(false);
+    expect(cleared.snapshot!.humanApproval).toBeNull();
+    w.restart();
+    expect(w.domain().bag).toBeUndefined();
+    expect(w.env.mcp.used).toHaveLength(reads);
+    expect(w.env.mcp.used.every((call) => READ_TOOLS.has(call.op))).toBe(true);
   });
 
   it('falha do MCP na busca não derruba o turno nem perde dados', async () => {
@@ -196,5 +221,36 @@ describe('GRP-01 ponta a ponta com AI-02 + DATA-01 + RUN-01', () => {
     await generateProposals(state, { query: 'pizza' }, deps as never, { seed: 'x', signal: controller.signal });
     expect(seen.length).toBeGreaterThan(0);
     expect(seen.every((sg) => sg === controller.signal)).toBe(true);
+  });
+
+  it('cenário da imagem: motivo e ação útil sobrevivem a consulta/replay/reinício sem outro modelo ou MCP', async () => {
+    const propose = vi.fn().mockResolvedValueOnce({ actions: [
+      { action: 'ADD_PARTICIPANT', name: 'Eu' }, { action: 'ADD_PARTICIPANT', name: 'Namorada' },
+      { action: 'ADD_RESTRICTION', participant: { name: 'Eu' }, restriction: { kind: 'DIETARY', code: 'LACTOSE_FREE' } },
+      { action: 'ADD_RESTRICTION', participant: { name: 'Namorada' }, restriction: { kind: 'ALLERGY', code: 'SEAFOOD' } },
+      { action: 'SET_LIMIT', target: 'GROUP', amountCents: 10_000, kind: 'MANDATORY' },
+    ] }).mockResolvedValueOnce({ actions: [{ action: 'SUGGEST_PROPOSALS', query: 'comida' }] });
+    const w = await world(undefined, undefined, { id: 'synthetic-scenario', propose });
+    w.env.mcp.searchPages.push({ results: [], hasMore: false });
+    await w.send('Eu sem lactose, Namorada com alergia a frutos do mar. Orçamento R$100.');
+    const op = await w.send('Sugere comida');
+    expect(op.status).toBe('SUCCEEDED');
+    expect(op.snapshot!.blocks.filter((b) => b.kind === 'PROPOSAL')).toEqual([]);
+    expect(op.snapshot!.pending.join(' ')).toMatch(/evidência alimentar/);
+    expect(op.snapshot!.pending.join(' ')).toMatch(/Sugere arroz/);
+    expect(op.snapshot!.pending.join(' ')).toMatch(/Só informação, não é recomendação/);
+    expect(w.domain().groupLimit.value.amountCents).toBe(10_000);
+    const reads = w.env.mcp.used.length;
+    for (let i = 0; i < 3; i++) {
+      w.runtime.store.snapshot(principalOf(ORG_A));
+      w.runtime.store.operation(principalOf(ORG_A), op.operationId);
+    }
+    expect(w.runtime.accept(principalOf(ORG_A), msg(2, 'Sugere comida', 1)).status).toBe(200);
+    w.runtime.tick(); await flush();
+    w.restart();
+    expect(w.runtime.store.snapshot(principalOf(ORG_A)).pending).toEqual(op.snapshot!.pending);
+    expect(propose).toHaveBeenCalledTimes(2);
+    expect(w.env.mcp.used).toHaveLength(reads);
+    expect(w.env.mcp.used.every((c) => READ_TOOLS.has(c.op))).toBe(true);
   });
 });

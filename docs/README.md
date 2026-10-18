@@ -4,9 +4,11 @@
 
 [Continuidade e endereço iFood](continuidade-enderecos.md): correção da entrega automática no bot, confirmação humana de endereço e sequência coordenada de deploy, ainda sem ativação operacional.
 
-Esta branch integra os drafts de endereço #47 e CART-01 #46 sobre a main com a preparação offline INT-02 #48. Código local integrado não comprova merge remoto, deploy ou validação do iFood.
+[Busca progressiva GRP-01](grp-01-busca-progressiva.md): incremento de código para ampliar a leitura quando falta cobertura verificável e explicar ausência de propostas, preservando alergias e orçamento. Publicação em PR de continuação sobre a main que já integra #47/#48; sem ativação operacional. As seções de revisão documental abaixo mantêm o retrato histórico de suas bases.
 
-[Estado remoto/local](estado-remoto-local.md): SHAs conferidos, merges e código CART-01 publicado no PR #46, ainda separado da main. A DEC-01 permite preparação real confirmada; documentação não habilita a operação.
+Esta branch reúne a busca progressiva com a main que já integra endereço #47, preparação offline INT-02 #48 e CART-01 via #51. A integração de código não comprova deploy nem o comportamento da instância em execução.
+
+[Estado remoto/local](estado-remoto-local.md): retrato histórico dos SHAs conferidos e da publicação CART-01 no PR #46, anterior à integração via #51. A DEC-01 permite preparação real confirmada; documentação não habilita a operação.
 
 [Acesso por senha no bot](acesso-bot-senha.md): opt-in para usuários admitidos pelo adaptador autenticado,
 com vínculos isolados e sem ampliar a fronteira de compra da DEC-01.
