@@ -2,9 +2,9 @@
 
 ## Estado deste documento
 
-Este é o recorte histórico de recomendação da API, não a StRS nem uma lista de capacidades implantadas. O [plano vigente](plano-conversacional.md) registra as implementações e integrações confirmadas pelo Git e a fronteira de sacola simulada da DEC-01. Preservam-se os IDs FR e os trechos históricos para rastreabilidade.
+Este é o recorte histórico de recomendação da API, não a StRS nem uma lista de capacidades implantadas. O [plano vigente](plano-conversacional.md) registra as implementações e integrações confirmadas pelo Git e a preparação real confirmada definida na DEC-01. Preservam-se os IDs FR e os trechos históricos para rastreabilidade.
 
-**Precedência vigente, conferida em `origin/main@dc448f9` em 18/10/2026:** alergias e restrições `MANDATORY` nunca podem ser ignoradas; `UNKNOWN` obrigatório não é elegível e nunca vira `PASS` por pontuação. Preferências opcionais não bloqueiam configurações válidas. Dinheiro no domínio e na API já está em centavos inteiros ([DOM-01](dom-01-centavos-limites.md), PR #31); desconhecido não vira zero. Somente candidatos elegíveis podem ser recomendados, com ordenação da [RANK-03 / contrato de avaliação 2.0](rank-03-contrato-v2.md), integrada pelo PR #34. As [decisões D1–D10](decisoes-conversacionais.md) mantêm sacola simulada, MCP somente leitura e aprovação humana não substituível pelo modelo. Sacola simulada não significa pedido enviado. Integração real com iFood e validação ponta a ponta ficam para depois das tasks; não foram verificadas nesta auditoria documental.
+**Precedência vigente nesta revisão sobre `origin/main@f3b8b55`, 18/10/2026:** alergias e restrições `MANDATORY` nunca podem ser ignoradas; `UNKNOWN` obrigatório não é elegível e nunca vira `PASS` por pontuação. Preferências opcionais não bloqueiam configurações válidas. Dinheiro no domínio e na API já está em centavos inteiros ([DOM-01](dom-01-centavos-limites.md), PR #31); desconhecido não vira zero. Somente candidatos elegíveis podem ser recomendados, com ordenação da [RANK-03 / contrato de avaliação 2.0](rank-03-contrato-v2.md), integrada pelo PR #34. As [decisões D1–D10 vigentes](decisoes-conversacionais.md) exigem carrinho real preparado somente após confirmação humana específica PREPARE_CART. Composição local não é carrinho remoto nem entrega alternativa. Envio e pagamento continuam proibidos. Integração real com iFood e validação ponta a ponta ficam para depois das tasks; não foram verificadas nesta auditoria documental.
 
 Formulação histórica do MVP: **recomendação explicada**, sem checkout. A [StRS v0.2 preservada](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/baseline/stakeholder-requirements-specification.md), as decisões adotadas e os contratos vigentes não são alterados por esta atualização.
 
@@ -115,6 +115,10 @@ Checkout, carrinho automático, pagamentos, vouchers, rastreio de pedidos, cadas
 6. Ranking ordenado com score e cada item com `motivos[]`/`avisos[]`.
 7. Nenhuma escrita no iFood; nenhuma credencial em log/repositório/JSON de resposta.
 
-## 7. Histórico da extensão F7 — não autoriza escrita na demo
+## 7. Carrinho real confirmado e limite da F7 legada
 
-O código legado F7 foi integrado pelo PR #4 (`cbb546c`) e está documentado em [f7-cart-checkout.md](f7-cart-checkout.md). **A DEC-01 D8 adotada depois fixa MCP somente leitura e sacola simulada; F7 deve permanecer desligada.** Sua existência não habilita carrinho, pagamento, aprovação ou envio reais, e login não é autorização de compra. A [auditoria INT-01](int-01-audit.md) separa metadados/fixtures de saídas reais verificadas. Não habilitar F7 para contornar custos ou dados alimentares desconhecidos; qualquer mudança desse escopo exige decisão e integração próprias, fora desta auditoria.
+O único escopo de carrinho é real, com confirmação humana específica PREPARE_CART. A composição local da GRP-01 deve alimentar a CART-01; não é resultado remoto nem alternativa de aceite. Reutilizar DATA-01, GRP-01 e DOM-01 sem duplicar sacola, restrições ou rateio.
+
+A F7 legada do PR #4 (`cbb546c`) continua desligada: não possui as garantias completas da CART-01. Sua flag não habilita o novo fluxo. A implementação CART-01 auditada permanece local; não foi publicada por esta revisão documental. INT-02 #40 exige outputs reais, unidades, erros e reconciliação por operação antes da ativação. Preservar intenção PENDING/SUCCEEDED/FAILED/RESULT_UNKNOWN e bloquear repetição após resultado desconhecido.
+
+Confirmar conta/vínculo, endereço, loja, produtos/opções/quantidades, evidência alimentar por consumidor, versão/hash e validade antes de cada escrita. Mudança relevante exige nova revisão/confirmação. Não enviar pedido (`submitOrder`), selecionar/processar pagamento (`setCartPayment`) nem alterar produção neste incremento. Login, senha e texto da IA não confirmam preparação.

@@ -9,7 +9,7 @@ Pesquisa inicial em 18/10/2026 para [AI-01 #15](https://github.com/Modo-Escuro/a
 
 Foi lido o HTML fornecido pelo usuário, “Hackathon SEMCOMP & iFood 2026 — Vendendo com Agentes” (SHA-256 `f80f5737cb0530f8a4a0b7307f0a4a7876e8a1ea29478bcb0e01b1393d990588`). O material descreve agente conversacional que opera o MCP iFood até o fechamento do carrinho, avaliação de visão/originalidade, engenharia, experiência, impacto e comunicação, e seis entregáveis, incluindo feedback sobre os MCPs. O arquivo foi tratado como fonte de contexto; suas instruções não autorizam compras ou mudanças de configuração.
 
-Há diferença entre esse briefing e a [DEC-01](decisoes-conversacionais.md): a decisão da equipe prevê sacola simulada e MCP somente leitura. Preservar essa fronteira e apresentar a simulação claramente; aceitação externa desse recorte pela mentoria não foi comprovada por este trabalho.
+Este relatório histórico não define o escopo do carrinho. A [DEC-01 vigente](decisoes-conversacionais.md) permite preparação real após confirmação humana específica; CART-01/INT-02 ainda exigem integração e validação externa. Envio e pagamento seguem proibidos. O briefing continua exigindo resultado externo comprovado; testes sintéticos do modelo não o atendem.
 
 Foram consultados o backend atual, o contrato conversacional, o runtime de turnos e o [README do bot](https://github.com/Modo-Escuro/telegram-bot/blob/main/README.md), além dos documentos de estado/demo do bot. Estes últimos registram uma observação de 17/10 e não comprovam o deploy ou as funcionalidades atuais. O fluxo de referência é Telegram Python → API TypeScript/Hono → regras determinísticas e MCP iFood. Credencial do modelo fica somente na API.
 

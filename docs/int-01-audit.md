@@ -1,10 +1,10 @@
 # INT-01 — Auditoria F7 e contrato externo
 
-Conferência em **18/10/2026**. Base original auditada: `feat/f7-cart-checkout@b08957d`, PR [#4](https://github.com/Modo-Escuro/api-backend/pull/4). O PR [#24](https://github.com/Modo-Escuro/api-backend/pull/24) incorpora `main@30a650d`, incluindo F7, API-01, DEC-01, OPS-01 e a infraestrutura RUN-01, preservando os commits da auditoria e a atualização concorrente de metadados `484b428`. O PR de auditoria não foi integrado nem implantado. A correção preserva o bloqueio de respostas desconhecidas e não habilita carrinho, aprovação ou envio reais.
+Conferência em **18/10/2026**. Base original auditada: `feat/f7-cart-checkout@b08957d`, PR [#4](https://github.com/Modo-Escuro/api-backend/pull/4). O PR [#24](https://github.com/Modo-Escuro/api-backend/pull/24) incorpora `main@30a650d`, incluindo F7, API-01, DEC-01, OPS-01 e a infraestrutura RUN-01, preservando os commits da auditoria e a atualização concorrente de metadados `484b428`. O PR de auditoria foi integrado à main; esse fato não comprova implantação nem validação de negócio. A correção preserva o bloqueio de respostas desconhecidas e não habilita carrinho, aprovação ou envio reais.
 
 **Estado: auditoria offline e metadados autenticados entregues; contrato de saídas de carrinho/pedido e reconciliação externa continuam sem validação.** A consulta `tools/list` compartilhada pelo usuário foi bem-sucedida em `2026-10-18T05:41:22.487Z`. Isso não valida `tools/call`, escopos de negócio ou respostas dos parsers.
 
-A [DEC-01 adotada](decisoes-conversacionais.md), integrada no PR #25, define **sacola simulada e MCP somente leitura**, com zero escritas externas. As lacunas reais são registradas para uma integração futura; não executar mutações para encerrá-las nesta demo. INT-01 permanece aberta quanto à validação de contratos externos de negócio.
+A [DEC-01 vigente](decisoes-conversacionais.md) permite carrinho real com confirmação humana específica; envio/pagamento continuam proibidos. A issue INT-01 #7 está fechada pela auditoria/metadados entregues. Outputs e reconciliação continuam pendentes na [INT-02 #40](https://github.com/Modo-Escuro/api-backend/issues/40), gate de ativação da CART-01. O relato de captura abaixo preserva sua origem histórica; não autoriza nova mutação.
 
 Manter `IFOOD_CART_ENABLED=false`: validar outputs isoladamente não autoriza alterar o escopo. O campo `f7GatewayAllowed` do inventário descreve a capacidade do adaptador legado, não autorização de uso na demo. O probe só inicializa o protocolo e consulta `tools/list`; não chama ferramentas de negócio, mesmo quando lista nomes de escrita.
 
@@ -81,21 +81,19 @@ A correção valida a confirmação antes de DONE no serviço e no gateway, exig
 | Mutação com confirmação reconhecida, getCart seguinte falha | F7 guarda DONE antes da leitura e replay só consulta | Preservar a intenção e recuperar leitura; não repetir escrita; aceitação do formato depende de validação real |
 | Mutação sem confirmação | Nem snapshot posterior nem retryable provam que não haverá efeito tardio | Manter RESULT_UNKNOWN, bloquear novas escritas e reconciliar por mecanismo verificado |
 | Submissão sem orderId/resposta | getOrder/trackOrder precisam de ID já conhecido; captura não expõe busca por requestId/intenção | BUY-02 permanece bloqueada sem correlação/idempotência/consulta confiáveis ou procedimento humano rastreável definido com provedor |
-| Submissão com orderId e status verificáveis | Ainda faltam output/status reais; pedido real está fora da demo adotada | Só afirmar estágio comprovado por fonte confiável; não tratar pedido criado como pagamento |
+| Submissão com orderId e status verificáveis | Ainda faltam output/status reais; envio e pagamento estão proibidos neste incremento | Só afirmar estágio comprovado por fonte confiável; não tratar pedido criado como pagamento |
 
 O universo investigado foi a captura preexistente de 23 tools, a nova projeção autenticada de 15 ferramentas, o documento local e o código/testes F7. **Não encontrar mecanismo nesse universo não prova ausência na plataforma.** Perguntar ao provedor sobre chave de idempotência, retenção, conteúdo conflitante, status por chave de requisição, consulta de criação/submissão sem ID, garantias de consistência/efeito tardio e procedimento de reconciliação.
 
 A busca pública complementar em 18/10/2026 por createCart/idempotência no domínio MCP e por MCP marketplace/reconciliação no domínio developer não encontrou documentação pública específica que resolvesse essas lacunas. O portal MCP não pôde ser aberto pela ferramenta web. Os resultados da [documentação para restaurantes](https://developer.ifood.com.br/pt-BR/docs/categories) referem-se à Merchant API e foram excluídos como evidência do contrato consumer MCP. Essa busca limitada não demonstra inexistência do recurso no provedor.
 
-## Fechamento adotado para a demo
+## Fechamento e preparação vigentes
 
-A DEC-01 D8/DA10 escolheu sacola **100% simulada**. O gatilho a implementar e verificar em BUY-01/RUN-01/QA-01 é o clique humano do organizador autenticado, preso ao `purchaseId`, versão e `contentHash` atuais, com restrições e limites verificados. Alteração invalida a aprovação; replay do mesmo clique devolve a mesma aprovação; custos ou restrições obrigatórias desconhecidos bloqueiam.
+O carrinho real é o único escopo de preparação. A [DEC-01 vigente](decisoes-conversacionais.md) exige confirmação humana PREPARE_CART vinculada à conta, composição, versão/hash e validade; não é aprovação de pedido. A composição local da GRP-01 é fonte de dados, não prova de carrinho remoto preparado.
 
-A evidência de fechamento é o registro único da aprovação fictícia e a apresentação **“SACOLA SIMULADA APROVADA — PEDIDO NÃO ENVIADO”**. Nenhum cartId/orderId remoto é exigido para essa sacola. Isso é requisito adotado, não funcionalidade implementada por esta auditoria.
+A CART-01 precisa integrar intenção durável, reconciliação e consulta confiável; a INT-02 #40 precisa validar respostas reais por operação antes da ativação. Sem ambiente/evidência disponível, a pendência externa continua aberta. Envio e pagamento permanecem proibidos. `/purchase-approvals` não substitui a confirmação de preparação.
 
-A aprovação fictícia não pode usar `/purchase-approvals`, cujo contrato exige total remoto confirmado; a simulação exige contrato explícito próprio conforme D8.
-
-CART-01 e BUY-02 reais ficam fora dessa demo. Se retomados, exigem validação de saídas, persistência de intenções e estados desconhecidos, elegibilidade por pessoa, aprovação humana válida e mecanismo confiável de reconciliação. `submitOrder` permanece inacessível.
+Critérios antigos de conclusão foram substituídos. Seu registro está no histórico Git, sem permanecer como alternativa de entrega atual.
 
 ## Acesso e reprodução
 
@@ -107,14 +105,15 @@ O primeiro erro genérico foi corrigido para distinguir etapas e falhas de arqui
 
 Fonte do probe: `scripts/int01-console-probe.ts`. Regenerar o comando com `node --import tsx scripts/generate-int01-console.ts`. Os testes injetam cliente/filesystem falsos e verificam paginação, expiração, ausência de fallback, etapas e sanitização. Uma nova execução exige token ainda válido; se expirado, verificar pelo fluxo existente da API, sem refresh concorrente do probe.
 
-## Reuso e dependências
+## Reuso e dependências atuais
 
-- API-01, OPS-01 e a infraestrutura RUN-01 estão incorporadas para verificação integrada. RUN-01 já implementa rotas e fila durável, ainda sem processador DATA/IA instalado; não comprova modelo de grupo, carrinho persistente, retenção D7 ou recuperação externa.
-- Para a demo: DATA-01 precisa persistir o domínio e aplicar retenção D7; GRP-01 fornece elegibilidade por pessoa; BUY-01 implementa a aprovação simulada vinculada a versão/hash, integrada ao runtime. Essas entregas continuam pendentes. O modelo nunca recebe credencial de aprovação.
+- Na base remota `f3b8b55`, API-01, OPS-01, RUN-01, DATA-01, GRP-01 e AI-01/AI-02 estão integradas ao código. Montagem em produção, volume e ensaio Telegram não se deduzem de merge ou teste offline.
+- Reutilizar domínio e retenção DATA-01, elegibilidade por pessoa GRP-01, rateio DOM-01 e processador AI-02; CART-01 não depende da conclusão de trabalho novo na AI-01. A implementação CART-01 auditada permanece local, fora da main e desta revisão documental.
+- BUY-01 deve distinguir confirmação PREPARE_CART de futura aprovação SUBMIT_ORDER. O modelo nunca recebe credencial de confirmação. Envio e pagamento estão proibidos neste incremento.
 - Reutilizar catálogo/getItem, validação de configuração, referências opacas e regras de custo. ItemRef comprova origem, não segurança alimentar. O servidor MCP fictício do projeto Python não substitui o cliente externo.
-- Integração real futura: CART-01/BUY-02 dependem das saídas autenticadas sanitizadas e de reconciliação estabelecida com o provedor. Nenhuma flag deve contornar essas lacunas.
+- INT-01 #7 foi encerrada pelo recorte de auditoria/metadados. Saídas autenticadas sanitizadas, semântica por operação e mecanismo confiável de reconciliação estão pendentes na [INT-02 #40](https://github.com/Modo-Escuro/api-backend/issues/40). Nenhuma flag deve contornar essas lacunas.
 
-## Validação atual sobre main — 18/10/2026
+## Histórico de validação INT-01 — 18/10/2026
 
 Windows, Node **24.13.0**, dependências instaladas com `npm ci --ignore-scripts`, lockfile da main preservado.
 
@@ -151,9 +150,9 @@ Esses checks executaram somente fakes/fixtures. O único ensaio MCP novo foi `to
 - [x] Matriz distingue documento, input capturado, simulação, metadado autenticado e saída não observada.
 - [x] Saídas desconhecidas mantêm bloqueio; flags e checkout não são habilitados.
 - [x] Falta de recuperação sem IDs e de garantia externa de idempotência está registrada.
-- [x] Gatilho de fechamento e dependências foram alinhados à DEC-01 adotada.
+- [x] Gatilho de fechamento e dependências foram alinhados à decisão anterior na ocasião; os critérios atuais estão nas seções acima.
 - [x] Nova consulta autenticada sanitizada e comparação de metadados registradas.
 - [ ] Saídas de negócio reais, unidades e erros por operação capturados e parsers validados com elas.
 - [ ] Mecanismo externo confiável de reconciliação sem cartId/orderId estabelecido.
 
-As duas pendências finais impedem declarar integração real de carrinho/pedido validada e permanecem fora do ensaio da demo somente leitura. Não encerrar #7 como contrato externo integralmente validado. CI/Linux e avaliação de LLM não foram executadas nesta auditoria.
+As duas pendências finais impedem declarar integração real de carrinho/pedido validada e seguem na INT-02 #40. O fechamento de #7 cobre auditoria/metadados, não validação integral do contrato externo. Carrinho real depende dos gates atuais e envio/pagamento continuam proibidos. CI/Linux e avaliação de LLM não foram executadas nesta auditoria histórica; esta revisão documental não repetiu a suíte.

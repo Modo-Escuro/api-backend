@@ -237,6 +237,5 @@ original de alterações somente no working tree foi superada pelo commit `8d54b
 
 - Confirmar separadamente versões implantadas, flags e ensaio integrado do bot/API/iFood depois das tasks.
 - Preservar bloqueio para alergias/`MANDATORY` não verificadas e para orçamento completo desconhecido;
-  somente elegíveis são recomendados. Sacola simulada não significa pedido enviado e o modelo não aprova.
-- A auditoria documental não muda o contrato nem resolve por suposição a aprovação simulada ainda pendente
-  de contrato/implementação próprios. Novos commits/publicação desta documentação dependem de autorização.
+  somente elegíveis são recomendados. A composição local alimenta a preparação do carrinho real; não comprova resultado remoto e o modelo não confirma escrita.
+- A confirmação PREPARE_CART depende do contrato CART-01/BOT-03 integrado e da INT-02 para ativação. A implementação CART-01 auditada continua local; aprovação futura de pedido é outra finalidade. Envio, pagamento e produção continuam proibidos. Esta revisão não muda schemas nem os pins históricos dos testes.

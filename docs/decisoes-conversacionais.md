@@ -1,50 +1,39 @@
-# DEC-01 — Decisões técnicas da demo conversacional
+# DEC-01 — Decisões técnicas vigentes
 
-Issue: [#5 DEC-01](https://github.com/Modo-Escuro/api-backend/issues/5) · Contrato relacionado: [conversation-api-v1](conversation-api-v1.md) · Requisitos anteriores: [requirements](requirements.md)
+Revisão de 18/10/2026 autorizada pelo usuário, que confirmou a aprovação da equipe para carrinho real. [Estado remoto/local](estado-remoto-local.md) · [DEC-01 #5](https://github.com/Modo-Escuro/api-backend/issues/5) · [Decisão anterior preservada](https://github.com/Modo-Escuro/api-backend/blob/f3b8b5561acc0c0ae5e9efe12b52acc2f29bf218/docs/decisoes-conversacionais.md).
 
-## Situação
+O único escopo de carrinho vigente é preparar/modificar o carrinho real após confirmação humana específica. Composição local e testes com mocks são etapas técnicas, não uma entrega alternativa. Não altera o baseline StRS nem declara validação da mentoria, integração real entregue ou autorização de pedido/pagamento. A main conferida ainda executa propostas/composição local ainda não sincronizada com o iFood; o código CART-01 auditado permanece local e separado desta revisão documental.
 
-As 10 decisões abaixo foram **adotadas em 18/10/2026 pelo solicitante** (E-RuiL-Vieira, responsável pela #5),
-que relatou que o grupo delegou as decisões técnicas e confirmou a adoção. Este documento não registra votação
-da equipe nem autorização da mentoria. A validação externa da demo está em [Riscos](#riscos), como risco
-independente, não como bloqueio.
+## Resumo vigente
 
-Escopo da demo: 1 organizador, participantes simulados, 1 loja, 1 endereço, 1 pagamento fictício, sacola
-simulada, MCP do iFood somente leitura. Aprovar a sacola simulada não autoriza nenhuma transação.
+| Decisão | Regra |
+| --- | --- |
+| D1 — Papéis | Um organizador por compra, participantes declarados por ele. Acesso por senha permite organizadores distintos com vínculos/conversas/filas isolados; não é compra compartilhada entre contas |
+| D2 — Recorte | Uma compra ativa por organizador, uma loja e um endereço. Carrinho real só pelo fluxo confirmado. Nenhum pagamento ou envio permitido neste incremento |
+| D3 — Rateio | Consumo individual, compartilhado igual, taxas entre consumidores e desconto pela elegibilidade. DOM-01 é fonte única, centavos inteiros e resíduos determinísticos |
+| D4 — Limites | Tetos individuais e coletivo simultâneos. Total desconhecido não valida orçamento nem aprova pedido; PREPARE_CART explicita a incerteza e autoriza apenas preparar a composição |
+| D5 — Obrigatório × preferência | Alergia, restrição obrigatória e teto rígido prevalecem; preferência não elimina candidato; ambiguidade exige esclarecimento |
+| D6 — Evidência alimentar | UNKNOWN obrigatório bloqueia o item para a pessoa. Filtro dietético não comprova alergia nem substitui confirmação rastreável do restaurante |
+| D7 — Dados | Domínio expira após 24 h inativo; logs minimizados por até 7 dias; OAuth independente. Intenção remota desconhecida não é apagada para liberar replay |
+| D8 — Carrinho confirmado | PREPARE_CART de uso único, escopado à revisão; preparar carrinho não aprova pedido. Pagamento e envio proibidos |
+| D9 — Ordenação | Prioridade declarada e restrições antes do ranking; dado ausente não vale zero; limites de busca explícitos |
+| D10 — Medição | Zero escrita sem confirmação válida; zero pagamento/envio; testes automatizados sem escrita externa. Medir latência, segurança, rateio e ensaio autorizado separadamente |
 
-Regras transversais mantidas: restrições obrigatórias antes do ranking, dinheiro em centavos inteiros,
-aprovação humana antes de qualquer efeito, e o modelo nunca aprova a própria compra.
+## D1 e D2 — Papéis, remoto e local
 
-## Resumo das decisões
+Cada organizador autenticado organiza sua própria compra. O acesso por senha integrado em API #39 e bot #13/#14 não compartilha conta iFood, domínio ou aprovação entre usuários. Participantes não possuem contas neste recorte. Dados declarados conservam origem no organizador.
 
-| # | Ref. StRS | Decisão adotada |
-| --- | --- | --- |
-| D1 | DA05 | Organizador único; participantes simulados, sem contas; dados declarados pelo organizador; aprovação humana só pelo organizador |
-| D2 | DA06 | 1 compra simulada ativa, 1 loja, 1 endereço, 1 organizador, 1 pagador fictício |
-| D3 | DA04 | Consumo individual; compartilhado em partes iguais; entrega e serviço só entre consumidores; desconto proporcional ao subtotal elegível; resíduos por `participantId`; sem negativos; taxa desconhecida não vira zero |
-| D4 | DA04 | Tetos coletivo e individuais simultâneos; centavos inteiros; custo desconhecido impede aprovação |
-| D5 | RS05 | Alergias, restrições obrigatórias e tetos máximos são rígidos; preferências são flexíveis; ambiguidade exige esclarecimento |
-| D6 | DA03 | Elegibilidade alimentar exige evidência específica; UNKNOWN bloqueia; filtro não comprova ausência de alérgeno; nenhuma confirmação inventada |
-| D7 | DA07 | Excluir dados ao encerrar; simulação expira após 24 h inativa; logs técnicos minimizados por até 7 dias; OAuth independente até desconexão, expiração ou revogação |
-| D8 | DA10 | Sacola 100% simulada; aprovação humana presa à versão e ao hash; mudança invalida; "PEDIDO NÃO ENVIADO"; MCP só leitura |
-| D9 | DA02 | Prioridade economia/rapidez declarada; ambiguidade exige pergunta; dado ausente segue desconhecido; restrições rígidas prevalecem |
-| D10 | DA08 | p95 ponta a ponta ≤ 10 s; 100% dos testes de alergia e orçamento; 100% dos rateios exatos; 5 demos seguidas sem erro; 0 chamadas MCP de escrita |
+A direção de produto permite carrinho real; os contratos e a implementação determinística precisam estar integrados e validados antes de ativar. Manter F7 legada desligada: sua flag não instala confirmação humana nem durabilidade. Não alterar flags, volumes ou produção por esta revisão documental.
 
-Restrições: sem `createCart`, `addItemToCart`, `submitOrder` ou pagamento real; sem múltiplas lojas, endereços,
-pagamentos ou contas de participantes; desconto limitado à elegibilidade; inconsistência financeira bloqueia
-aprovação; sem segurança alimentar inferida por categoria; sem aprovação automática; sem dados sensíveis em logs.
+## Confirmação de preparação e aprovação de pedido
 
-## D1 e D2 — Papéis e escopo
+PREPARE_CART confirma uma composição e suas mutações, com valores conhecidos e incertezas explícitas. Não declara que o pedido cabe no orçamento completo antes de conhecer taxas relevantes. Alergia ou restrição obrigatória insuficientemente verificada bloqueia já a preparação; não há confirmação humana genérica para ignorá-la.
 
-- O organizador autenticado pelo adaptador Telegram é o único usuário real. Participantes são registros simulados
-  criados por ele, sem conta, login ou vínculo OAuth próprio.
-- Toda restrição, limite e consumo de participante tem origem "declarado pelo organizador".
-- Uma compra simulada ativa por organizador, com uma loja (`merchantId`) e um endereço (`addressId`), ambos vindos
-  de respostas do MCP. O pagador é fictício e único; nenhuma operação de pagamento existe.
+BUY-01 futuro deve usar outra autorização para SUBMIT_ORDER, com responsável, conta, versão/hash, itens/opções, entrega, custo completo e validade. Custo UNKNOWN, faixa ou divergência bloqueiam aprovação de pedido. Nenhuma autorização futura está habilitada por esta decisão.
 
 ## D3 — Rateio (informativo, centavos inteiros)
 
-O rateio mostra quanto cabe a cada participante simulado; nada é cobrado.
+O rateio mostra quanto cabe a cada participante declarado pelo organizador; nada é cobrado.
 
 ```
 split(total, pesos[]) -> partes[]
@@ -62,15 +51,15 @@ split(total, pesos[]) -> partes[]
    Preço do item = (`promotionalUnitPrice ?? unitPrice` + Σ `additionalPrice` das opções) × quantidade.
 3. Entrega: valor = `promotionalFee ?? fee`; `split(entrega, 1 por consumidor)`. Promoção de entrega é taxa reduzida, não desconto.
 4. Serviço: mesma regra da entrega, só entre consumidores.
-5. Taxa ausente na resposta do MCP ⇒ componente UNKNOWN, nunca 0; o plano mostra "taxa desconhecida" e a aprovação fica bloqueada (D4).
+5. Taxa ausente na resposta do MCP ⇒ componente UNKNOWN, nunca 0; o plano mostra "taxa desconhecida" e a aprovação de pedido/validação do orçamento ficam bloqueadas (D4). PREPARE_CART só autoriza preparar a composição com essa incerteza explícita, observados os bloqueios alimentares e os limites já verificáveis.
 6. Desconto: e[i] = subtotal elegível de cada pessoa (só itens a que o desconto se aplica); valor aplicado = min(desconto, Σe);
    `split(valor aplicado, e)`. Vários descontos: ordem crescente de identificador, cada um limitado ao elegível restante.
    Elegibilidade desconhecida ⇒ desconto não aplicado e sinalizado. `promotionalUnitPrice` já é preço-base e não entra de novo como desconto.
 7. Total por pessoa = itens + entrega + serviço − desconto.
 8. Invariantes: cada componente fecha exatamente no seu total; nenhuma parte e nenhum total negativo; mesma entrada ⇒ mesma saída.
-   Violação ⇒ plano INCONSISTENTE e aprovação bloqueada.
+   Violação ⇒ plano INCONSISTENTE e aprovação de pedido bloqueada.
 9. Preço em faixa (regra 6 do CLAUDE.md, semântica "a partir de"): rateio calculado no mínimo e no máximo; limites
-   conferidos contra o máximo; aprovação bloqueada enquanto houver faixa.
+   conferidos contra o máximo; aprovação de pedido bloqueada enquanto houver faixa.
 
 Exemplo: pizza R$ 60,00 dividida por A, B e C; bebida R$ 8,00 de A; salada R$ 30,00 de D; entrega R$ 7,99;
 cupom R$ 10,00 válido em todos os itens. Valores em centavos:
@@ -91,8 +80,8 @@ Desconto: os pisos somam 999; o centavo restante vai para A, que tem o maior res
 | Participante sem consumo | Não paga entrega nem serviço |
 | Pessoa com alergia e item compartilhado | Item só é compartilhado entre pessoas compatíveis (RN07) |
 | Desconto maior que o subtotal elegível | Limitado ao elegível; ninguém fica negativo |
-| Taxa ausente no MCP | UNKNOWN, nunca 0; aprovação bloqueada |
-| Preço em faixa | Mínimo e máximo; limites contra o máximo; aprovação bloqueada |
+| Taxa ausente no MCP | UNKNOWN, nunca 0; aprovação de pedido bloqueada |
+| Preço em faixa | Mínimo e máximo; limites contra o máximo; aprovação de pedido bloqueada |
 | Pedido abaixo do mínimo da loja | Plano não validado; mostrar quanto falta |
 | Participante entra ou sai | Recálculo completo; aprovação anterior invalidada (RN06, CA12) |
 
@@ -100,8 +89,8 @@ Desconto: os pisos somam 999; o centavo restante vai para A, que tem o maior res
 
 1. Valores em centavos inteiros; conversão de decimal só na borda.
 2. total[i] ≤ teto[i] para cada teto individual rígido; Σ total ≤ teto coletivo rígido. As duas condições valem juntas.
-3. Componente UNKNOWN ou em faixa ⇒ limite "não verificável" ⇒ aprovação bloqueada.
-4. Inconsistência financeira (soma que não fecha, valor negativo, desconto acima do elegível) ⇒ aprovação bloqueada com erro explícito.
+3. Componente UNKNOWN ou em faixa ⇒ limite "não verificável" ⇒ aprovação de pedido bloqueada.
+4. Inconsistência financeira (soma que não fecha, valor negativo, desconto acima do elegível) ⇒ aprovação de pedido bloqueada com erro explícito.
 5. Teto de preferência só afeta ranking e explicação; nunca bloqueia.
 
 ## D5 — Rígido × flexível
@@ -111,7 +100,7 @@ Desconto: os pisos somam 999; o centavo restante vai para A, que tem o maior res
 3. Alergia explícita nunca vira preferência por inferência, histórico, score ou texto do modelo (RN01, RN02).
 4. Marcadores de limite rígido: "no máximo", "até", "não passa de", "não posso", "sou alérgico", "sou celíaco".
 5. Ambiguidade exige esclarecimento. Até a resposta: ambiguidade alimentar ⇒ item bloqueado; ambiguidade financeira
-   ou de prazo ⇒ limite não verificável e aprovação bloqueada.
+   ou de prazo ⇒ limite não verificável e aprovação de pedido bloqueada.
 6. Rebaixar rígido para flexível exige declaração explícita registrada do organizador; o modelo nunca rebaixa.
 7. Contradição ("sou alérgico a camarão, mas como um pouco") ⇒ esclarecer e manter rígida.
 
@@ -129,34 +118,34 @@ Desconto: os pisos somam 999; o centavo restante vai para A, que tem o maior res
 
 ## D7 — Retenção e exclusão
 
-Encerrar = o organizador conclui ou cancela, ou a simulação fica 24 h sem evento aceito. A aprovação fictícia não encerra sozinha.
+Encerrar = o organizador conclui ou cancela, ou a compra fica 24 h sem evento aceito. Confirmar preparação do carrinho não encerra a compra. Encerrar o domínio local não cancela um efeito remoto já iniciado.
 
 | Classe | Conteúdo | Retenção | Exclusão |
 | --- | --- | --- | --- |
-| Dados da compra simulada | Participantes simulados, restrições, limites, itens, revisões, aprovação fictícia, histórico curto | Até encerrar, ou 24 h sem evento aceito | Imediata na transição para encerrada ou expirada |
-| Logs técnicos (exceção) | Só identificador opaco de correlação, rota, nome da ferramenta MCP, código de status ou erro, latência, contadores | Até 7 dias | Expurgo diário do que passou de 7 dias |
-| Vínculo OAuth (exceção) | Tokens e metadados do vínculo | Independente da compra | Imediata na desconexão, revogação ou expiração sem refresh possível |
+| Dados de domínio da compra | Participantes, restrições, limites, itens, revisões e histórico curto | Até encerrar, ou 24 h sem evento aceito | Excluir na transição para encerrada ou expirada, preservando somente os registros técnicos mínimos abaixo |
+| Intenção remota e deduplicação | Referência opaca, finalidade, versão/hash, estado, correlação e evidência mínima de reconciliação; sem payload bruto, endereço, alergias ou tokens | Enquanto houver PENDING/RESULT_UNKNOWN ou risco de replay/efeito tardio; definir descarte após reconciliação segundo garantias verificadas do provedor | Nunca apagar para liberar nova tentativa. Sem garantia de descarte seguro, manter bloqueio/tombstone mínimo e registrar a pendência operacional |
+| Logs técnicos | Só correlação opaca, rota, nome de ferramenta, código, latência e contadores | Até 7 dias | Expurgo diário do que passou de 7 dias |
+| Vínculo OAuth | Tokens e metadados do vínculo | Independente da compra | Excluir na desconexão, revogação ou expiração sem refresh possível |
 
+- A política de intenção remota é requisito da CART-01 local; não atribui essas garantias à F7 legada em memória nem declara integração na main.
+- Exclusão/cancelamento bloqueia novas escritas; não equivale a reconciliar operação em voo. Não reter todo o domínio para preservar uma trava técnica.
 - Nunca em log: texto de mensagem, nomes, alergias e restrições, endereço, tokens, valores por participante.
-- Backups do armazenamento (OPS-01): rotação de até 7 dias.
+- Backups do armazenamento (OPS-01): rotação de até 7 dias. Restaurar backup não pode reabrir intenção desconhecida para escrita.
 - Refresh recusado ⇒ RECONNECT_REQUIRED e tokens apagados; falha de rede ⇒ UNAVAILABLE, tokens mantidos (CLAUDE.md).
-- Pedido de exclusão antes de encerrar equivale a cancelar.
 - Relatórios de teste e medição (D10) usam só dados sintéticos ou fixtures sanitizadas.
 
-## D8 — Sacola simulada e aprovação fictícia
+## D8 — Preparação confirmada do carrinho real
 
-1. O MCP só é usado para leitura: `listAddresses`, `searchOffers`, `browseOffers`, `getRecommendations`, `getItem`,
-   `getMerchant` e `getUser` restrito. Sem `createCart`, `addItemToCart`, `submitOrder` ou pagamento.
-2. Revisão = retrato canônico da compra: `purchaseId`, versão, `merchantId`, `addressId`, itens (`itemId`, `optionId`s,
-   quantidade, consumidores), componentes de custo e rateio em centavos, limites e situação de cada restrição.
-3. Hash = SHA-256 do JSON canônico da revisão (chaves ordenadas recursivamente, sem espaços, centavos inteiros),
-   alinhado ao `contentHash` de [conversation-api-v1](conversation-api-v1.md).
-4. Aprovação fictícia = clique do organizador, vindo do adaptador autenticado, com `purchaseId`, versão e hash. A API
-   confere que são os atuais e registra uma única vez. Nunca gerada pelo modelo; nunca automática.
-5. Qualquer mudança cria nova versão e invalida a aprovação anterior. Clique duplo devolve a mesma aprovação; botão de versão antiga é rejeitado.
-6. Aprovação bloqueada quando houver: custo UNKNOWN ou em faixa, inconsistência financeira, restrição rígida UNKNOWN ou
-   FAIL para algum consumidor, limite rígido violado ou não verificável.
-7. Após aprovar, a interface exibe **"SACOLA SIMULADA APROVADA — PEDIDO NÃO ENVIADO"**.
+1. Fonte única: participantes/restrições/limites/sacola da DATA-01/GRP-01; custos e rateio DOM-01. Não duplicar o domínio no bot ou na CART-01.
+2. Validar vínculo operacional e permissões, listAddresses/endereço, loja, getItem/produtos/opções/quantidades, cobertura por consumidor e versão antes de escrever. IDs do provedor; nunca enviar userId nem confundir itemId/cartItemId.
+3. Revisão humana explicita composição desejada, mudanças no carrinho existente, preços observados e custos desconhecidos. Vincular finalidade PREPARE_CART, organizador/bot/conversa privados, conta/link, compra, versão/hash, conteúdo e expiração.
+4. Aceitar somente callback humano do adaptador autenticado, referência opaca de uso único fora do contexto do modelo. Login, senha, texto “sim” e userConsent fornecido pela IA não confirmam escrita.
+5. Consumir confirmação e persistir intenção antes da rede em uma transação. Persistir reconhecimento e cartId juntos. A chamada externa fica fora da transação; não prometer atomicidade com o iFood.
+6. Mesma intenção não repete efeito; chave reutilizada com conteúdo diferente conflita. Timeout/401/resultado desconhecido bloqueiam novas escritas. Só reconciliar por fonte confiável; leitura parecida não basta.
+7. Revalidar antes de cada passo e conferir composição, preço, subtotal e taxas depois dele. Mudança relevante interrompe os próximos passos e exige nova revisão/confirmação. Sem revisão/ETag remota não se elimina a corrida com outro cliente.
+8. Exibir resultado como “CARRINHO PREPARADO” somente com evidência correspondente; sempre distinguir “PEDIDO NÃO ENVIADO”. Não produzir sucesso apenas do texto do modelo.
+9. Validar schemas/outputs reais por operação na INT-02 antes de ativar; metadados, fixtures sintéticas e flags não suprem evidência. Não executar escritas reais em testes automatizados.
+10. `submitOrder`, `setCartPayment` e processamento de pagamento continuam proibidos. Entrega/cupom só podem ter mutação futura com listagem prévia e confirmação específica; não estão implementados no incremento local de itens.
 
 ## D9 — Ordenação
 
@@ -172,85 +161,28 @@ Encerrar = o organizador conclui ou cancela, ou a simulação fica 24 h sem even
 4. Valor desconhecido numa chave fica depois de todos os conhecidos naquela chave, marcado "desconhecido"; nunca vale 0.
 5. Resultado: de 2 a 4 opções elegíveis (RN05); alternativa distinta mais rápida ou mais barata aparece com a troca explicada em valores observados (RS08).
 
-## D10 — Metas e medição
 
-A demo só é considerada pronta quando as 5 metas passam.
+## D10 — Metas e evidências
 
-| Meta | Fórmula | Instrumento | Amostra | Critério |
-| --- | --- | --- | --- | --- |
-| Tempo ponta a ponta | p95 por posição: tempos em ordem crescente, valor na posição ⌈0,95 × n⌉. Tempo = do aceite do evento na API até a recomendação pronta | Timer monotônico no backend, em log técnico com correlação opaca | n = 40: 4 contextos fixos × 10 execuções, MCP real só leitura (p95 = 38ª posição) | ≤ 10 000 ms |
-| Testes de alergia e orçamento | aprovados ÷ total | Vitest offline com fixtures reais sanitizadas; inclui os cenários abaixo | Todos os testes marcados alergia ou orçamento | 100%, sem teste ignorado |
-| Rateio exato | casos válidos ÷ casos; válido = cada componente fecha, nenhuma parte negativa, saída idêntica em 2 execuções | Teste de propriedade com gerador de semente fixa | 1 000 casos aleatórios + exemplos deste documento | 100% |
-| Demos seguidas | Execuções consecutivas sem erro; erro = exceção não tratada, estado errado, invariante violada ou chamada de escrita; uma falha zera o contador | Roteiro de demo Telegram → API → MCP | Até atingir 5 seguidas | 5 |
-| Escrita no MCP | Chamadas a ferramentas fora da lista de leitura | Contador no gateway MCP + teste que tenta `createCart`, `addItemToCart` e `submitOrder` e espera rejeição | Todas as execuções de teste e de demo | 0 |
+| Meta | Amostra/critério |
+| --- | --- |
+| Latência da recomendação | p95 ≤ 10 s; 40 execuções (4 contextos × 10), tempo do aceite até recomendação pronta, posição 38 em ordem crescente. Inferência isolada não é ponta a ponta |
+| Alergia/orçamento | 100% dos cenários relevantes; UNKNOWN não autoriza; ausência de evidência é bloqueio correto |
+| Rateio | 1 000 casos determinísticos e exemplos: soma exata, sem partes negativas, mesma entrada/saída |
+| Ensaio da demo | 5 execuções consecutivas sem exceção/invariante violada; separar conversa, carrinho observado e fechamento ainda pendente |
+| Efeitos externos | Zero escrita em testes automatizados; no ensaio autorizado, 100% das escritas de carrinho com confirmação específica válida; zero envio/pagamento |
 
-## Cenários de validação
+Testes mockados não comprovam essas metas no provedor. Ensaio exige ambiente de teste disponibilizado e revisão humana específica. Não manipular produção para validar a demo.
 
-1. Grupo de 4 pessoas, limites diferentes, frete e taxa comuns: a soma rateada fecha exatamente em centavos e cada pessoa cabe no próprio limite (CA10).
-2. Participante com alergia e item sem informação de ingrediente: o item fica bloqueado para essa pessoa, com pendência visível (CA06).
-3. Confirmação de outro item ou variante: não libera o item atual (CA07).
-4. Teto do grupo muda de R$ 180 para R$ 150: restrições e participantes são preservados e o plano é reavaliado (CA12).
-5. Nenhum plano completo cabe: o conflito é explicado e a cobertura parcial aparece sem excluir alguém em silêncio (CA11).
-6. Participante sem consumo: não paga entrega, e a soma da entrega fecha entre quem consome (D3).
-7. Teto declarado como "uns R$ 150": o agente pede esclarecimento antes de validar esse limite (D5).
-8. Sacola simulada aprovada: a interface mostra "pedido não enviado" e nenhuma mutação é chamada no iFood (D8).
-9. Organizador declara a alergia de um participante simulado: o item incompatível fica bloqueado só para esse participante, e o rateio informativo exclui o item dele (D1, D3).
-10. Qualquer chamada a `createCart`, `addItemToCart`, `submitOrder` ou operação de pagamento é rejeitada no backend e não chega ao MCP (D8).
-11. Taxa de serviço ausente na resposta do MCP: aparece como desconhecida, nunca 0, e a aprovação fica bloqueada (D3, D4).
-12. Desconto maior que o subtotal elegível: aplicado só até o elegível, e ninguém fica com valor negativo (D3).
-13. Item vindo do filtro VEGAN e participante com alergia a amendoim: o item continua UNKNOWN e bloqueado para ele (D6).
-14. Simulação sem evento por 24 h: expira e os dados da compra são excluídos; o vínculo OAuth continua (D7).
+## Impacto, dependências e pendências
 
-## Riscos
+| Task | Alcance atual |
+| --- | --- |
+| INT-01 #7 | Auditoria/metadados entregues; issue fechada com limites explícitos |
+| [INT-02 #40](https://github.com/Modo-Escuro/api-backend/issues/40) | Outputs reais, permissões/comportamento e reconciliação pendentes; gate de ativação por operação |
+| [CART-01 #18](https://github.com/Modo-Escuro/api-backend/issues/18) | Carrinho real confirmado no escopo; código auditado local, ainda não integrado/validado externamente |
+| [BUY-01 #19](https://github.com/Modo-Escuro/api-backend/issues/19) / [BUY-02 #20](https://github.com/Modo-Escuro/api-backend/issues/20) | Aprovação de pedido e envio/reconciliação futuros; não habilitados nesta revisão |
+| [BOT-03](https://github.com/Modo-Escuro/telegram-bot/issues/3) | Apresentação de grupo/propostas pode avançar; callback de carrinho separado da futura aprovação de pedido |
+| [QA-01](https://github.com/Modo-Escuro/telegram-bot/issues/4) | Provar cada marco com evidência e registrar lacunas; definir fechamento DA10 com o evento |
 
-| # | Risco | Efeito | Mitigação |
-| --- | --- | --- | --- |
-| R1 | A validação externa da demo simulada como estado final do evento não está registrada; não se presume autorização da mentoria | A banca pode esperar carrinho ou pedido real | Apresentar a fronteira explicitamente ("PEDIDO NÃO ENVIADO"); compra real exige nova decisão, não extensão desta |
-| R2 | Sem canal com o restaurante, quase toda alergia fica UNKNOWN (D6) | Participante com alergia pode ficar sem item elegível | Mensagem de insuficiência (RN05) faz parte do roteiro da demo |
-| R3 | p95 ≤ 10 s depende da latência real do MCP | Meta D10 pode falhar sem mudança de código | Detalhamento paralelo limitado, cache de `getItem` (requisitos atuais) e medição antes da demo |
-| R4 | Escopo de #7, #18, #19 e #20 descreve carrinho e envio reais | Trabalho fora da demo | Seção Impacto abaixo; revisão do escopo das issues fica com a equipe |
-| R5 | Contrato API-01 prevê aprovação só com total confirmado de carrinho e `OUTCOME` sem estágio simulado | Aprovação fictícia da D8 não cabe em `/purchase-approvals` | Ver Coerência; tratar como ajuste explícito do contrato, sem reutilizar a rota de compra |
-
-## Coerência com CLAUDE.md e com o contrato API-01
-
-- CLAUDE.md, regra 5 (sem `createCart`/`addItemToCart`/`submitOrder`): atendida por D8; MCP só leitura.
-- Regra 6 (preço composto, faixa quando ambíguo): D3 usa o preço composto e trata faixa como bloqueio de aprovação.
-- Regras 1–4 (IDs só do MCP, `getItem` antes de recomendar, ausente ≠ zero, restrição sem dado ⇒ não verificado): D2, D6, D9.
-- Convenção de centavos inteiros na borda do bot: D3 e D4.
-- Vínculo OAuth e estados `UNAVAILABLE`/`RECONNECT_REQUIRED`: D7 preserva o comportamento atual.
-- [conversation-api-v1](conversation-api-v1.md): dinheiro `UNKNOWN`/`ESTIMATE`/`RANGE` corresponde a D3/D4; `contentHash`
-  canônico corresponde ao hash da D8. Diferença: `/purchase-approvals` exige total `CONFIRMED` de carrinho validado e
-  `OUTCOME` só tem `CART`/`ORDER`/`PAYMENT`. A aprovação fictícia não deve usar essa rota; o contrato precisa de ajuste
-  explícito (ex.: ação de revisão simulada e resultado simulado), conforme a própria seção final do contrato prevê para decisões da DEC-01.
-
-## Impacto nas issues
-
-| Issue | O que esta decisão define | Dependências técnicas restantes |
-| --- | --- | --- |
-| [#7 INT-01](https://github.com/Modo-Escuro/api-backend/issues/7) | Auditar o F7, confirmar que fica desligado e garantir a lista de ferramentas só de leitura; critério "0 escrita" (D10) | — |
-| [#10 DOM-01](https://github.com/Modo-Escuro/api-backend/issues/10) | Algoritmo de rateio (D3), limites (D4), rígido × flexível (D5) | — |
-| [#11 RANK-03](https://github.com/Modo-Escuro/api-backend/issues/11) | Chaves de ordenação e tratamento de desconhecido (D9) | DOM-01, RANK-02 |
-| [#13 DATA-01](https://github.com/Modo-Escuro/api-backend/issues/13) | Participantes simulados (D1), uma compra (D2), evidência por combinação (D6), retenção (D7) | OPS-01 |
-| [#15 AI-01](https://github.com/Modo-Escuro/api-backend/issues/15) | Dados minimizados (D7); metas, fórmulas e amostras (D10) | — |
-
-Fora do escopo da demo: [#18 CART-01](https://github.com/Modo-Escuro/api-backend/issues/18) e
-[#20 BUY-02](https://github.com/Modo-Escuro/api-backend/issues/20), que dependem de carrinho e envio reais. De
-[#19 BUY-01](https://github.com/Modo-Escuro/api-backend/issues/19), só a vinculação da aprovação à versão e ao hash (D8).
-Este documento não altera essas issues.
-
-## Alternativas consideradas (histórico)
-
-| # | Alternativas avaliadas | Adotada |
-| --- | --- | --- |
-| D1 | Organizador único; cada participante no grupo; organizador + autoconfirmação | Organizador único, participantes simulados |
-| D2 | 1 de cada; várias lojas; subgrupos; múltiplos endereços/pagamentos | 1 compra, 1 loja, 1 endereço, pagador fictício |
-| D3 | Igual entre quem tem item; proporcional ao subtotal; sem rateio; misto | Misto (consumo, compartilhado igual, taxas entre consumidores, desconto proporcional) |
-| D4 | Ambos valem; coletivo prevalece; individual prevalece | Ambos valem |
-| D5 | Obrigatório só se explícito; todo valor é obrigatório; tudo é preferência | Rígido × flexível com marcadores; ambiguidade pergunta |
-| D6 | Sem canal: bloquear; registro manual do organizador; canal integrado | Bloquear sem evidência específica |
-| D7 | Apagar ao encerrar; manter entre compras; só memória do processo | Apagar ao encerrar, 24 h de expiração, logs 7 dias, OAuth independente |
-| D8 | Sacola revisada; pedido enviado; pagamento concluído; carrinho real | Sacola 100% simulada |
-| D9 | Ordenação estrita; score ponderado; híbrido | Ordenação estrita por prioridade declarada |
-| D10 | Fixar metas agora; medir antes | Fixar agora, com fórmula e amostra |
-
-Registro de trabalho com a análise completa de alternativas e riscos por opção: documento DEC-01 no claude.ai, privado ao solicitante.
+Riscos remanescentes: sem outputs observados não há ativação; sem canal alimentar verificado alergias ficam bloqueadas; sem recuperação confiável de criação sem cartId ou envio sem orderId não há retry; sem versão condicional remota há corrida externa. O briefing de fechamento continua como objetivo pendente. Carrinho preparado não comprova pedido nem pagamento.
