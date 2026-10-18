@@ -14,8 +14,8 @@ export default tseslint.config(
       'no-restricted-syntax': [
         'error',
         {
-          selector: "Literal[value=/^(createCart|addItemToCart|updateCartItem|submitOrder|setCartPayment|setCartDelivery|setVoucher|createAddress)$/]",
-          message: 'Escrita no iFood (carrinho/pedido/endereço) é proibida no MVP.',
+          selector: "Literal[value=/^(submitOrder|createAddress)$/]",
+          message: 'Envio de pedidos e criação de endereços continuam proibidos em F7.',
         },
       ],
     },

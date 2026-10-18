@@ -21,6 +21,8 @@ export interface AppConfig {
   publicBaseUrl: string;
   /** Habilita a sessão global antiga (/api/auth/*, diagnóstico com MCP). Só desenvolvimento; nunca vira vínculo. */
   devGlobalSession: boolean;
+  /** Habilitar só após validar saída MCP e integrar correções #2/#3. Nunca habilita checkout. */
+  cartEnabled: boolean;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -43,6 +45,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     linksDir: env.IFOOD_LINKS_DIR || '.ifood-links',
     publicBaseUrl: (env.PUBLIC_BASE_URL || `http://localhost:${Number(env.PORT || 8000)}`).replace(/\/$/, ''),
     devGlobalSession: env.DEV_GLOBAL_SESSION === 'true',
+    cartEnabled: env.IFOOD_CART_ENABLED === 'true',
   };
 }
 

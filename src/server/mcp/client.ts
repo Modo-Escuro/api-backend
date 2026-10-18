@@ -10,7 +10,7 @@ import { config } from '../config.js';
 export const MCP_TIMEOUT_MS = 15_000;
 
 /** Injeta Bearer; em 401 tenta refresh uma vez e repete. */
-function authedFetch(auth: IfoodAuth): typeof fetch {
+function authedFetch(auth: IfoodAuth, retryUnauthorized = true): typeof fetch {
   return async (input, init) => {
     const send = async (token: string) => {
       const headers = new Headers(init?.headers);
@@ -18,7 +18,7 @@ function authedFetch(auth: IfoodAuth): typeof fetch {
       return fetch(input, { ...init, headers });
     };
     const res = await send(await auth.getAccessToken());
-    if (res.status !== 401) return res;
+    if (res.status !== 401 || !retryUnauthorized) return res;
     const t = await auth.refresh();
     return send(t.accessToken);
   };
@@ -31,6 +31,7 @@ export class McpSession {
   constructor(
     readonly auth: IfoodAuth,
     private readonly url = config.mcpUrl,
+    private readonly retryUnauthorized = true,
   ) {}
 
   async getClient(): Promise<Client> {
@@ -38,7 +39,7 @@ export class McpSession {
     if (this.connecting) return this.connecting;
     this.connecting = (async () => {
       const c = new Client({ name: 'compra-com-contexto', version: '0.1.0' });
-      const transport = new StreamableHTTPClientTransport(new URL(this.url), { fetch: authedFetch(this.auth) });
+      const transport = new StreamableHTTPClientTransport(new URL(this.url), { fetch: authedFetch(this.auth, this.retryUnauthorized) });
       transport.onclose = () => {
         if (this.client === c) this.client = null;
       };
