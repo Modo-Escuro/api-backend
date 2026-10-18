@@ -165,6 +165,8 @@ describe('RUN-01 SQLite real e transações', () => {
   it('resultado inválido, preços inconsistentes, tamanho e aprovação não são publicados', () => {
     for (const mutate of [
       (r: ReturnType<typeof result>) => { r.snapshot.version = 55; },
+      (r: ReturnType<typeof result>) => { r.snapshot.blocks = [{ kind: 'OUTCOME', stage: 'ORDER', status: 'CONFIRMED', evidenceRef: 'e'.repeat(24) }]; },
+      (r: ReturnType<typeof result>) => { r.snapshot.phase = 'CONFIRMED'; },
       (r: ReturnType<typeof result>) => { r.snapshot.humanApproval = { reviewRef: 'r'.repeat(24), approvalRef: 'a'.repeat(24), expectedVersion: 1, expiresAt: '2099-01-01T00:00:00Z' }; },
       (r: ReturnType<typeof result>) => { r.snapshot.blocks = [{ kind: 'PROPOSAL', proposalRef: 'p'.repeat(24), coverage: [], price: { kind: 'RANGE', currency: 'BRL', minCents: 100, maxCents: 1 } }]; },
       (r: ReturnType<typeof result>) => { r.snapshot.blocks = [{ kind: 'TEXT', text: 'x'.repeat(2000), source: 'SERVER' }]; },

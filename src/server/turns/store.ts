@@ -311,6 +311,11 @@ export class TurnStore {
         this.failure(saved, saved.effect ? 'RESULT_UNKNOWN' : 'STALE_VERSION'); return false;
       }
       const snapshot = SnapshotSchema.parse(result.snapshot);
+      // Processamento somente leitura não comprova carrinho/pedido/pagamento.
+      if (!saved.effect && (snapshot.blocks.some(b => b.kind === 'OUTCOME') ||
+          snapshot.phase === 'SUBMITTING' || snapshot.phase === 'CONFIRMED')) {
+        throw new ContractError('INVALID_REQUEST');
+      }
       if (snapshot.conversationId !== op.conversationId || snapshot.version !== op.baseVersion + 1 ||
           snapshot.humanApproval !== null || snapshot.allowedActions.length ||
           (saved.effect && !snapshot.blocks.some(b => b.kind === 'OUTCOME' && b.evidenceRef !== null && b.status !== 'UNKNOWN'))) {
