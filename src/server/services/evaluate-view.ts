@@ -1,10 +1,12 @@
-// Formata o resultado do pipeline para a API (POST /api/evaluate).
+// Formata o resultado do pipeline para a API (POST /api/evaluate): recomendações ranqueadas (só
+// ELIGIBLE), bloqueados e pendentes de verificação — cada um em seu próprio bucket.
 // Campos opcionais saem como valor ou null; o estado real (ABSENT/NULL/INVALID) fica em `missingFields`,
 // para a UI distinguir "não informado" de "vazio". Nenhum token, segredo ou coordenada é incluído.
 
 import type { Field } from '../domain/fields.js';
 import { indexOptions } from '../domain/normalize.js';
 import type { PriceBreakdown } from '../domain/pricing.js';
+import type { EligibilityCategory, RankedRecommendation } from '../domain/ranking.js';
 import type { DetailOutcome, EvaluatedCandidate, EvaluateOutcome } from './evaluate.js';
 
 type FieldState = Exclude<Field<unknown>['state'], 'PRESENT'>;
@@ -135,28 +137,64 @@ export function candidateView(c: EvaluatedCandidate) {
 
 export function evaluateView(o: EvaluateOutcome) {
   const views = o.candidates.map(candidateView);
-  const eligible = views.filter((x) => x.eligible);
-  const blocked = views.filter((x) => !x.eligible);
+  const withCategory = views.map((view, i) => ({ view, category: o.candidates[i]!.category }));
+  const pick = (category: EligibilityCategory) => withCategory.filter((x) => x.category === category).map((x) => x.view);
+  const eligible = pick('ELIGIBLE');
+  const blocked = pick('BLOCKED');
+  const needsVerification = pick('NEEDS_VERIFICATION');
+
+  // Recomendações = candidatos ELIGIBLE ordenados pelo ranking (os demais nunca aparecem aqui).
+  const byId = new Map(views.map((v) => [v.itemId, v]));
+  type Recommendation = (typeof views)[number] & { ranking: Pick<RankedRecommendation, 'rank' | 'score' | 'criteria' | 'reasons' | 'dataLimitations'> };
+  const recommendations: Recommendation[] = [];
+  for (const r of o.ranking.recommendations) {
+    const c = byId.get(r.itemId);
+    if (!c) continue;
+    recommendations.push({ ...c, ranking: { rank: r.rank, score: r.score, criteria: r.criteria, reasons: r.reasons, dataLimitations: r.dataLimitations } });
+  }
+
+  const notEligible = [...blocked, ...needsVerification];
   const blockerCounts: Record<string, number> = {};
-  for (const b of blocked) for (const code of new Set(b.blockers.map((x) => x.code))) blockerCounts[code] = (blockerCounts[code] ?? 0) + 1;
+  for (const b of notEligible) for (const code of new Set(b.blockers.map((x) => x.code))) blockerCounts[code] = (blockerCounts[code] ?? 0) + 1;
+
   return {
     query: o.query,
     interpretedQuery: o.interpretedQuery,
     location: o.location,
     serverFilters: o.serverFilters,
-    summary: { candidates: views.length, eligible: eligible.length, blocked: blocked.length, blockerCounts },
+    summary: {
+      candidates: views.length,
+      eligible: eligible.length,
+      blocked: blocked.length,
+      needsVerification: needsVerification.length,
+      recommendations: recommendations.length,
+      blockerCounts,
+    },
+    ranking: {
+      weights: o.ranking.weights,
+      priority: o.ranking.priority,
+      maxRecommendations: o.ranking.maxRecommendations,
+      eligibleConsidered: o.ranking.eligibleConsidered,
+      eligibleScored: o.ranking.eligibleScored,
+      notes: o.ranking.notes,
+    },
+    recommendations,
     eligible,
     blocked,
+    needsVerification,
     search: o.search,
     details: o.details,
     limits: o.limits,
     durationMs: o.durationMs,
     deadlineReached: o.deadlineReached,
     notes: [
-      'Sem ranking: a ordem é a do searchOffers (relevância do iFood ou `refinements.sort`).',
+      `Ranking aplicado a ${o.ranking.eligibleConsidered} candidato(s) já elegível(eis): ${recommendations.length} recomendação(ões) emitida(s) (máx. ${o.ranking.maxRecommendations}), em ordem decrescente de score.`,
+      'Restrições obrigatórias decidem a elegibilidade antes do ranking: preço, promoção, avaliação e preferência nunca compensam uma restrição obrigatória.',
+      'Produtos bloqueados (incompatibilidade) e pendentes de verificação (falta de informação) ficam fora de `recommendations`.',
       'Preços são estimativas ou faixas; o total confirmado só existe no carrinho do iFood (fora do escopo).',
       'O iFood não fornece ingredientes/alérgenos estruturados; heurísticas textuais nunca comprovam segurança.',
       'Apenas restrições obrigatórias são enviadas como filtro ao iFood; preferências não excluem itens.',
+      ...o.ranking.notes,
     ],
   };
 }

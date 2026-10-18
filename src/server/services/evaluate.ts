@@ -1,11 +1,13 @@
-// Pipeline read-only de avaliação (F2/F3 integradas). SEM ranking: a ordem é a da busca do iFood.
+// Pipeline read-only de avaliação (F2/F3/F4 integradas).
 //   localização → searchOffers (paginado) → normalize → getItem (limitado, paralelo, com cache)
-//   → normalize → constraints/configuration/pricing/eligibility → elegíveis × bloqueados
+//   → normalize → constraints/configuration/pricing/eligibility → classificação (ELIGIBLE/BLOCKED/
+//   NEEDS_VERIFICATION) → ranking dos ELEGIBLE (domínio puro, sem chamadas MCP novas)
 // Somente tools de leitura. Toda chamada MCP tem timeout e há um prazo total por requisição.
 
 import { NormalizationError, normalizeItemDetail, normalizeSearchOffers, type NormalizedItemDetail, type NormalizedListingItem } from '../domain/normalize.js';
 import { requirementOf, serverFiltersFor, type RestrictionKey } from '../domain/constraints.js';
 import { evaluateCandidate, type Budget, type EligibilityResult } from '../domain/eligibility.js';
+import { classifyBlockers, rankCandidates, type EligibilityCategory, type RankingResult, type UserPreferences } from '../domain/ranking.js';
 import { McpToolError } from '../mcp/errors.js';
 import type { CallOptions } from '../mcp/tools.js';
 import type { Address, ItemRestriction, LatLng, ListAddressesResult, SearchOffersArgs, SearchRefinements } from '../mcp/types.js';
@@ -59,6 +61,8 @@ export interface EvaluateRequest {
   merchantType?: SearchOffersArgs['merchantType'];
   /** Repassados ao searchOffers (contexto: distância, tempo, avaliação, promoção, ordenação). */
   refinements?: Pick<SearchRefinements, 'maxDistanceKm' | 'maxDeliveryTimeMinutes' | 'minRating' | 'onlyWithPromotion' | 'maxDeliveryFee' | 'sort'>;
+  /** Preferências do usuário: só alteram a pontuação do ranking, nunca a elegibilidade. */
+  preferences?: UserPreferences;
   limits?: Partial<EvaluateLimits>;
 }
 
@@ -84,6 +88,8 @@ export interface EvaluatedCandidate {
   page: number;
   detail: DetailOutcome;
   evaluation: EligibilityResult;
+  /** ELIGIBLE | BLOCKED | NEEDS_VERIFICATION — derivada dos blockers (domain/ranking.ts). */
+  category: EligibilityCategory;
 }
 
 export interface EvaluateOutcome {
@@ -101,6 +107,8 @@ export interface EvaluateOutcome {
   };
   details: { requested: number; detailed: number; fromCache: number; failed: number; skippedLimit: number; skippedClosed: number; skippedDeadline: number };
   candidates: EvaluatedCandidate[];
+  /** Ranking dos candidatos ELIGIBLE (pesos, notas e no máximo 4 recomendações). */
+  ranking: RankingResult;
   limits: EvaluateLimits;
   durationMs: number;
   deadlineReached: boolean;
@@ -305,8 +313,14 @@ export async function runEvaluation(req: EvaluateRequest, deps: EvaluateDeps, ca
       detail = null;
     }
     const evaluation = evaluateCandidate({ listing, detail, serverFilters, quantity: req.quantity }, constraints);
-    return { listing, serverFilters, page, detail: outcomes[i]!, evaluation };
+    return { listing, serverFilters, page, detail: outcomes[i]!, evaluation, category: classifyBlockers(evaluation.blockers) };
   });
+
+  // ---- ranking (F4): só ELEGIBLE, dados já coletados — nenhuma chamada MCP nova, nenhuma escrita.
+  const rankable = candidates
+    .filter((c) => c.category === 'ELIGIBLE')
+    .map((c) => ({ evaluation: c.evaluation, listing: c.listing, detail: c.detail.status === 'DETAILED' ? c.detail.detail : null }));
+  const ranking = rankCandidates(rankable, req.preferences, req.refinements);
 
   const count = (s: DetailOutcome['status']) => outcomes.filter((o) => o.status === s).length;
   return {
@@ -325,6 +339,7 @@ export async function runEvaluation(req: EvaluateRequest, deps: EvaluateDeps, ca
       skippedDeadline: count('SKIPPED_DEADLINE'),
     },
     candidates,
+    ranking,
     limits,
     durationMs: now() - t0,
     deadlineReached,

@@ -1,9 +1,10 @@
-// POST /api/evaluate — avaliação read-only (sem ranking, sem carrinho).
+// POST /api/evaluate — avaliação read-only (ranking dos elegíveis, sem carrinho).
 // Contrato do bot: dinheiro em CENTAVOS inteiros na entrada e na saída; conversão explícita aqui (domínio é BRL decimal).
 
 import type { Context, Hono } from 'hono';
 import { z } from 'zod';
 import { ALLERGENS, DIETARY } from '../domain/constraints.js';
+import { PRIORITIES } from '../domain/ranking.js';
 import { SORTS } from '../mcp/types.js';
 import { EvaluateInputError, type EvaluateOutcome, type EvaluateRequest } from '../services/evaluate.js';
 import { evaluateView } from '../services/evaluate-view.js';
@@ -11,6 +12,9 @@ import { evaluateViewCents, fromCents } from '../services/cents.js';
 
 /** Centavos inteiros (≤ R$ 10.000,00). */
 const cents = z.number().int().positive().max(1_000_000);
+
+/** Texto curto de preferência (nunca vira restrição obrigatória). */
+const prefText = z.string().trim().min(1).max(40);
 
 export const EvaluateBody = z
   .object({
@@ -39,6 +43,17 @@ export const EvaluateBody = z
         minRating: z.number().min(0).max(5).optional(),
         onlyWithPromotion: z.boolean().optional(),
         sort: z.enum(SORTS).optional(),
+      })
+      .strict()
+      .optional(),
+    // Preferências: alteram só a pontuação do ranking — nunca a elegibilidade (restrições são `restrictions`).
+    preferences: z
+      .object({
+        foodTypes: z.array(prefText).max(10).optional(),
+        likedIngredients: z.array(prefText).max(20).optional(),
+        avoidedIngredients: z.array(prefText).max(20).optional(),
+        occasion: z.string().trim().min(1).max(60).optional(),
+        priority: z.enum(PRIORITIES).optional(),
       })
       .strict()
       .optional(),

@@ -238,7 +238,7 @@ describe('/api/evaluate em centavos (contrato do bot)', () => {
     expect(r.status).toBe(200);
     const body = await r.json();
     expect(body.money).toEqual({ currency: 'BRL', unit: 'CENTS' });
-    const pizza = body.blocked.find((c: { item: { name: string } }) => c.item.name === 'Promoção pizza grande');
+    const pizza = body.needsVerification.find((c: { item: { name: string } }) => c.item.name === 'Promoção pizza grande');
     expect(pizza.blockers.map((b: { code: string }) => b.code)).toEqual(['ITEM_BUDGET_UNVERIFIED']); // faixa 6500–14300 vs teto 10000
     const p = pizza.pricing.minimumConfigurable;
     expect(p.unitTotalRange).toEqual({ minCents: 6500, maxCents: 14300 });
@@ -257,6 +257,40 @@ describe('/api/evaluate em centavos (contrato do bot)', () => {
     JSON.parse(json, (k, v) => (k.endsWith('Cents') && typeof v === 'number' && nums.push(v), v));
     expect(nums.length).toBeGreaterThan(10);
     expect(nums.every(Number.isInteger)).toBe(true);
+  });
+});
+
+describe('/api/evaluate com preferences (F4 — ranking)', () => {
+  it('preferences chegam ao ranking, saem em centavos e nunca viram filtro obrigatório', async () => {
+    const { call, env } = mk();
+    await connectAndConfirm(env, ORG_A);
+    const r = await call('POST', '/api/evaluate', { body: { query: 'pizza', preferences: { foodTypes: ['pizza'], priority: 'ECONOMY' } } });
+    expect(r.status).toBe(200);
+    const body = await r.json();
+    expect(body.ranking).toMatchObject({ priority: 'ECONOMY', maxRecommendations: 4, weights: { PRICE: 0.4, PREFERENCES: 0.35 } });
+    expect(body.recommendations.length).toBeGreaterThan(0);
+    expect(body.recommendations.length).toBe(body.summary.recommendations);
+    for (const [i, rec] of (body.recommendations as { eligible: boolean; ranking: { rank: number; score: number | null; criteria: { criterion: string; effectiveWeight: number }[] } }[]).entries()) {
+      expect(rec.eligible).toBe(true);
+      expect(rec.ranking.rank).toBe(i + 1);
+      expect(rec.ranking.criteria).toHaveLength(5);
+    }
+    // Preferência não altera a busca no iFood (só a pontuação).
+    expect(env.mcp.searchArgs.at(-1)!.refinements?.itemRestrictions ?? []).toEqual([]);
+  });
+
+  it.each([
+    [{ query: 'pizza', preferences: { priority: 'RAPIDO' } }],
+    [{ query: 'pizza', preferences: { priority: 'CHEAPEST' } }],
+    [{ query: 'pizza', preferences: { food: ['pizza'] } }], // objeto é strict: chave desconhecida
+    [{ query: 'pizza', preferences: { foodTypes: [''] } }],
+    [{ query: 'pizza', preferences: { occasion: '   ' } }],
+  ] as [unknown][])('400 de validação em preferences %j (antes de qualquer chamada)', async (body) => {
+    const { call, env } = mk();
+    await connectAndConfirm(env, ORG_A);
+    const before = env.mcp.used.length;
+    expect((await call('POST', '/api/evaluate', { body })).status).toBe(400);
+    expect(env.mcp.used.length).toBe(before);
   });
 });
 
@@ -303,8 +337,8 @@ describe('regressão de alergia em /api/evaluate (issue #3)', () => {
     const body = await r.json();
     expect(env.mcp.searchArgs.at(-1)!.refinements).toMatchObject({ itemRestrictions: ['GLUTEN_FREE'] });
     expect(body.serverFilters).toEqual(['GLUTEN_FREE']);
-    expect(body.summary).toMatchObject({ candidates: 1, eligible: 0, blocked: 1 });
-    const c = body.blocked[0];
+    expect(body.summary).toMatchObject({ candidates: 1, eligible: 0, blocked: 0, needsVerification: 1 });
+    const c = body.needsVerification[0];
     expect(c.item.name).toBe('Veggie Burger');
     expect(c.detail.status).toBe('DETAILED');
     expect(c.eligible).toBe(false);

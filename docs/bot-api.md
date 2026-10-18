@@ -85,7 +85,7 @@ Operações de conta (mesma autenticação; exigem vínculo confirmado **e** ope
 | Rota | Operação | Erros de vínculo |
 |---|---|---|
 | `GET /api/addresses` | `ADDRESSES_READ` | 409 `IFOOD_LINK_REQUIRED` · 409 `IFOOD_RECONNECT_REQUIRED` · 503 `IFOOD_UNAVAILABLE` · 403 `IFOOD_SCOPE_MISSING` |
-| `POST /api/evaluate` | `OFFERS_EVALUATE` | idem; corpo/resposta em centavos (seção 6) |
+| `POST /api/evaluate` | `OFFERS_EVALUATE` | idem; corpo/resposta em centavos (seção 7); buckets e ranking (seção 8) |
 
 ## 4. Fluxo que o bot deve implementar
 
@@ -156,20 +156,92 @@ Identidade da conta: `getUser` com `includeProfileData=false` (contrato observad
 - Mensagens (`blockers[].message`, `notes`) continuam em texto "R$ x.yz" para leitura humana.
 - Internamente o domínio usa BRL decimal; a conversão é feita só na borda (`src/server/services/cents.ts`).
 
-## 8. Callback localhost
+## 8. Recomendações ranqueadas (`/api/evaluate` — F4)
+
+Detalhe da implementação (pesos, critérios, política de dado ausente, testes): `docs/ranking.md`.
+
+- **Requisição**: além de `query`/`location`/`restrictions`/`budget`/`refinements`, existe
+  `preferences: { foodTypes?, likedIngredients?, avoidedIngredients?, occasion?, priority? }` opcional, com
+  `priority` em `ECONOMY | SPEED | PREFERENCES`. Preferência **nunca** vira filtro obrigatório no iFood e nunca
+  muda a elegibilidade — só a pontuação.
+- **Três buckets mutuamente exclusivos** (a restrição obrigatória decide *antes* de qualquer pontuação):
+  - `recommendations` — só candidatos **ELIGIBLE**, no máx. 4, em ordem decrescente de `ranking.score`;
+  - `eligible` — todos os elegíveis (apenas os quatro primeiros têm `ranking`, na mesma ordem);
+  - `blocked` — incompatibilidade identificada (`RESTRICTION_FAIL`, `OVER_ITEM_BUDGET`, `MERCHANT_CLOSED`,
+    `NO_VALID_CONFIGURATION`…). O bot mostra o motivo e **não** oferece o item;
+  - `needsVerification` — falta de informação (`NOT_DETAILED`, `ALLERGY_UNVERIFIED`, `PRICE_UNAVAILABLE`…).
+    Não é "seguro": o bot pede confirmação/explique a lacuna, **nunca** recomenda.
+  - `summary = { candidates, eligible, blocked, needsVerification, recommendations, blockerCounts }`, com
+    `eligible + blocked + needsVerification === candidates` e `recommendations ≤ 4`.
+- **`ranking` em cada recomendação**: `rank` (1-based), `score` (0–1 ou `null`), `criteria[]`
+  (`PREFERENCES 35% · CONTEXT 25% · PRICE 20% · DELIVERY 10% · RATING 10%`; com `priority` o critério escolhido
+  dobra e os pesos entram no `ranking.weights` do topo), `reasons[]` (por que pontuou assim) e
+  `dataLimitations[]` (o que faltou). Critério sem dado vem `status: "NO_DATA"`, `score: null`,
+  `effectiveWeight: 0`, `contribution: null` — o peso é redistribuído entre os avaliados e **nenhuma nota é
+  inventada**; `score: null` só quando nenhum critério pôde ser avaliado.
+- O `ranking` do topo traz `weights`, `priority`, `maxRecommendations`, `eligibleConsidered`, `eligibleScored` e
+  `notes` (inclusive "Nenhuma opção pôde ser confirmada como compatível…" quando `recommendations` for `[]`).
+- Garantias: restrição obrigatória vence qualquer pontuação (preço/promoção/avaliação preferência não compensam
+  bloqueio); empate é determinístico (score desc → ordem da busca → `itemId`); os textos de `ranking` não têm
+  dinheiro e passam intactos na saída em centavos (seção 7).
+
+Exemplo real (fixtures de teste, `query: "lanche vegano"`, `priority: "ECONOMY"`) — recorte:
+
+```json
+{
+  "summary": { "candidates": 17, "eligible": 4, "blocked": 0, "needsVerification": 13, "recommendations": 4,
+    "blockerCounts": { "NOT_DETAILED": 13 } },
+  "ranking": { "weights": { "PREFERENCES": 0.35, "CONTEXT": 0.25, "PRICE": 0.4, "DELIVERY": 0.1, "RATING": 0.1 },
+    "priority": "ECONOMY", "maxRecommendations": 4, "eligibleConsidered": 4, "eligibleScored": 4,
+    "notes": ["Pesos do ranking: preferências 35%, contexto 25%, preço 20%, entrega 10%, avaliação 10%; prioridade ECONOMY dobra o peso de PRICE."] },
+  "recommendations": [
+    { "itemId": "c29bfc17-0c56-4925-9298-93c946c39075", "eligible": true,
+      "item": { "name": "Maria salada Veg" },
+      "listingPrice": { "unitPriceCents": 2990, "promotionalUnitPriceCents": 2990, "definitive": false },
+      "ranking": {
+        "rank": 1, "score": 0.9124,
+        "criteria": [
+          { "criterion": "PREFERENCES", "weight": 0.35, "effectiveWeight": 0.3684, "status": "SCORED",
+            "score": 1, "contribution": 0.3684, "basis": "Média de 1 sinal(is) de preferência (…).",
+            "reasons": ["combina com o tipo de comida pedido: \"vegano\""], "dataLimitations": ["Preferências avaliadas por similaridade de texto (…)"] },
+          { "criterion": "CONTEXT", "weight": 0.25, "effectiveWeight": 0, "status": "NO_DATA",
+            "score": null, "contribution": null, "basis": "Nenhum limite de contexto (…) informado na requisição.",
+            "reasons": [], "dataLimitations": [] },
+          { "criterion": "PRICE", "weight": 0.4, "effectiveWeight": 0.4211, "status": "SCORED",
+            "score": 1, "contribution": 0.4211, "basis": "Preço por unidade normalizado (min–max) entre 4 opção(ões) elegível(eis).",
+            "reasons": ["preço estimado R$ 29.90 por unidade", "menor preço entre as opções elegíveis"], "dataLimitations": [] },
+          { "criterion": "DELIVERY", "weight": 0.1, "effectiveWeight": 0.1053, "status": "SCORED",
+            "score": 0.5, "contribution": 0.0527, "basis": "Tempo e taxa de entrega normalizado (…) entre 4 elegível(eis); média de 2 de 2 subcritérios.",
+            "reasons": ["entrega estimada 30–40 min", "taxa de entrega R$ 6.99"], "dataLimitations": [] },
+          { "criterion": "RATING", "weight": 0.1, "effectiveWeight": 0.1053, "status": "SCORED",
+            "score": 0.6667, "contribution": 0.0702, "basis": "Avaliação do estabelecimento normalizada (min–max) entre os candidatos elegíveis.",
+            "reasons": ["avaliação 4.9 ★ (258 avaliações)"], "dataLimitations": [] }
+        ],
+        "reasons": ["combina com o tipo de comida pedido: \"vegano\"", "preço estimado R$ 29.90 por unidade",
+          "menor preço entre as opções elegíveis", "entrega estimada 30–40 min", "taxa de entrega R$ 6.99",
+          "avaliação 4.9 ★ (258 avaliações)"],
+        "dataLimitations": ["critério CONTEXT sem dado (NO_DATA): peso redistribuído entre os demais — sem nota calculada",
+          "Preferências avaliadas por similaridade de texto (nome/descrição/opções): ausência do termo não prova ausência do ingrediente — usado só para preferência, nunca para segurança"]
+      } }
+  ],
+  "eligible": ["…"], "blocked": [], "needsVerification": ["…"]
+}
+```
+
+## 9. Callback localhost
 
 Redirect registrado: **`http://localhost:8000`** (exato). Para a demo: Telegram Desktop e navegador **no computador do backend**.
 Abrir pelo celular não funciona (e é bloqueado). Para uso pelo celular seria preciso outro redirect cadastrado no iFood e
 `PUBLIC_BASE_URL` público — e então a proteção "mesma máquina" deixa de existir (restam navegador vinculado + confirmação).
 
-## 9. Recorte da demo (não é isolamento multiusuário completo)
+## 10. Recorte da demo (não é isolamento multiusuário completo)
 
 - Um organizador em `ALLOWED_ORGANIZER_IDS`, uma conta iFood dedicada de teste.
 - Sem banco de dados, sem criptografia dos tokens em repouso (arquivos modo 600 em `IFOOD_LINKS_DIR`, fora do Git), sem rate
   limiting, sem auditoria, sem revogação no provedor, um único processo (tentativas pendentes ficam em memória).
 - Sessão global antiga (`/api/auth/*`) desligada por padrão e nunca importada como vínculo.
 
-## 10. Configuração
+## 11. Configuração
 
 ```bash
 # api-backend (.env)

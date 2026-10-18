@@ -66,7 +66,8 @@ function priceCents(p: PriceView | null) {
   };
 }
 
-function candidateCents(c: Candidate) {
+/** Genérico para preservar campos extras (ex.: `ranking` das recomendações) na saída em centavos. */
+function candidateCents<C extends Candidate>(c: C) {
   const { listingPrice, pricing, ...rest } = c;
   return {
     ...rest,
@@ -88,7 +89,10 @@ export function evaluateViewCents(v: ReturnType<typeof evaluateView>) {
   return {
     money: { currency: 'BRL' as const, unit: 'CENTS' as const },
     ...v,
+    // `ranking` (dentro de cada recomendação) não tem dinheiro — passa intacto por candidateCents.
+    recommendations: v.recommendations.map(candidateCents),
     eligible: v.eligible.map(candidateCents),
     blocked: v.blocked.map(candidateCents),
+    needsVerification: v.needsVerification.map(candidateCents),
   };
 }
