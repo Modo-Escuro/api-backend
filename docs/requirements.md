@@ -117,7 +117,7 @@ Checkout, carrinho automático, pagamentos, vouchers, rastreio de pedidos, cadas
 
 ## 7. Carrinho real confirmado e limite da F7 legada
 
-O único escopo de carrinho é real, com confirmação humana específica PREPARE_CART. A composição local da GRP-01 deve alimentar a CART-01; não é resultado remoto nem alternativa de aceite. Reutilizar DATA-01, GRP-01 e DOM-01 sem duplicar sacola, restrições ou rateio.
+O único escopo de carrinho é real, com confirmação humana específica PREPARE_CART. A composição local da GRP-01 deve alimentar a CART-01; não é resultado remoto nem alternativa de aceite. Reutilizar DATA-01, GRP-01 e DOM-01 sem duplicar carrinho, restrições ou rateio.
 
 A F7 legada do PR #4 (`cbb546c`) continua desligada: não possui as garantias completas da CART-01. Sua flag não habilita o novo fluxo. A implementação CART-01 auditada permanece local; não foi publicada por esta revisão documental. INT-02 #40 exige outputs reais, unidades, erros e reconciliação por operação antes da ativação. Preservar intenção PENDING/SUCCEEDED/FAILED/RESULT_UNKNOWN e bloquear repetição após resultado desconhecido.
 

@@ -140,7 +140,7 @@ describe('montagem do entrypoint AI-01 (rede sintética)', () => {
     } finally { runtime.stop(); dir.clean(); }
   });
 
-  it('Telegram → AI-02 → Gemini → GRP-01 → sacola simulada, MCP só leitura e sem aprovação', async () => {
+  it('Telegram → AI-02 → Gemini → GRP-01 → carrinho simulado, MCP só leitura e sem aprovação', async () => {
     const dir = temporary();
     const modelConfig = loadConfig(environment).conversationModel!;
     const env = setup({ conversationRuntime: { dbFile: dir.file, botId: principal.botId }, conversationModel: { ...modelConfig, maxRequests: 10 } });
@@ -181,7 +181,7 @@ describe('montagem do entrypoint AI-01 (rede sintética)', () => {
       const chosen = await send(3, 'Quero a proposta 1', 2);
       expect(chosen).toMatchObject({ status: 'SUCCEEDED', snapshot: { phase: 'EDITING_CART', humanApproval: null } });
       const review = chosen.snapshot.blocks.find((b: { kind: string }) => b.kind === 'REVIEW');
-      expect(review.blockers).toContain('Sacola simulada: aprovação e pedido ainda não estão disponíveis nesta etapa.');
+      expect(review.blockers).toContain('Carrinho simulado: aprovação e pedido ainda não estão disponíveis nesta etapa.');
       expect(review.price).toEqual({ kind: 'UNKNOWN', currency: 'BRL' });
       const used = env.mcp.used.map((u: { op: string }) => u.op);
       expect(used.every((op: string) => ['listAddresses', 'searchOffers', 'getItem', 'getUser'].includes(op))).toBe(true);

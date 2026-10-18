@@ -21,7 +21,7 @@ export const ALLOWED_ACTIONS: readonly AgentAction['action'][] = [
 ];
 
 const CONFIRMATION = 'precisa de confirmação explícita sua, que ainda não pode ser dada por mensagem nesta etapa; nada foi alterado';
-export const REVIEW_NOTE = 'Para fazer o pedido, a sacola simulada precisa ser revisada e aprovada por botão. Essa revisão ainda não está disponível nesta etapa; nenhuma compra foi feita.';
+export const REVIEW_NOTE = 'Para fazer o pedido, o carrinho simulado precisa ser revisado e aprovado por botão. Essa revisão ainda não está disponível nesta etapa; nenhuma compra foi feita.';
 
 const fold = (s: string) => s.normalize('NFD').replace(/[\p{M}\p{Cf}]/gu, '').trim().toLocaleLowerCase('pt-BR');
 /** Acima disto (R$ 100 mil) o valor é tratado como implausível: na prática equivaleria a "sem teto" sem ninguém dizer. */
@@ -265,12 +265,12 @@ export function planActions(
           notes.push(`A proposta ${a.position} não foi exibida (grupo grande); peça sugestões mais específicas antes de escolher.`);
           break;
         }
-        tryApply([{ op: 'SELECT_PROPOSAL', proposalId: chosen.proposalId }], `Proposta ${a.position} colocada na sacola simulada (nenhum pedido foi feito).`, `Escolher a proposta ${a.position}`);
+        tryApply([{ op: 'SELECT_PROPOSAL', proposalId: chosen.proposalId }], `Proposta ${a.position} colocada no carrinho simulado (nenhum pedido foi feito).`, `Escolher a proposta ${a.position}`);
         break;
       }
       case 'CLEAR_BAG':
-        if (state?.bag) tryApply([{ op: 'CLEAR_BAG' }], 'Sacola simulada esvaziada.', 'Esvaziar a sacola');
-        else notes.push('A sacola simulada já está vazia.');
+        if (state?.bag) tryApply([{ op: 'CLEAR_BAG' }], 'Carrinho simulado esvaziado.', 'Esvaziar o carrinho');
+        else notes.push('O carrinho simulado já está vazio.');
         break;
     }
   }

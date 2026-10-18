@@ -118,7 +118,7 @@ Dinheiro é BRL em centavos inteiros seguros: `UNKNOWN` não contém valor, `EST
 
 ## Revisão e aprovação humana
 
-Conta conectada/confirmada é o contrato OAuth existente. Revisão é apresentação de sacola, custos e bloqueios. Aprovação é callback humano específico em `/purchase-approvals`, com schema próprio, e só pode existir para revisão apta na fase `AWAITING_APPROVAL`, cobertura completa, total confirmado, sem bloqueios e dentro da validade. Aprovação não pode vencer depois da cotação.
+Conta conectada/confirmada é o contrato OAuth existente. Revisão é apresentação de carrinho, custos e bloqueios. Aprovação é callback humano específico em `/purchase-approvals`, com schema próprio, e só pode existir para revisão apta na fase `AWAITING_APPROVAL`, cobertura completa, total confirmado, sem bloqueios e dentro da validade. Aprovação não pode vencer depois da cotação.
 
 `humanApproval` é reservado ao adaptador humano, nunca ao contexto do LLM. `toModelContext` faz projeção explícita por allowlist para `modelContext.schema.json`; não encaminhar snapshots/operações inteiras, referências de ação/aprovação, status de login, cabeçalhos, credenciais ou dados de pagamento ao modelo. Os textos de pendências desse DTO precisam ser mensagens seguras do servidor, sem transcrição de erros externos ou segredos. A futura AI-02 acrescentará dados declarativos estritamente necessários com schema próprio; este DTO mínimo não substitui o estado de domínio.
 

@@ -45,7 +45,7 @@ const BLOCKER_TEXT: Record<ApprovalBlocker, string> = {
   RESTRICTIONS_UNVERIFIED: 'Há restrições alimentares sem confirmação.',
   BAG_NEEDS_REVALIDATION: 'A compra mudou depois da escolha; peça novas sugestões.',
 };
-const SIMULATED = 'Sacola simulada: aprovação e pedido ainda não estão disponíveis nesta etapa.';
+const SIMULATED = 'Carrinho simulado: aprovação e pedido ainda não estão disponíveis nesta etapa.';
 
 function planText(title: string, plan: PlanEvaluation, state: PurchaseState, compact = false): string {
   const who = (id: string) => state.participants.find((p) => p.participantId === id)?.displayName ?? '?';
@@ -56,11 +56,14 @@ function planText(title: string, plan: PlanEvaluation, state: PurchaseState, com
     const n = plan.coverage.filter((c) => c.status === 'COVERED').length;
     return clip(`${title}: ${plan.proposal.lines.length} item(ns); ${delivery}.${floor} Atendidos: ${n} de ${plan.coverage.length}.`, 300);
   }
-  const lines = plan.proposal.lines.map((l) => `${l.name} (${l.consumerIds.map(who).join(', ')}): ${formatCents(l.unitMinCents)}${l.unitMaxCents === l.unitMinCents ? '' : l.unitMaxCents === null ? '+' : `–${formatCents(l.unitMaxCents)}`}`);
-  const delivery = plan.proposal.deliveryFeeCents === null ? 'entrega não informada' : `entrega ${formatCents(plan.proposal.deliveryFeeCents)}`;
-  const floor = plan.lowerBoundCents === null ? '' : ` Soma dos preços observados: ${formatCents(plan.lowerBoundCents)} — não é o total (sem taxa de serviço; descontos não visíveis podem mudar o valor).`;
+  // Uma linha por informação, com emoji, para separar bem as propostas no Telegram (o bot põe preços em negrito).
+  const single = state.participants.length === 1;
+  const lines = plan.proposal.lines.map((l) => `• ${l.name}${single ? '' : ` (${l.consumerIds.map(who).join(', ')})`}: ${formatCents(l.unitMinCents)}${l.unitMaxCents === l.unitMinCents ? '' : l.unitMaxCents === null ? '+' : `–${formatCents(l.unitMaxCents)}`}`);
+  const delivery = plan.proposal.deliveryFeeCents === null ? '🛵 Entrega: não informada' : `🛵 Entrega: ${formatCents(plan.proposal.deliveryFeeCents)}`;
+  const floor = plan.lowerBoundCents === null ? [] : [`💰 Soma dos preços observados: ${formatCents(plan.lowerBoundCents)} (não é o total: sem taxa de serviço; descontos não visíveis podem mudar o valor)`];
   const out = plan.coverage.filter((c) => c.status !== 'COVERED').map((c) => who(c.participantId));
-  return clip(`${title}: ${lines.join('; ')}; ${delivery}.${floor}${out.length ? ` Sem atendimento: ${out.join(', ')}.` : ''}`, 1500);
+  const icon = title.startsWith('Proposta') ? '🍽️' : '🛒';
+  return clip([`${icon} ${title}`, ...lines, delivery, ...floor, ...(out.length ? [`⚠️ Sem atendimento: ${out.join(', ')}`] : [])].join('\n'), 1500);
 }
 
 export interface PlanViews { proposals: PlanEvaluation[]; bag: PlanEvaluation | null }
@@ -106,7 +109,7 @@ function build(base: Snapshot, state: PurchaseState | null, applied: string[], p
       const b = plans.bag;
       blocks.push({ kind: 'REVIEW', reviewRef: b.proposal.proposalId, coverage: coverage(b), price: { kind: 'UNKNOWN', currency: 'BRL' },
         blockers: [...b.approvalBlockers.map((x) => BLOCKER_TEXT[x]), SIMULATED].slice(0, 30) });
-      blocks.push({ kind: 'TEXT', source: 'SERVER', text: planText('Sacola simulada', b, state, compact) });
+      blocks.push({ kind: 'TEXT', source: 'SERVER', text: planText('Carrinho simulado', b, state, compact) });
     }
   }
   const omitted = shown < plans.proposals.length

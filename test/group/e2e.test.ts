@@ -1,4 +1,4 @@
-// GRP-01 ponta a ponta: mensagem → agente → leitura MCP (fixtures reais) → propostas → sacola simulada → SQLite.
+// GRP-01 ponta a ponta: mensagem → agente → leitura MCP (fixtures reais) → propostas → carrinho simulado → SQLite.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ConversationEvent, Operation } from '../../src/server/contracts/conversation';
 import { DeterministicModel } from '../../src/server/agent/mock-model';
@@ -83,7 +83,7 @@ describe('GRP-01 ponta a ponta com AI-02 + DATA-01 + RUN-01', () => {
     const review = chosen.snapshot!.blocks.find((b) => b.kind === 'REVIEW')!;
     expect(review.kind === 'REVIEW' && review.blockers).toEqual(expect.arrayContaining([
       'Total do pedido desconhecido: a taxa de serviço só aparece no carrinho.',
-      'Sacola simulada: aprovação e pedido ainda não estão disponíveis nesta etapa.',
+      'Carrinho simulado: aprovação e pedido ainda não estão disponíveis nesta etapa.',
     ]));
     expect(chosen.snapshot!.humanApproval).toBeNull();
     expect(chosen.snapshot!.blocks.some((b) => b.kind === 'OUTCOME')).toBe(false);
@@ -106,7 +106,7 @@ describe('GRP-01 ponta a ponta com AI-02 + DATA-01 + RUN-01', () => {
     expect(used).toContain('getItem');
   });
 
-  it('replay não refaz a busca; reinício preserva propostas e sacola', async () => {
+  it('replay não refaz a busca; reinício preserva propostas e carrinho', async () => {
     const w = await world();
     await w.send('Somos Ana. Ana não tem restrição');
     await w.send('Sugere pizza');
@@ -121,7 +121,7 @@ describe('GRP-01 ponta a ponta com AI-02 + DATA-01 + RUN-01', () => {
     expect((await w.send('pode pedir')).snapshot!.phase).toBe('EDITING_CART');
   });
 
-  it('Esvaziar sacola limpa somente a composição simulada e preserva contexto após reinício', async () => {
+  it('Esvaziar carrinho limpa somente a composição simulada e preserva contexto após reinício', async () => {
     const w = await world();
     await w.send('Somos Ana e Caio. Ana não tem restrição. Caio é alérgico a leite. Teto de R$ 180');
     await w.send('Sugere pizza');
@@ -129,7 +129,7 @@ describe('GRP-01 ponta a ponta com AI-02 + DATA-01 + RUN-01', () => {
     expect(w.domain().bag).toBeDefined();
     const before = w.domain();
     const reads = w.env.mcp.used.length;
-    const cleared = await w.send('Esvaziar sacola simulada');
+    const cleared = await w.send('Esvaziar carrinho simulado');
     expect(cleared.status).toBe('SUCCEEDED');
     expect(w.domain().bag).toBeUndefined();
     expect(w.domain().participants).toEqual(before.participants);

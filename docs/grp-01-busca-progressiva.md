@@ -40,7 +40,7 @@ O resultado interno acrescenta diagnóstico separado para evidência alimentar, 
 
 Quando falta evidência, explica que elevar o teto não resolve esse bloqueio. Orienta consultar o restaurante sobre a restrição e contaminação cruzada e esclarece que uma mensagem no chat não constitui confirmação rastreável. Oferece outra busca por tipo de comida mantendo teto e restrições. Orçamento observado acima do teto, lojas fechadas, preço ausente e atendimento em lojas separadas recebem motivos próprios.
 
-Até três candidatos com status não verificado podem aparecer com o prefixo **“Só informação, não é recomendação”**, pessoa afetada e bloqueio explícito. São texto de catálogo tratado como dado, com tamanho limitado e controles removidos. Não recebem bloco PROPOSAL, referência de escolha, sacola ou autorização humana. “Quero a proposta 1” não seleciona um candidato meramente informativo. As mensagens continuam no contrato v1 existente, sem alterar schemas ou pins históricos do bot.
+Até três candidatos com status não verificado podem aparecer com o prefixo **“Só informação, não é recomendação”**, pessoa afetada e bloqueio explícito. São texto de catálogo tratado como dado, com tamanho limitado e controles removidos. Não recebem bloco PROPOSAL, referência de escolha, carrinho ou autorização humana. “Quero a proposta 1” não seleciona um candidato meramente informativo. As mensagens continuam no contrato v1 existente, sem alterar schemas ou pins históricos do bot.
 
 ## Retomar conversa e coordenação com bot
 

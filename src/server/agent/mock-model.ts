@@ -79,7 +79,7 @@ export function interpret(message: string): AgentProposal {
     if (/pode pedir|faz o pedido|fecha o pedido|finaliza o pedido/.test(low)) actions.push({ action: 'REQUEST_ORDER' });
     if ((m = low.match(/(?:sugere|sugira|sugest[oõ]es de|op[cç][oõ]es de|procura|busca)\s+([a-zà-ú ]{2,40})/))) actions.push({ action: 'SUGGEST_PROPOSALS', query: m[1]!.trim() });
     if ((m = low.match(/(?:quero|escolho|fico com|pode ser)\s+(?:a\s+)?(?:proposta|op[cç][aã]o)\s+([1-4])\b/))) actions.push({ action: 'SELECT_PROPOSAL', position: Number(m[1]) });
-    if (/(?:esvazia|limpa|zera)\s+a sacola/.test(low)) actions.push({ action: 'CLEAR_BAG' });
+    if (/(?:esvazia|limpa|zera)\s+(?:o carrinho|a sacola)/.test(low)) actions.push({ action: 'CLEAR_BAG' });
     if (/cancela(?:r)? a compra/.test(low)) actions.push({ action: 'CLOSE_PURCHASE', reason: 'CANCELLED' });
     else if (/encerra(?:r)? a compra/.test(low)) actions.push({ action: 'CLOSE_PURCHASE', reason: 'CLOSED' });
   }

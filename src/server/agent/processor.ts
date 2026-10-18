@@ -198,14 +198,14 @@ export function createAgentProcessor(opts: AgentOptions): TurnProcessor {
       return renderSnapshot(ctx.snapshot, plan.state, plan.applied, pending, views);
     };
     let snapshot = render();
-    // A revisão da sacola nunca é cortada. Se ela não couber no limite de resposta, a escolha não é gravada
-    // (sacola sem revisão visível não existe) e o usuário recebe o motivo.
+    // A revisão do carrinho nunca é cortada. Se ela não couber no limite de resposta, a escolha não é gravada
+    // (carrinho sem revisão visível não existe) e o usuário recebe o motivo.
     if (Buffer.byteLength(JSON.stringify(snapshot)) > SNAPSHOT_BUDGET_BYTES && plan.ops.some((o) => o.op === 'SELECT_PROPOSAL')) {
       const kept = plan.ops.filter((o) => o.op !== 'SELECT_PROPOSAL');
       plan.ops.splice(0, plan.ops.length, ...kept);
       plan.state = kept.length ? ctx.previewDomain({ ops: kept, ...(linkId ? { linkId } : {}) }) : ctx.purchase;
-      plan.applied = plan.applied.filter((t) => !t.includes('colocada na sacola simulada'));
-      extraNotes.unshift('O grupo é grande demais para mostrar a revisão da sacola; a escolha não foi registrada. Reduza o grupo ou as condições e tente de novo.');
+      plan.applied = plan.applied.filter((t) => !t.includes('colocada no carrinho simulado'));
+      extraNotes.unshift('O grupo é grande demais para mostrar a revisão do carrinho; a escolha não foi registrada. Reduza o grupo ou as condições e tente de novo.');
       snapshot = render();
     }
     metrics.inc('agent_turns_total', { outcome: 'OK' });
