@@ -1,6 +1,7 @@
 # Ranking de recomendações (F4) — implementação
 
-Status: **implementado no api-backend** (2026-10-17). Base: `docs/requirements.md` (FR-4, FR-5, FR-7, FR-8).
+Status: **RANK-03 implementada localmente na branchBruna**, contrato 2.0 (18/10/2026), sem commit/integração novos.
+Base: DEC-01 D9 e DOM-01; diagnóstico, antes/depois e consumidores: [rank-03-contrato-v2](rank-03-contrato-v2.md).
 Contrato HTTP/centavos e exemplo de payload: `docs/bot-api.md` (seções 7 e 8).
 
 ## 1. Ordem das decisões
@@ -15,7 +16,7 @@ classificação (domain/ranking.ts → classifyBlockers)   ELIGIBLE | BLOCKED | 
 pontuação (domain/ranking.ts → rankCandidates)         score 0–1 + critérios explicáveis
         │
         ▼
-ORDERNAÇÃO + corte (score desc → ordem da busca → itemId; máx. 4)
+ORDERNAÇÃO D9 + corte (custo/prazo/preferências → merchantId → itemId; máx. 4)
 ```
 
 Regra inegociável: **nenhuma pontuação compensa restrição obrigatória.** Preço, promoção, avaliação e
@@ -33,7 +34,10 @@ candidato com `blockers` (defesa em profundidade). Nada aqui faz fetch, lê rel�
 | `NEEDS_VERIFICATION` | **falta de informação** (nunca vira "seguro") | `NOT_DETAILED`, `RESTRICTION_UNVERIFIED`, `ALLERGY_UNVERIFIED`, `ALLERGY_OPTIONS_UNVERIFIED`, `ITEM_BUDGET_UNVERIFIED`, `ORDER_BUDGET_UNVERIFIED`, `PRICE_UNAVAILABLE` |
 
 - Incompatibilidade tem precedência sobre falta de informação (bloco com os dois ⇒ `BLOCKED`).
-- Código desconhecido ⇒ `BLOCKED` (conservador: não recomendar).
+- Código desconhecido ⇒ `BLOCKED` como fallback conservador, não como incompatibilidade comprovada.
+  Prevalece mesmo combinado com `NOT_DETAILED`; todos os motivos originais permanecem na resposta.
+- Pendências conhecidas de DOM-01 (`PRICE_UNVERIFIED`, `CONFIG_UNVERIFIED`, `AVAILABILITY_UNKNOWN`,
+  `LIMIT_<métrica suportada>_UNVERIFIED`) são `NEEDS_VERIFICATION`. Limite confirmado excedido é `BLOCKED`.
 - Alergia é sempre `MANDATORY` e nunca resulta `PASS` (`bot-api.md` §6): com dados insuficientes o item cai em
   `NEEDS_VERIFICATION` (`ALLERGY_UNVERIFIED`), não em `ELIGIBLE` nem `BLOCKED`.
 
@@ -47,11 +51,17 @@ com `eligible + blocked + needsVerification === candidates`.
 |---|---|
 | `restrictions[]` (DIETARY/ALLERGY) | **obrigatório** — decide elegibilidade; vira filtro server-side quando aplicável |
 | `budget` | **obrigatório** — teto; exceder ⇒ `BLOCKED`/`NEEDS_VERIFICATION`, nunca "compensa ficar caro" |
-| `refinements` (`maxDistanceKm`, `maxDeliveryTimeMinutes`, `maxDeliveryFeeCents`, `minRating`) | alimenta o critério CONTEXT |
+| `refinements` (`maxDistanceKm`, `maxDeliveryTimeMinutes`, `maxDeliveryFeeCents`, `minRating`) | limites obrigatórios locais antes do ranking |
+| `softLimits` | alvos flexíveis, alimentam CONTEXT e a contagem de preferências explicitamente atendidas |
 | `preferences` (`foodTypes`, `likedIngredients`, `avoidedIngredients`, `occasion`, `priority`) | alimenta o critério PREFERENCES e os pesos — **nunca** vira filtro nem mexe em elegibilidade |
 
-`priority` (`ECONOMY` \| `SPEED` \| `PREFERENCES`) dobra exatamente um critério (`PRICE`/`DELIVERY`/`PREFERENCES`)
-via `weightsFor`; os pesos entram na resposta em `ranking.weights`.
+`ECONOMY`: total completo estimado crescente → máximo observado do prazo crescente → preferências
+atendidas decrescentes → `merchantId`/`itemId`. `SPEED`: inverte as duas primeiras chaves. Desconhecido fica
+depois dos conhecidos em cada chave. Sem ECONOMY/SPEED (inclusive `PREFERENCES` legado), retorna
+`PRIORITY_REQUIRED`, pergunta em `clarification` e nenhuma recomendação, sem mudar os buckets de elegibilidade.
+
+`weightsFor` preserva pesos diagnósticos legados: ECONOMY dobra PRICE para 0.4 e SPEED dobra DELIVERY
+para 0.2. O peso é renormalizado somente entre critérios pontuados no diagnóstico: **score não ordena**.
 
 ## 4. Pesos e critérios
 
@@ -60,21 +70,26 @@ Pesos padrão (`DEFAULT_WEIGHTS`): `PREFERENCES 35% · CONTEXT 25% · PRICE 20% 
 | Critério | Sinal | Normalização | Origem |
 |---|---|---|---|
 | `PREFERENCES` | média de sinais (restrição marcada como `PREFERENCE`, `foodTypes`/`likedIngredients`/`avoidedIngredients`/`occasion` por similaridade de texto do nome/descrição/opções) | absoluta 0–1 | `preferences` |
-| `CONTEXT` | folga relativa (`headroom`) de distância, tempo, taxa e nota mínima pedidos | absoluta 0–1 | `refinements` |
-| `PRICE` | preço por unidade (`selected ?? minimumConfigurable`; faixa ⇒ ponto médio, com limitação explícita) | min–max entre os **ELIGIBLE** desta consulta (mais barato = 1) | `pricing` |
-| `DELIVERY` | média de ETA (ponto médio do intervalo) e taxa de entrega | min–max entre os ELIGIBLE (menor = 1) | listagem |
+| `CONTEXT` | folga relativa (`headroom`) de distância, tempo, taxa e nota mínima desejados | absoluta 0–1 | `softLimits` |
+| `PRICE` | total completo estimado de `selected ?? minimumConfigurable`, com quantidade, entrega e serviço; sem total único verificável ⇒ NO_DATA | min–max entre elegíveis com total conhecido (mais barato = 1) | `pricing` |
+| `DELIVERY` | máximo observado do prazo, sem pontuar frete; máximo ausente/inválido ⇒ NO_DATA | min–max entre os ELIGIBLE com prazo conhecido (menor = 1) | listagem |
 | `RATING` | `merchant.rating.value` | min–max entre os ELIGIBLE (maior = 1) | listagem |
 
 - **Dado ausente** (explícito): critério vem `status: "NO_DATA"`, `score: null`, `contribution: null`,
   `effectiveWeight: 0`; o total é a média ponderada **só dos critérios avaliados** e a limitação aparece em
-  `dataLimitations`. Nenhuma nota é inventada; `score: null` só quando nenhum critério pôde ser avaliado.
+  `dataLimitations`. Essa redistribuição é somente diagnóstica, não decide ordem. Nenhuma nota é inventada;
+  `score: null` só quando nenhum critério pôde ser avaliado. `coverage` mostra critérios, pesos e fração
+  ponderada disponível; não é confiança. Detalhes e fórmula no guia v2.
 - Min–max empatado (todos com o mesmo valor) ⇒ `0.5` neutro, não "o melhor".
 - Preferências por texto são **heurística rotulada**: ausência do termo não prova ausência do ingrediente —
   usadas só para pontuar, nunca para segurança.
 
 ## 5. Saída
 
-Por recomendação, o campo `ranking`:
+Por recomendação, `ranking` inclui `rank`, `score` diagnóstico, `criteria`, `coverage`, `orderingKeys`,
+`reasons` e `dataLimitations`. Score relativo à consulta, nunca probabilidade nem percentual de satisfação.
+
+**Exemplo histórico anterior à RANK-03** (o contrato atual está no guia v2):
 
 ```jsonc
 { "rank": 1, "score": 0.9124,
@@ -86,13 +101,13 @@ Por recomendação, o campo `ranking`:
   "reasons": ["…"], "dataLimitations": ["critério CONTEXT sem dado (NO_DATA): …"] }
 ```
 
-No topo: `ranking = { weights, priority, maxRecommendations: 4, eligibleConsidered, eligibleScored, notes }`
+No topo: `contractVersion: "2.0"` e `ranking` com versão, status, políticas, esclarecimento, pesos,
+prioridade, limite 4, contadores e notas.
 (com a nota "Nenhuma opção pôde ser confirmada como compatível…" quando `recommendations` for `[]`).
 
-Garantias: `recommendations.length = min(4, eligible)`; bloqueados/pendentes nunca aparecem em
-`recommendations`; ordem decrescente de `score`; empates determinísticos (score desc → ordem da busca →
-`itemId`). Dinheiro segue o contrato em centavos (`services/cents.ts`); `ranking` não tem dinheiro e passa
-intacto na saída.
+Garantias: com prioridade D9 declarada, `recommendations.length = min(4, eligible)`; zero/uma opção não
+é completada com bloqueados/pendentes. Ordem estrita D9, independente de score e da ordem da busca.
+Dinheiro segue em centavos, inclusive `orderingKeys.estimatedTotalCents`, sem reconversão na projeção.
 
 ## 6. Arquivos
 
@@ -108,13 +123,13 @@ intacto na saída.
 A elegibilidade continua sendo decidida em `domain/constraints.ts` e `domain/eligibility.ts`, antes da
 pontuação. Configuração e composição monetária permanecem funções puras de domínio.
 
-## 7. Correção encontrada durante os testes
+## 7. Histórico — correção encontrada nos testes da F4
 
 `pricePoint` (`src/server/domain/ranking.ts`) não tratava preço único (`unitTotalRange.min === max`, o caso
 mais comum: item sem opções) e caía no retorno final ⇒ `PRICE` virava `NO_DATA` para todo mundo. Corrigido:
 `min === max` devolve o valor sem limitação; faixa (`max > min`) continua com ponto médio + limitação.
 
-## 8. Testes (25 novos; total 239)
+## 8. Histórico — testes da F4 (25 novos; total então 239)
 
 | Arquivo | Cobre |
 |---|---|
@@ -128,8 +143,8 @@ Verificação: `npm run typecheck && npm run lint && npm test` — limpo (16 arq
 
 ## 9. Fora de escopo / possíveis próximos passos
 
-- **`CONTEXT` considera só `refinements`** — FR-7 cita também "preço final vs orçamento"; incluiria um
-  `headroom` do `budget` no critério de contexto (hoje o orçamento age só como filtro duro).
+- `CONTEXT` considera alvos flexíveis de `softLimits`; orçamento máximo continua filtro rígido de DOM-01.
+- Política de score ponderado como chave de ordenação não foi aprovada: D9 escolheu ordenação estrita.
 - Preferências usam similaridade de texto; nenhuma resposta real do MCP traz ingredientes/alérgenos
   estruturados (heurística rotulada, nunca usada para segurança).
 - Sem checkout (regra de ouro do MVP): preço é estimativa; total confirmado só no carrinho do iFood.
@@ -178,7 +193,7 @@ anteriormente no Windows não ocorreram neste ambiente; nenhum teste foi removid
 Após a atualização da main, dinheiro do domínio e da API está em centavos inteiros.
 A normalização converte BRL somente na entrada MCP; a projeção HTTP apenas acrescenta os nomes
 `*Cents`, sem multiplicar por 100 novamente. O ranking formata centavos como reais na explicação;
-pontos médios de preço são representados em centavos inteiros.
+na RANK-03, faixa de total não é substituída por ponto médio ou limite inferior.
 
 Limites obrigatórios locais, configuração desconhecida e disponibilidade ausente continuam bloqueando.
 `preferences` e `softLimits` coexistem na requisição, sem transformar preferências em filtros obrigatórios.

@@ -11,12 +11,17 @@ import {
   DEFAULT_WEIGHTS,
   MAX_RECOMMENDATIONS,
   classifyBlockers,
-  rankCandidates,
+  rankCandidates as rankWithDeclaredPriority,
   weightsFor,
   type RankCandidate,
 } from '../../src/server/domain/ranking';
 import type { ItemRestriction } from '../../src/server/mcp/types';
 import { item, listingFor } from './helpers';
+import { completeSyntheticEstimate } from '../helpers/ranking';
+
+// Estes cenários de critérios declaram economia; ausência/ambiguidade é testada em rank03.test.ts.
+const rankCandidates: typeof rankWithDeclaredPriority = (cs, prefs, context, constraints) =>
+  rankWithDeclaredPriority(cs, { priority: 'ECONOMY', ...prefs }, context, constraints);
 
 interface CandidateOpts {
   /** Preço por unidade sintético (zera optionGroups ⇒ preço fixo, sem faixa). */
@@ -53,7 +58,8 @@ function candidate(name: string, opts: CandidateOpts = {}): RankCandidate {
   }
   if (opts.dropRating) l.merchant.rating = { value: ABSENT, rawValue: ABSENT, count: ABSENT };
   const evaluation = evaluateCandidate({ listing: l, detail: d, serverFilters: opts.serverFilters ?? [] }, { restrictions: opts.restrictions ?? [], budget: opts.budget });
-  return { evaluation, listing: l, detail: d };
+  const result = { evaluation, listing: l, detail: d };
+  return opts.price === undefined ? result : completeSyntheticEstimate(result);
 }
 
 const ids = (r: ReturnType<typeof rankCandidates>) => r.recommendations.map((x) => x.itemId);
@@ -114,7 +120,7 @@ describe('classifyBlockers — segurança alimentar antes de qualquer pontuaçã
 });
 
 describe('rankCandidates — pontuação explicável', () => {
-  it('6. produtos elegíveis são ordenados conforme suas pontuações', () => {
+  it('6. produtos elegíveis são ordenados por total conhecido, com pontuação diagnóstica', () => {
     const expensive = candidate('Veggie Burger', { price: 50, equalize: true });
     const cheap = candidate('Vegano Brooks', { price: 30, equalize: true });
     const mid = candidate('Maria salada Veg', { price: 40, equalize: true });
@@ -126,9 +132,9 @@ describe('rankCandidates — pontuação explicável', () => {
     expect(r.recommendations.map((x) => x.rank)).toEqual([1, 2, 3]);
 
     const scores = r.recommendations.map((x) => x.score!);
-    expect(scores[0]).toBeCloseTo(0.75, 4); // preço 30 (min–max 1) + entrega/avaliação empatados em 0.5
+    expect(scores[0]).toBeCloseTo(0.8333, 4); // total 30+4,90: peso diagnóstico PRICE 0.4, prazo/rating 0.1 cada
     expect(scores[1]).toBeCloseTo(0.5, 4);
-    expect(scores[2]).toBeCloseTo(0.25, 4);
+    expect(scores[2]).toBeCloseTo(0.1666, 4); // soma das duas contribuições arredondadas a 4 casas
 
     for (const rec of r.recommendations) {
       expect(rec.criteria.map((c) => c.criterion)).toEqual([...CRITERIA]);
@@ -145,7 +151,7 @@ describe('rankCandidates — pontuação explicável', () => {
     expect(r.maxRecommendations).toBe(MAX_RECOMMENDATIONS);
   });
 
-  it('7. preferência muda o ranking, mas nunca a elegibilidade', () => {
+  it('7. preferência muda o diagnóstico, mas não compensa custo total maior nem altera elegibilidade', () => {
     const brooks = candidate('Vegano Brooks', { price: 50, equalize: true }); // mais caro ⇒ último
     const maria = candidate('Maria salada Veg', { price: 40, equalize: true });
     const veggie = candidate('Veggie Burger', { price: 30, equalize: true });
@@ -156,12 +162,12 @@ describe('rankCandidates — pontuação explicável', () => {
 
     // "kibe" aparece só no texto do Vegano Brooks.
     const withPrefs = rankCandidates([brooks, maria, veggie], { likedIngredients: ['kibe'] });
-    expect(ids(withPrefs)).toEqual([brooks.evaluation.itemId, veggie.evaluation.itemId, maria.evaluation.itemId]);
+    expect(ids(withPrefs)).toEqual(ids(base)); // D9: custo precede preferência
 
-    const pref = withPrefs.recommendations[0]!.criteria.find((c) => c.criterion === 'PREFERENCES')!;
+    const pref = withPrefs.recommendations.find((rec) => rec.itemId === brooks.evaluation.itemId)!.criteria.find((c) => c.criterion === 'PREFERENCES')!;
     expect(pref).toMatchObject({ status: 'SCORED', score: 1 });
     expect(pref.reasons.join(' ')).toMatch(/kibe/);
-    // Mesma composição de candidatos: preferência só reordena.
+    // Mesma composição de candidatos: score não libera restrição nem substitui D9.
     expect(ids(withPrefs).sort()).toEqual(ids(base).sort());
     expect([brooks, maria, veggie].map(category)).toEqual(['ELIGIBLE', 'ELIGIBLE', 'ELIGIBLE']);
   });
@@ -178,8 +184,8 @@ describe('rankCandidates — pontuação explicável', () => {
     expect(rating.dataLimitations.join(' ')).toMatch(/avaliação do estabelecimento não informada/);
     expect(rec.dataLimitations.join(' ')).toMatch(/critério RATING sem dado \(NO_DATA\)/);
 
-    // (0.2×1 + 0.1×0.5) / 0.3 — peso da avaliação foi redistribuído, sem nota de 0.
-    expect(rec.score).toBeCloseTo(0.8333, 3);
+    // (0.4×1 + 0.1×0.5) / 0.5 — redistribuição apenas diagnóstica, sem inventar nota de avaliação.
+    expect(rec.score).toBeCloseTo(0.9, 3);
     expect(rec.score).not.toBeCloseTo(0.625, 2);
     expect(rec.score).not.toBeNull();
     expect(r.eligibleScored).toBe(2);
@@ -207,9 +213,10 @@ describe('rankCandidates — pontuação explicável', () => {
     expect(ids(r1)).toEqual(ids(r2));
     expect(r1.recommendations).toEqual(r2.recommendations);
     expect(r1.recommendations.map((x) => x.score)).toEqual([0.5, 0.5, 0.5]); // empate real
-    expect(ids(r1)).toEqual([a.evaluation.itemId, b.evaluation.itemId, c.evaluation.itemId]); // ordem da busca
+    const orderedIds = [...input].sort((x, y) => x.evaluation.merchantId < y.evaluation.merchantId ? -1 : x.evaluation.merchantId > y.evaluation.merchantId ? 1 : x.evaluation.itemId < y.evaluation.itemId ? -1 : 1).map((x) => x.evaluation.itemId);
+    expect(ids(r1)).toEqual(orderedIds); // D9: IDs, não ordem da busca
     expect(rankCandidates([c, b, a])).toEqual(rankCandidates([c, b, a]));
-    expect(ids(rankCandidates([c, b, a]))).toEqual([c.evaluation.itemId, b.evaluation.itemId, a.evaluation.itemId]);
+    expect(ids(rankCandidates([c, b, a]))).toEqual(orderedIds);
   });
 
   it('respeita o limite de 4 recomendações, sempre na melhor ordem', () => {

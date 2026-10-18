@@ -46,7 +46,8 @@ export const EvaluateBody = z
       })
       .strict()
       .optional(),
-    // Preferências: alteram só a pontuação do ranking — nunca a elegibilidade (restrições são `restrictions`).
+    // D9 ordena com ECONOMY/SPEED. Ausência ou PREFERENCES legado pede esclarecimento (HTTP 200,
+    // ranking.status=PRIORITY_REQUIRED); preferências não alteram elegibilidade.
     preferences: z
       .object({
         foodTypes: z.array(prefText).max(10).optional(),

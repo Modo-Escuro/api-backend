@@ -94,8 +94,8 @@ export interface PriceBreakdown {
   fromPricePattern: FromPricePattern;
   totalDiscount: number;
   delivery: { fee: number | null; promotionalFeeApplied: boolean; source: 'searchOffers' | null };
-  /** Taxa de serviço não observada no catálogo; não é inferida nem completada com zero. */
-  service: { fee: null; status: 'UNKNOWN' };
+  /** KNOWN exige componente explícito; o catálogo atual só produz UNKNOWN, nunca zero inferido. */
+  service: { fee: null; status: 'UNKNOWN' } | { fee: number; status: 'KNOWN' };
   /** Subtotal parcial, sem taxa de serviço; não é total do pedido. */
   itemsAndDeliverySubtotal: number | null;
   estimatedTotal: number | null;
