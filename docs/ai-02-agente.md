@@ -79,6 +79,8 @@ Logs do agente: só códigos (`MODEL_TIMEOUT`, `MODEL_OUTPUT_INVALID`, ...), nun
   válida, instala o candidato OpenAI e este agente. Isso não informa versão ou configuração implantada.
 - **AI-01 (#15):** [montagem e avaliação](ai-01-montagem-ensaio.md) implementadas como preparação; escolha final,
   comparação/custo, avaliação externa e metas D10 continuam pendentes. Modelo determinístico só em testes e avaliação offline.
+- **Configuração padrão:** `index.ts` cria o runtime sem processador; apenas `CONVERSATION_RUNTIME_ENABLED=true` continua recusando eventos novos com 503 `UNAVAILABLE`. O modelo determinístico não é importado fora de testes.
+- **AI-01 (#15):** implementa o provedor real e seleciona Gemini após ensaio curto. Com runtime configurado, `CONVERSATION_MODEL=gemini-3.8-flash` e chave válida, o código instala o agente com contexto mínimo, 800 tokens de saída e prazo de 9 s para vínculo + modelo. A chave sozinha não ativa IA. Ver [resultado, limites e passos de ativação](ai-01-result.md). Merge/deploy/ativação remota não são comprovados por esse ensaio; D10 ponta a ponta continua separada.
 - **BUY-01 (#19):** confirmação humana por botão (para remoções/encerramento) e revisão/aprovação fictícia.
 - **GRP-01 (#17):** propostas, consumo por participante e rateio (DOM-01) — fora deste agente.
 - **DOM-01:** ao integrar rateio, teto `UNCLEAR` deve bloquear (ver auditoria DATA-01 × DOM-01).
