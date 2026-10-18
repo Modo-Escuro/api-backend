@@ -1,4 +1,6 @@
 // RUN-01: fila e resultados transacionais. Nenhuma chamada a modelo/provedor neste módulo.
+// DATA-01 (schema v2): estado da compra no mesmo banco, gravado na MESMA transação do snapshot/operação;
+// patches com proveniência em purchase_changes; exclusão D7 ao encerrar ou após inatividade.
 import { randomBytes } from 'node:crypto';
 import { chmodSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -6,6 +8,10 @@ import { DatabaseSync } from 'node:sqlite';
 import { CancelResultSchema, OperationSchema, SnapshotSchema, type ConversationEvent, type ErrorCode, type Operation, type Snapshot } from '../contracts/conversation.js';
 import { contractErrorResponse } from '../contracts/errors.js';
 import { assertOperation, assertReplay, assertScope, assertSnapshot, assertVersion, contentHash, ContractError, eventKey, type AdapterPrincipal } from '../contracts/guards.js';
+import {
+  CONTRACT_MAX_PARTICIPANTS, DEFAULT_MAX_PARTICIPANTS, DomainError, nextPurchase, parsePurchaseState,
+  type ChangePath, type DomainChange, type PurchaseState,
+} from '../domain/purchase.js';
 
 const ref = () => randomBytes(24).toString('base64url');
 const terminal = (o: Operation) => !['ACCEPTED', 'RUNNING', 'CANCEL_REQUESTED'].includes(o.status);
@@ -18,11 +24,17 @@ export interface TurnLimits {
   maxRecords: number;
   maxAttempts: number;
   maxResultBytes: number;
+  /** DATA-01: participantes por compra (padrão 20; contrato API-01 aceita até 100). */
+  maxParticipants: number;
+  /** DEC-01 D7: dados da compra expiram após este tempo sem evento aceito (24 h). */
+  inactivityMs: number;
 }
 export const DEFAULT_LIMITS: TurnLimits = {
   deadlineMs: 120_000, leaseMs: 15_000, maxPending: 100, maxPerConversation: 10,
   maxRecords: 10_000, maxAttempts: 3, maxResultBytes: 65_536,
+  maxParticipants: DEFAULT_MAX_PARTICIPANTS, inactivityMs: 24 * 60 * 60_000,
 };
+export const SCHEMA_VERSION = 2;
 export interface CancelCommand {
   contractVersion: '1.0'; eventId: string; conversationId: string; expectedVersion: number;
   source: ConversationEvent['source']; operationId: string;
@@ -31,6 +43,14 @@ type CancelResult = ReturnType<typeof CancelResultSchema.parse>;
 export interface Job {
   operation: Operation; event: ConversationEvent; principal: AdapterPrincipal;
   snapshot: Snapshot; token: string;
+  /** DATA-01: compra ativa da conversa no momento do claim (null se não houver). */
+  purchase: PurchaseState | null;
+}
+export interface FinishInput {
+  snapshot: Snapshot; completeness: 'PARTIAL' | 'COMPLETE'; paths: Operation['changes'][number]['paths'];
+  cause?: 'USER' | 'DERIVED';
+  /** DATA-01: operações tipadas; o estado é recalculado aqui a partir do estado persistido. */
+  domain?: DomainChange;
 }
 interface Row {
   id: string; scope: string; event_id: string; body: string | null; operation: string;
@@ -51,6 +71,7 @@ export class TurnStore {
       if (!Number.isSafeInteger(n) || n <= 0) throw new Error('Limite de execução inválido.');
     }
     if (this.limits.leaseMs >= this.limits.deadlineMs) throw new Error('Lease deve ser menor que prazo.');
+    if (this.limits.maxParticipants > CONTRACT_MAX_PARTICIPANTS) throw new Error('Máximo de participantes acima do contrato.');
     if (path !== ':memory:') {
       const dir = dirname(resolve(path));
       // Usar diretório dedicado: nunca alterar permissões da raiz do volume/sistema.
@@ -62,12 +83,15 @@ export class TurnStore {
     try {
       if (path !== ':memory:' && existsSync(path)) chmodSync(path, 0o600);
       this.db.exec('PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;');
-      const version = this.db.prepare('PRAGMA user_version').get()!['user_version'];
-      if (version !== 0 && version !== 1) { this.db.close(); throw new Error('Versão de armazenamento não suportada.'); }
+      const version = Number(this.db.prepare('PRAGMA user_version').get()!['user_version']);
+      if (version < 0 || version > SCHEMA_VERSION) { this.db.close(); throw new Error('Versão de armazenamento não suportada.'); }
       const integrity = this.db.prepare('PRAGMA quick_check').get()!['quick_check'];
       if (integrity !== 'ok') { this.db.close(); throw new Error('Armazenamento inválido.'); }
       this.transaction(() => {
-        this.db.exec(`
+        // Relido dentro da transação: outra conexão pode ter migrado entre a leitura acima e o BEGIN IMMEDIATE.
+        const current = Number(this.db.prepare('PRAGMA user_version').get()!['user_version']);
+        if (current < 0 || current > SCHEMA_VERSION) throw new Error('Versão de armazenamento não suportada.');
+        if (current === 0) this.db.exec(`
           CREATE TABLE IF NOT EXISTS conversations (scope TEXT PRIMARY KEY, snapshot TEXT NOT NULL);
           CREATE TABLE IF NOT EXISTS events (
             key TEXT PRIMARY KEY, scope TEXT NOT NULL, kind TEXT NOT NULL, hash TEXT NOT NULL,
@@ -86,6 +110,23 @@ export class TurnStore {
           CREATE INDEX IF NOT EXISTS operations_scope ON operations(scope, status);
           PRAGMA user_version=1;
         `);
+        // v2 (DATA-01): domínio da compra + proveniência dos patches. Migração aditiva: dados v1 preservados.
+        if (current < 2) this.db.exec(`
+          ALTER TABLE conversations ADD COLUMN domain TEXT;
+          ALTER TABLE conversations ADD COLUMN last_activity_at INTEGER;
+          CREATE INDEX IF NOT EXISTS conversations_activity ON conversations(last_activity_at);
+          CREATE TABLE IF NOT EXISTS purchase_changes (
+            change_id TEXT PRIMARY KEY, scope TEXT NOT NULL, purchase_id TEXT NOT NULL, event_id TEXT NOT NULL,
+            source TEXT NOT NULL, base_version INTEGER NOT NULL, result_version INTEGER NOT NULL,
+            cause TEXT NOT NULL CHECK (cause IN ('USER','DERIVED')), caused_by TEXT, patch TEXT NOT NULL,
+            created_at INTEGER NOT NULL, FOREIGN KEY(scope) REFERENCES conversations(scope)
+          );
+          CREATE INDEX IF NOT EXISTS purchase_changes_scope ON purchase_changes(scope, result_version);
+          PRAGMA user_version=2;
+        `);
+        // Conversas vindas do v1 não têm atividade registrada. O instante da migração abre uma janela única de
+        // `inactivityMs` (D7): não presume atividade antiga como recente, nem apaga de surpresa uma conversa em uso.
+        if (current === 1) this.db.prepare('UPDATE conversations SET last_activity_at=? WHERE last_activity_at IS NULL').run(this.now());
       });
     } catch {
       try { this.db.close(); } catch { /* já fechado */ }
@@ -104,8 +145,13 @@ export class TurnStore {
     return found ? SnapshotSchema.parse(JSON.parse(String(found['snapshot']))) : undefined;
   }
   private initial(p: AdapterPrincipal): Snapshot {
-    return { contractVersion: '1.0', conversationId: p.conversationId, version: 0, phase: 'COLLECTING',
-      blocks: [], pending: [], allowedActions: [], humanApproval: null };
+    return emptySnapshot(p.conversationId, 0);
+  }
+  /** Compra persistida da conversa; inválida ⇒ falha fechada (nunca tratada como ausente). */
+  private purchaseOf(scope: string): PurchaseState | null {
+    const found = this.db.prepare('SELECT domain FROM conversations WHERE scope=?').get(scope);
+    if (!found || found['domain'] === null) return null;
+    return parsePurchaseState(JSON.parse(String(found['domain'])));
   }
   private budget(scope: string) {
     const count = (sql: string, ...args: string[]) => Number(this.db.prepare(sql).get(...args)!['n']);
@@ -164,6 +210,8 @@ export class TurnStore {
         pollAfterMs: 1000, completeness: 'NONE', snapshot: null, changes: [], error: null,
       };
       this.db.prepare('INSERT OR IGNORE INTO conversations(scope,snapshot) VALUES (?,?)').run(scope, JSON.stringify(snapshot));
+      // D7: "evento aceito" renova a atividade; replays acima não renovam.
+      this.db.prepare('UPDATE conversations SET last_activity_at=? WHERE scope=?').run(this.now(), scope);
       this.db.prepare('INSERT INTO operations(id,scope,event_id,body,operation,status) VALUES (?,?,?,?,?,?)')
         .run(operation.operationId, scope, event.eventId, JSON.stringify(event), JSON.stringify(operation), operation.status);
       this.db.prepare('INSERT INTO events(key,scope,kind,hash,source,operation_id) VALUES (?,?,?,?,?,?)')
@@ -258,7 +306,16 @@ export class TurnStore {
       const exclude = activeIds.length ? ` AND id NOT IN (${activeIds.map(() => '?').join(',')})` : '';
       const saved = row(this.db.prepare(`SELECT * FROM operations WHERE status='ACCEPTED'${exclude} ORDER BY seq LIMIT 1`).get(...activeIds));
       if (!saved) return undefined;
-      const op = JSON.parse(saved.operation) as Operation, snapshot = this.current(saved.scope)!;
+      const op = JSON.parse(saved.operation) as Operation;
+      // Estado ilegível de UMA conversa falha só a operação dela; a fila das demais continua (DATA-01).
+      let snapshot: Snapshot, purchase: PurchaseState | null;
+      try {
+        snapshot = this.current(saved.scope)!;
+        purchase = this.purchaseOf(saved.scope);
+      } catch {
+        this.failure(saved, 'INTERNAL');
+        return undefined;
+      }
       if (Date.parse(op.deadlineAt) <= this.now()) { this.failure(saved, 'DEADLINE_EXCEEDED'); return undefined; }
       if (snapshot.version !== op.baseVersion) { this.failure(saved, 'STALE_VERSION'); return undefined; }
       const [, botId, organizerId, conversationId] = JSON.parse(saved.scope) as string[];
@@ -267,7 +324,7 @@ export class TurnStore {
       this.db.prepare('UPDATE operations SET owner=?,token=?,lease_until=?,attempts=attempts+1 WHERE id=?')
         .run(owner, token, Math.min(this.now() + this.limits.leaseMs, Date.parse(op.deadlineAt)), op.operationId);
       return { operation: running, event: JSON.parse(saved.body!) as ConversationEvent,
-        principal: { botId: botId!, organizerId: organizerId!, conversationId: conversationId! }, snapshot, token };
+        principal: { botId: botId!, organizerId: organizerId!, conversationId: conversationId! }, snapshot, token, purchase };
     });
   }
   private owned(job: Job): Row | undefined {
@@ -301,7 +358,7 @@ export class TurnStore {
     });
   }
 
-  finish(job: Job, result: { snapshot: Snapshot; completeness: 'PARTIAL' | 'COMPLETE'; paths: Operation['changes'][number]['paths']; cause?: 'USER' | 'DERIVED' }): boolean {
+  finish(job: Job, result: FinishInput): boolean {
     return this.transaction(() => {
       const saved = this.owned(job);
       if (!saved) return false;
@@ -325,15 +382,119 @@ export class TurnStore {
         throw new ContractError('INVALID_REQUEST');
       }
       assertSnapshot(snapshot, this.now());
-      const complete: Operation = { ...op, status: 'SUCCEEDED', resultVersion: snapshot.version,
-        snapshot, completeness: result.completeness, pollAfterMs: null, error: null,
-        changes: [{ changeId: ref(), eventId: op.eventId, source: job.event.source,
-          baseVersion: op.baseVersion, resultVersion: snapshot.version, paths: result.paths, cause: result.cause ?? 'DERIVED' }] };
+      // DATA-01: recalcula o domínio a partir do estado PERSISTIDO (não do que o processador viu nem de um estado pronto).
+      let domain: ReturnType<typeof nextPurchase> | null = null;
+      if (result.domain !== undefined) {
+        try {
+          domain = nextPurchase(this.purchaseOf(saved.scope), result.domain,
+            { seed: saved.scope, eventId: op.eventId, maxParticipants: this.limits.maxParticipants });
+        } catch (e) {
+          if (e instanceof DomainError) throw new ContractError('INVALID_REQUEST');
+          throw e;
+        }
+      }
+      const endedStatus = domain?.state && domain.state.status !== 'ACTIVE' ? domain.state.status : null;
+      // D7: o snapshot de encerramento é gerado pelo servidor; nada do processador (texto, pendências) sobrevive.
+      const stored = endedStatus ? closingSnapshot(snapshot, endedStatus) : snapshot;
+      // O bloco GROUP mostrado precisa refletir exatamente a compra gravada (participantes, nomes e teto).
+      if (!endedStatus) assertGroupMatches(stored, domain ? domain.state : this.purchaseOf(saved.scope));
+      const paths = [...new Set<ChangePath>([...result.paths, ...(domain?.paths ?? [])])];
+      // Operações de domínio vêm de uma mensagem humana aceita: por padrão a origem é USER, não DERIVED.
+      const cause = result.cause ?? (domain?.ops.length ? 'USER' : 'DERIVED');
+      const changeId = ref();
+      const complete: Operation = { ...op, status: 'SUCCEEDED', resultVersion: stored.version,
+        snapshot: stored, completeness: result.completeness, pollAfterMs: null, error: null,
+        changes: [{ changeId, eventId: op.eventId, source: job.event.source,
+          baseVersion: op.baseVersion, resultVersion: stored.version, paths, cause }] };
       if (Buffer.byteLength(JSON.stringify(complete)) > this.limits.maxResultBytes) throw new ContractError('LIMIT_EXCEEDED');
       this.write(saved, complete);
-      this.db.prepare('UPDATE conversations SET snapshot=? WHERE scope=?').run(JSON.stringify(snapshot), saved.scope);
+      if (!domain || domain.state === null) {
+        this.db.prepare('UPDATE conversations SET snapshot=?, last_activity_at=? WHERE scope=?')
+          .run(JSON.stringify(stored), this.now(), saved.scope);
+        return true;
+      }
+      if (endedStatus) {
+        // D7: encerrar exclui a compra na mesma transação. O snapshot neutro de encerramento e a operação atual
+        // também expiram: a atividade é renovada para o expurgo por inatividade apagá-los depois.
+        this.db.prepare('UPDATE conversations SET snapshot=? WHERE scope=?').run(JSON.stringify(stored), saved.scope);
+        this.purgeScope(saved.scope, op.operationId);
+        this.db.prepare('UPDATE conversations SET last_activity_at=? WHERE scope=?').run(this.now(), saved.scope);
+        return true;
+      }
+      const state: PurchaseState = { ...domain.state, version: snapshot.version };
+      this.db.prepare('UPDATE conversations SET snapshot=?, domain=?, last_activity_at=? WHERE scope=?')
+        .run(JSON.stringify(snapshot), JSON.stringify(parsePurchaseState(state)), this.now(), saved.scope);
+      const insert = this.db.prepare(`INSERT INTO purchase_changes(change_id,scope,purchase_id,event_id,source,base_version,
+        result_version,cause,caused_by,patch,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)`);
+      const source = JSON.stringify(job.event.source);
+      // Associação/troca de vínculo é derivada: aponta para o evento causador sem fabricar mensagem humana.
+      const link = domain.linkEvent ? JSON.stringify({ derived: domain.linkEvent === 'CHANGED' ? 'LINK_CHANGED' : 'LINK_ASSOCIATED' }) : null;
+      // A linha das operações usa o changeId da operação; a derivada tem ID próprio e `caused_by` = changeId da
+      // operação (referência canônica do contrato, em Operation.changes[]), exista ou não linha de operações.
+      if (domain.ops.length) {
+        insert.run(changeId, saved.scope, state.purchaseId, op.eventId, source, op.baseVersion, snapshot.version,
+          cause, null, JSON.stringify(domain.ops), this.now());
+      }
+      if (link) {
+        insert.run(ref(), saved.scope, state.purchaseId, op.eventId, source, op.baseVersion, snapshot.version,
+          'DERIVED', changeId, link, this.now());
+      }
       return true;
     });
+  }
+
+  /**
+   * DEC-01 D7: exclui dados de compras sem evento aceito há `inactivityMs`. Escopos com trabalho em andamento ou
+   * resultado externo desconhecido são preservados. Cada conversa roda num SAVEPOINT próprio: estado ilegível em uma
+   * não impede o expurgo das demais (a falha é contada e registrada sem identificadores).
+   */
+  purge(): { purged: number; failed: number } {
+    return this.transaction(() => {
+      const cutoff = this.now() - this.limits.inactivityMs;
+      const scopes = this.db.prepare(`SELECT scope FROM conversations c WHERE last_activity_at IS NOT NULL AND last_activity_at <= ?
+        AND NOT EXISTS (SELECT 1 FROM operations o WHERE o.scope = c.scope
+          AND (o.status IN ('ACCEPTED','RUNNING','CANCEL_REQUESTED','RESULT_UNKNOWN') OR (o.effect = 1 AND o.status <> 'SUCCEEDED')))`).all(cutoff);
+      let purged = 0, failed = 0;
+      for (const r of scopes) {
+        this.db.exec('SAVEPOINT purge_scope');
+        try {
+          this.purgeScope(String(r['scope']), null);
+          this.db.exec('RELEASE purge_scope');
+          purged++;
+        } catch {
+          this.db.exec('ROLLBACK TO purge_scope');
+          this.db.exec('RELEASE purge_scope');
+          failed++;
+        }
+      }
+      if (failed) console.error('[runtime] expurgo D7 falhou em', failed, 'conversa(s); nova tentativa no próximo ciclo');
+      return { purged, failed };
+    });
+  }
+
+  /**
+   * Remove a compra, os patches e o conteúdo histórico das operações do escopo. Mantém só a deduplicação
+   * (chave + hash dos eventos e status das operações). Sem `keep`, o snapshot volta ao inicial com versão
+   * incrementada, para que nada antigo passe na checagem de versão. Deve rodar dentro de uma transação.
+   */
+  private purgeScope(scope: string, keep: string | null) {
+    if (keep === null) {
+      const current = this.current(scope)!;
+      this.db.prepare('UPDATE conversations SET snapshot=?, domain=NULL, last_activity_at=NULL WHERE scope=?')
+        .run(JSON.stringify(emptySnapshot(current.conversationId, current.version + 1)), scope);
+    } else {
+      this.db.prepare('UPDATE conversations SET domain=NULL, last_activity_at=NULL WHERE scope=?').run(scope);
+    }
+    this.db.prepare('DELETE FROM purchase_changes WHERE scope=?').run(scope);
+    const rows = this.db.prepare('SELECT * FROM operations WHERE scope=? AND id<>?').all(scope, keep ?? '');
+    for (const value of rows) {
+      const saved = row(value)!, op = JSON.parse(saved.operation) as Operation;
+      if (!terminal(op) || (!op.snapshot && !op.changes.length)) continue;
+      const scrubbed: Operation = { ...op, changes: [],
+        snapshot: op.snapshot ? emptySnapshot(op.conversationId, op.snapshot.version) : null };
+      this.write(saved, scrubbed);
+    }
+    this.db.prepare(`UPDATE events SET source='"PURGED"' WHERE scope=? AND operation_id<>?`).run(scope, keep ?? '');
   }
 
   fail(job: Job, code: ErrorCode = 'INTERNAL') {
@@ -345,4 +506,35 @@ export class TurnStore {
       else this.failure(saved, code);
     });
   }
+}
+
+/** Snapshot neutro, sem blocos nem referências (estado inicial ou conteúdo expurgado). */
+function emptySnapshot(conversationId: string, version: number): Snapshot {
+  return { contractVersion: '1.0', conversationId, version, phase: 'COLLECTING',
+    blocks: [], pending: [], allowedActions: [], humanApproval: null };
+}
+
+/** Snapshot gerado pelo servidor ao encerrar/cancelar: sem nada vindo do processador (D7). */
+function closingSnapshot(snapshot: Snapshot, status: 'CLOSED' | 'CANCELLED'): Snapshot {
+  const text = status === 'CLOSED'
+    ? 'Compra encerrada. Os dados desta compra foram excluídos.'
+    : 'Compra cancelada. Os dados desta compra foram excluídos.';
+  return { ...emptySnapshot(snapshot.conversationId, snapshot.version), blocks: [{ kind: 'TEXT', source: 'SERVER', text }] };
+}
+
+/**
+ * Bloco GROUP precisa refletir a compra gravada: no máximo um bloco, exatamente os mesmos participantes
+ * (participantRef = participantId, mesmo nome) e o teto coletivo declarado (ou null). Texto de condições não é
+ * verificável aqui e é responsabilidade de quem monta o snapshot.
+ */
+function assertGroupMatches(snapshot: Snapshot, state: PurchaseState | null) {
+  const groups = snapshot.blocks.filter(b => b.kind === 'GROUP');
+  if (!groups.length) return;
+  const group = groups[0]!;
+  if (groups.length > 1 || group.kind !== 'GROUP' || !state || state.status !== 'ACTIVE') throw new ContractError('INVALID_REQUEST');
+  const byId = new Map(state.participants.map(p => [p.participantId, p.displayName]));
+  const refs = new Set(group.participants.map(p => p.participantRef));
+  const budget = state.groupLimit.state === 'DECLARED' ? state.groupLimit.value.amountCents : null;
+  if (group.participants.length !== byId.size || refs.size !== byId.size || group.budgetCents !== budget ||
+      group.participants.some(p => byId.get(p.participantRef) !== p.displayName)) throw new ContractError('INVALID_REQUEST');
 }
