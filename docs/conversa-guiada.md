@@ -4,6 +4,8 @@ Base: continuação dos PRs API #49 e bot #20 já integrados. Esta alteração e
 
 ## Implementado
 
+- Na pergunta atual de orçamento, aceita “60 reais” e guarda o valor na pendência persistida. “Valor máximo” ou “referência” conclui a classificação sem repetir o número, inclusive após reinício. A resposta curta só usa a pendência de orçamento do grupo atualmente exibida; não aplica valores a outra pessoa nem interpreta números de outra etapa.
+
 - Guarda a intenção de busca enquanto coleta participantes, restrições, orçamento e prioridade. Quando a coleta fica completa, retoma a busca sem exigir que a pessoa repita o alimento.
 - Oferece referências de escolha apenas para propostas exibidas. O bot apresenta Escolher opção N, Mudar busca, Ver outras, Não tenho restrições e, com CART-01 habilitada e sacola atual, Revisar carrinho.
 - Interpreta respostas exatas como “a segunda”, “mais barato” e “troca por pizza” usando o estado atual. “Essa” com várias opções pede esclarecimento; “somos só dois” pede os nomes de quem permanece, sem remover pessoas por adivinhação.
