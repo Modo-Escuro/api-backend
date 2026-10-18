@@ -1,24 +1,37 @@
 # INT-01 — Auditoria F7 e contrato externo
 
-Conferência em **18/10/2026**. Base auditada: `feat/f7-cart-checkout@b08957d`, PR [#4](https://github.com/Modo-Escuro/api-backend/pull/4), incluindo `33f591e`/`main@686300d`. Este incremento reaproveita F7 e corrige a confirmação de respostas desconhecidas; não incorpora F7 à main nem habilita carrinho, aprovação ou envio.
+Conferência em **18/10/2026**. Base original auditada: `feat/f7-cart-checkout@b08957d`, PR [#4](https://github.com/Modo-Escuro/api-backend/pull/4). A branch da auditoria foi atualizada com `main@9aa02f2`, incluindo F7, API-01, DEC-01 e OPS-01; o PR de auditoria não foi integrado nem implantado. A correção preserva o bloqueio de respostas desconhecidas e não habilita carrinho, aprovação ou envio reais.
 
-**Estado da tarefa: auditoria offline entregue; validação autenticada de saídas e definição do ambiente/fechamento pendentes. Não encerrar INT-01 como integração validada.** DEC-01 [#5](https://github.com/Modo-Escuro/api-backend/issues/5) continuava aberta na consulta desta sessão, sem decisões novas registradas no corpo/comentários consultados. O usuário informou que a API está online; isso não define operações de preparação autorizadas nem fornece uma sessão iFood para este checkout.
+**Estado: auditoria offline e metadados autenticados entregues; contrato de saídas de carrinho/pedido e reconciliação externa continuam sem validação.** A consulta `tools/list` compartilhada pelo usuário foi bem-sucedida em `2026-10-18T05:41:22.487Z`. Isso não valida `tools/call`, escopos de negócio ou respostas dos parsers.
+
+A [DEC-01 adotada](decisoes-conversacionais.md), integrada no PR #25, define **sacola simulada e MCP somente leitura**, com zero escritas externas. As lacunas reais são registradas para uma integração futura; não executar mutações para encerrá-las nesta demo. INT-01 permanece aberta quanto à validação de contratos externos de negócio.
 
 ## Fontes e níveis de evidência
 
 | Fonte | O que sustenta | Limite |
 | --- | --- | --- |
-| `fixtures/tools-list.json` | 23 ferramentas capturadas; nomes, descrições, inputs e annotations; 15 relevantes para carrinho/pedido | Captura preexistente declarada real no projeto; não é nova execução desta auditoria. Não contém `outputSchema` |
-| `documenta_o_oficial_ifood_mcp.md` | Documento local fornecido: BRL decimal, jornada, `error` singular em cart e raiz em tracking | Não é captura de resposta; autoridade/versão externa não foram revalidadas nesta sessão |
-| `src/server/cart/*`, `src/server/mcp/cart.ts`, sessão por vínculo e rotas F7 | Garantias e lacunas verificadas no código | Estado atual em memória; código não comprova comportamento do provedor |
-| `test/cart/*`, incluindo os 23 testes INT-01 | Casos sintéticos, regressões, parser, transporte sem replay 401 e bloqueios de escrita | Não são fixtures de saída real; nenhum teste compra no iFood |
-| `GET https://api-backend-production-9c4c.up.railway.app/api/health` | HTTP 200, `{ok:true}` observado nesta sessão | Só disponibilidade HTTP; não comprova commit implantado, autenticação, escopos, ferramentas ou carrinho |
+| `fixtures/tools-list.json` | Captura preexistente de 23 ferramentas, incluindo schemas de entrada e descrições; 15 relevantes à F7/pedido | Não é nova execução desta auditoria; não tem outputSchema |
+| [metadata-20261018.json](../fixtures/int01/metadata-20261018.json) | Projeção sanitizada da nova consulta autenticada, executada pelo usuário no Console Railway; 15 ferramentas selecionadas, uma página | Saída fornecida pelo usuário, sem verificação independente no servidor pelo agente. Não contém schemas completos, respostas de negócio ou prova de escopo |
+| `documenta_o_oficial_ifood_mcp.md` | Documento local: BRL decimal, jornada e erros inline | Não é resposta capturada; autoridade/versão externa não foi revalidada |
+| `src/server/cart/*`, `src/server/mcp/cart.ts` e testes | Garantias e regressões offline da F7 | Estado de carrinho em memória; testes sintéticos não comprovam o provedor |
+| Healthcheck público da API Railway | HTTP 200, `ok:true`, armazenamento `OK/VOLUME`, `acceptingNewLinks:true` | Disponibilidade/persistência não comprovam contrato de negócio |
 
-Inventário reproduzível: [int-01-tools-audit.json](int-01-tools-audit.json), gerado por `node --import tsx scripts/audit-f7-contract.ts`. O SHA-256 identifica a captura de entrada com quebras normalizadas para LF (portável entre Windows/Linux), não respostas privadas. Esse comando não lê ambiente/credenciais nem faz rede. O teste detecta drift entre captura e relatório.
+Inventário offline: [int-01-tools-audit.json](int-01-tools-audit.json), reproduzível com `node --import tsx scripts/audit-f7-contract.ts`. O SHA-256 identifica a captura preexistente normalizada para LF, não respostas privadas.
+
+## Resultado da consulta autenticada
+
+O usuário concluiu o vínculo pelo bot e executou o [comando do Console](int-01-console-command.sh) de `c817be8031b7ae5673a6c97d95015633faf2dfbe`. A fixture preserva o JSON final e registra sua proveniência; o prefixo de terminal `NODE` não faz parte da resposta.
+
+A comparação offline normalizou a ordem das ferramentas e dos conjuntos de campos. **15/15 coincidem, zero diferenças na projeção comparada**: nomes, propriedades, campos obrigatórios, presença de outputSchema e `readOnlyHint/destructiveHint/idempotentHint`. As annotations adicionais da captura antiga e os tipos/formatos/descrições dos schemas não foram comparados.
+
+- As 15 ferramentas seguem sem `outputSchema` e com hints `false/true/false`; esses hints não definem uma política de execução.
+- `createCart.required=[]`; `options` permanece fora do required de add/update; `submitOrder` só requer cartId formalmente. Isso não autoriza compra nem dispensa validação humana.
+- Nenhum nome de campo de idempotência aparece nessa projeção. `getCart` requer cartId; `getOrder` e `trackOrder` requerem orderId. Não foi estabelecida recuperação por intenção sem ID.
+- `businessToolsCalled:false` e `outputResponsesCaptured:false`: nenhuma operação de carrinho, pedido ou pagamento foi executada pelo probe. Preços, unidades de saída, erros inline e confirmações de mutação continuam sem nova evidência de execução.
 
 ## Matriz por operação
 
-Legenda: **D** = descrição/documento local; **C** = input capturado em `tools/list`; **S** = comportamento/parser simulado em testes; **O** = saída real observada nesta auditoria. **O é pendente em todas as linhas**. Nomes abaixo não autorizam sua chamada. Nenhum output de carrinho foi inventado como captura real.
+Legenda: **D** = descrição/documento local; **C** = input capturado em `tools/list`; **S** = comportamento/parser simulado em testes; **O** = saída real observada nesta auditoria. **O é pendente em todas as linhas**. A nova consulta autenticada confirma somente a projeção de metadados de C: nomes, nomes de campos, obrigatoriedade, presença de outputSchema e três hints. Não recaptura tipos, formatos, descrições ou schemas completos. Nomes abaixo não autorizam sua chamada. Nenhum output de carrinho foi inventado como captura real.
 
 | Operação | Input C e origem dos IDs | Output D / hipótese S da F7 | Evidência e bloqueio |
 | --- | --- | --- | --- |
@@ -66,78 +79,61 @@ A correção valida a confirmação antes de DONE no serviço e no gateway, exig
 | Mutação com confirmação reconhecida, getCart seguinte falha | F7 guarda DONE antes da leitura e replay só consulta | Preservar a intenção e recuperar leitura; não repetir escrita; aceitação do formato depende de validação real |
 | Mutação sem confirmação | Nem snapshot posterior nem retryable provam que não haverá efeito tardio | Manter RESULT_UNKNOWN, bloquear novas escritas e reconciliar por mecanismo verificado |
 | Submissão sem orderId/resposta | getOrder/trackOrder precisam de ID já conhecido; captura não expõe busca por requestId/intenção | BUY-02 permanece bloqueada sem correlação/idempotência/consulta confiáveis ou procedimento humano rastreável definido com provedor |
-| Submissão com orderId e status verificáveis | Ainda faltam output/status reais e decisão DA10 | Só afirmar estágio comprovado por fonte confiável; não tratar pedido criado como pagamento |
+| Submissão com orderId e status verificáveis | Ainda faltam output/status reais; pedido real está fora da demo adotada | Só afirmar estágio comprovado por fonte confiável; não tratar pedido criado como pagamento |
 
-O universo investigado foi a captura de 23 tools, o documento local e o código/testes F7. **Não encontrar mecanismo nesse universo não prova ausência na plataforma.** Perguntar ao provedor sobre chave de idempotência, retenção, conteúdo conflitante, status por chave de requisição, consulta de criação/submissão sem ID, garantias de consistência/efeito tardio e procedimento de reconciliação.
+O universo investigado foi a captura preexistente de 23 tools, a nova projeção autenticada de 15 ferramentas, o documento local e o código/testes F7. **Não encontrar mecanismo nesse universo não prova ausência na plataforma.** Perguntar ao provedor sobre chave de idempotência, retenção, conteúdo conflitante, status por chave de requisição, consulta de criação/submissão sem ID, garantias de consistência/efeito tardio e procedimento de reconciliação.
 
-DA10 deve nomear o estágio final e sua evidência: se sacola, cartId + estado/totais observados; se pedido, orderId + estado aceito verificado; se pagamento, evidência específica de pagamento. São critérios condicionais para validação, não decisões aprovadas nem contrato externo observado. INT-01 nunca chama submit para produzir essa evidência. Em BUY-02/QA-01, ensaio de envio exige revisão humana específica e ambiente autorizado.
+A busca pública complementar em 18/10/2026 por createCart/idempotência no domínio MCP e por MCP marketplace/reconciliação no domínio developer não encontrou documentação pública específica que resolvesse essas lacunas. O portal MCP não pôde ser aberto pela ferramenta web. Os resultados da [documentação para restaurantes](https://developer.ifood.com.br/pt-BR/docs/categories) referem-se à Merchant API e foram excluídos como evidência do contrato consumer MCP. Essa busca limitada não demonstra inexistência do recurso no provedor.
 
-## Próximo ensaio autenticado (pendente)
+## Fechamento adotado para a demo
 
-1. Confirmar ambiente/organizador/limites em DEC-01 e preservar vínculo antes de qualquer redeploy (OPS-01). O checkout de auditoria não possui configuração de sessão iFood/BOT_API_TOKEN; não copiar segredos para o chat/Git.
-2. Usar a sessão do vínculo correto, sem fallback OAuth global. Revalidar tools/list com paginação e comparar nomes/inputs/outputs com o inventário. Metadados não são execução.
-3. Apenas leituras autorizadas e com IDs já conhecidos: obter contrato observado do getCart e listas necessárias. Se ainda não existe cartId, solicitar autorização explícita da preparação mínima antes de criar carrinho; não fabricar IDs nem ativar F7 em produção para contornar falta de contrato.
-4. Para obter amostra de criação/seleção, executar apenas a operação de preparação nomeada e permitida pelo ambiente. Conferir getItem/configuração e listagens anteriores. Sem setPayment/cupom por suposição e sem submitOrder nesta tarefa.
-5. Inspecionar outputs no canal privado e produzir fixture sanitizada com transformação registrada: remover credenciais/PAN/CVV/documentos, endereço, conta, notas e dados pessoais; substituir IDs por UUIDs sintéticos consistentes quando necessário. Registrar tipos, unidades, enums não privados, sucesso/erro e origem da transformação, preservando distinção entre captura sanitizada e fixture inventada. Não publicar saída privada bruta.
-6. Ajustar parsers somente com essa evidência, rodar fixtures reais sanitizadas e regressões e atualizar a coluna O. Confirmar mecanismo de reconciliação e resposta do provedor para lacunas. Se insuficiente, manter bloqueio e a tarefa pendente.
+A DEC-01 D8/DA10 escolheu sacola **100% simulada**. O gatilho a implementar e verificar em BUY-01/RUN-01/QA-01 é o clique humano do organizador autenticado, preso ao `purchaseId`, versão e `contentHash` atuais, com restrições e limites verificados. Alteração invalida a aprovação; replay do mesmo clique devolve a mesma aprovação; custos ou restrições obrigatórias desconhecidos bloqueiam.
 
-O usuário prefere operar o navegador: login e inspeção do painel ficam com ele. O healthcheck público foi a única chamada à API de aplicação nesta auditoria; não houve leitura de endereço, pagamento, pedido ou token iFood, nem chamada real de carrinho/MCP. A atualização de acesso Railway está registrada abaixo.
+A evidência de fechamento é o registro único da aprovação fictícia e a apresentação **“SACOLA SIMULADA APROVADA — PEDIDO NÃO ENVIADO”**. Nenhum cartId/orderId remoto é exigido para essa sacola. Isso é requisito adotado, não funcionalidade implementada por esta auditoria.
 
-### Acesso Railway e alternativa pelo Console — 18/10/2026
+CART-01 e BUY-02 reais ficam fora dessa demo. Se retomados, exigem validação de saídas, persistência de intenções e estados desconhecidos, elegibilidade por pessoa, aprovação humana válida e mecanismo confiável de reconciliação. `submitOrder` permanece inacessível.
 
-O login humano no Railway CLI foi concluído e o acesso ao projeto/serviço `api-backend` confirmado. Uma consulta autenticada de metadados encontrou deploy `SUCCESS` e instância `RUNNING`; isso não identifica ou valida uma sessão iFood. Não foram lidas variáveis secretas nem reiniciado o serviço.
+## Acesso e reprodução
 
-O usuário autorizou criar/registrar uma chave SSH temporária e removê-la após o ensaio. A chave foi criada com ACL restrita ao usuário e registrada; a primeira conexão apresentou uma chave de host ainda não conhecida. A revisão automática bloqueou aceitá-la sem uma referência confiável de autenticidade. O [suporte Railway](https://station.railway.com/questions/confirm-ssh-host-fingerprint-for-ssh-rai-8cd06fc6), incluindo resposta de funcionário, informa que não publica fingerprints/CA de host para esse endpoint e indica o Console do painel como alternativa autenticada. A consulta SSH foi cancelada antes da aceitação. A chave temporária foi **revogada na Railway e os dois arquivos locais removidos**, conferindo o fingerprint da chave criada antes da exclusão. Nenhum comando executou no contêiner via SSH.
+O usuário opera o navegador. O login Railway e a consulta de metadados do deploy foram concluídos. A tentativa SSH foi cancelada antes de confiar na chave de host: a revisão automática bloqueou a aceitação sem referência confiável; a chave temporária autorizada foi revogada e seus arquivos locais removidos. Nenhum comando executou no contêiner via SSH.
 
-Para avançar sem confiar nessa chave de host, o usuário pode executar o [comando autocontido do Console](int-01-console-command.sh) pela sessão autenticada do painel:
+O [Console autenticado](int-01-console-command.sh) usa o SDK instalado, lê apenas a credencial do vínculo confirmado permitido e não usa a sessão global. Não faz refresh, não grava storage nem chama ferramentas de negócio; remove dados privados da projeção. A configuração é lida do código instalado (`config.linksDir`), acompanhando o padrão do volume da OPS-01.
 
-1. Abrir o projeto Railway, serviço `api-backend`, ambiente `production`, aba **Console**. Estar na pasta da API (onde estão `package.json` e `node_modules`). Não precisa publicar este script no serviço.
-2. Colar o conteúdo completo de `int-01-console-command.sh`. O comando usa o SDK já instalado e lê somente o arquivo do vínculo confirmado correspondente à allowlist. Não usa `.tokens.json` global, não faz login/refresh, não modifica storage e não chama ferramentas de negócio.
-3. Compartilhar apenas o JSON final: ele contém nomes, propriedades/requeridos, presença de outputSchema e hints booleanos. Não inclui valores de schema, nomes da conta, IDs de conta/carrinho, tokens, erros privados ou cursores. `OBSERVED_METADATA` comprova apenas a nova leitura de tools/list, **não saídas reais de carrinho**.
-4. Se retornar `BLOCKED`, conservar a razão sanitizada. `VERIFY_LINK_THROUGH_EXISTING_API` exige verificar o vínculo pelo fluxo existente; o comando não rotaciona refresh tokens concorrendo com a API. Vínculo ausente/ambíguo, cliente/endereço MCP divergente ou formato desconhecido também bloqueiam.
+O primeiro erro genérico foi corrigido para distinguir etapas e falhas de arquivos sem expor mensagens privadas. Depois de `LINKS_FILE_MISSING` no caminho efetivo, o healthcheck confirmou o volume disponível; o usuário concluiu Conectar → autorização no navegador → Confirmar e forneceu a consulta autenticada bem-sucedida. Não foi criado links.json manualmente nem importada sessão global.
 
-Fonte: `scripts/int01-console-probe.ts`; gerar o comando com `node --import tsx scripts/generate-int01-console.ts`. Os testes usam filesystem/cliente falsos e conferem paginação, ausência de fallback global, bloqueios e sanitização. O comando não foi executado no contêiner nesta sessão; aguarda ação do usuário no navegador. As saídas reais de cart e o mecanismo de recuperação sem IDs continuam pendentes.
+Fonte do probe: `scripts/int01-console-probe.ts`. Regenerar o comando com `node --import tsx scripts/generate-int01-console.ts`. Os testes injetam cliente/filesystem falsos e verificam paginação, expiração, ausência de fallback, etapas e sanitização. Uma nova execução exige token ainda válido; se expirado, verificar pelo fluxo existente da API, sem refresh concorrente do probe.
 
-O usuário executou posteriormente o comando no Console e compartilhou `BLOCKED / PROBE_FAILED_NO_PRIVATE_DETAILS`, com `businessToolsCalled:false`. Esse resultado não distingue falha de leitura local, conexão ou tools/list; não comprova ausência do vínculo nem rejeição da sessão. O probe foi corrigido para retornar a etapa (`READ_CONFIRMED_LINK`, `CONNECT_MCP` ou `LIST_TOOLS`) e razões estáticas para arquivo ausente, leitura recusada, JSON inválido ou formato desconhecido. Caminhos, conteúdo dos arquivos e mensagens de exceção continuam privados. A nova execução no Console permanece pendente; não recriar vínculo nem alterar storage com base apenas no erro genérico.
+## Reuso e dependências
 
-Na execução seguinte, o usuário informou `READ_CONFIRMED_LINK / LINKS_FILE_MISSING`. Ao atualizar as referências, foi identificada a OPS-01 já integrada em `main@9aa02f2`: seu caminho padrão usa o volume Railway, enquanto o comando antigo resolvia `.ifood-links` pelo diretório atual. O comando passa a carregar `config.linksDir` do código efetivamente instalado no serviço, sem procurar sessões alternativas ou alterar storage. A diferença pode explicar o arquivo não encontrado; a presença do vínculo no caminho efetivo ainda depende da próxima execução. Se continuar ausente, verificar o fluxo humano Conectar → Confirmar no bot e a persistência OPS-01 antes de prosseguir.
+- API-01 e OPS-01 estão incorporadas à branch para verificação integrada. O contrato conversacional continua sendo especificação; a integração de rotas/estado fica para suas tasks.
+- Para a demo: DATA-01/RUN-01 persistem revisão, intenção, versão/hash e aprovação fictícia; GRP-01 fornece elegibilidade por pessoa; BUY-01 implementa apenas a aprovação simulada da DEC-01. O modelo nunca recebe credencial de aprovação.
+- Reutilizar catálogo/getItem, validação de configuração, referências opacas e regras de custo. ItemRef comprova origem, não segurança alimentar. O servidor MCP fictício do projeto Python não substitui o cliente externo.
+- Integração real futura: CART-01/BUY-02 dependem das saídas autenticadas sanitizadas e de reconciliação estabelecida com o provedor. Nenhuma flag deve contornar essas lacunas.
 
-**Atualização de escopo:** DEC-01 foi integrada via PR #25 e adota sacola simulada, com MCP somente leitura e zero chamadas de escrita. Ela substitui o plano condicional de preparação de carrinho acima: não executar createCart, alterações de carrinho, pagamento ou submitOrder. O inventário de F7 permanece histórico; não exigir mutações reais para validar a demo agora aprovada. As amostras autenticadas autorizadas devem se limitar às leituras necessárias à demo.
+## Verificações e pendências
 
-Com o comando que carrega a configuração do serviço, o usuário voltou a informar `READ_CONFIRMED_LINK / LINKS_FILE_MISSING`, com `businessToolsCalled:false`. Em seguida, uma consulta pública a `/api/health` retornou HTTP 200, `ok:true` e `linksStorage:{state:"OK",durability:"VOLUME",acceptingNewLinks:true}`. O volume está disponível para novos vínculos, mas o arquivo de vínculos não foi encontrado pelo probe no caminho efetivo. O próximo passo é concluir o fluxo humano **Conectar iFood → autorização no navegador → Confirmar conexão** no bot com a conta de teste permitida; depois repetir o probe. Não criar `links.json` manualmente nem importar a sessão global. A criação do usuário de teste no portal iFood e o login Railway não estabelecem esse vínculo. A confirmação e a captura autenticada continuam pendentes; nenhum teste de negócio externo foi realizado.
+Histórico offline: 9/11 regressões falharam antes da correção e 11/11 passaram depois; mais 12 testes de inventário/parsers. A suíte F7 anterior à atualização com main teve 296/296; após os ajustes de diagnóstico, os 8 testes do probe passaram com TypeScript/ESLint. Esses resultados eram sintéticos.
 
-## Reuso e dependências de integração
+Verificação integrada após incorporar `main@9aa02f2`, Windows / Node 24.19.0:
 
-- Reaproveitar gateway exclusivo, catálogo/getItem, validação de configuração, referências opacas, projeção e validação de totais e invalidação de revisão. Manter regressões F7.
-- OPS-01 preserva vínculo; DATA-01/RUN-01/CART-01 persistem intents, carrinhos, estado desconhecido, referências, versões e evidência. GRP-01 fornece elegibilidade por pessoa/configuração. Referência de catálogo não a substitui.
-- Adaptar endpoints/revisões F7 ao [contrato API-01 v1](https://github.com/Modo-Escuro/api-backend/blob/6ce3d99/docs/conversation-api-v1.md) na integração. Esta branch de auditoria parte de F7, não incorpora o commit da API-01. Não confundir revisão informativa antiga com referência humana de uso único.
-- BUY-01 autoriza por callback autenticado + revisão/conta/total/validade, atomicamente com intenção; BUY-02 depende de contrato externo e reconciliação. Sem evidência para recuperação sem ID, envio continua bloqueado. QA-01 verifica o estágio final escolhido em DA10.
-
-## Verificações executadas e aceite
-
-Windows, Node 24.19.0, dependências do mesmo `package-lock.json` de F7 reutilizadas do clone isolado:
-
-| Verificação | Resultado |
+| Verificação executada | Resultado |
 | --- | --- |
-| Regressões INT-01 contra F7 antes da correção | 9 falharam / 2 passaram, confirmando o problema |
-| Regressões após correção | 11/11 passaram |
-| Inventário + parsers adicionais | 12/12 passaram |
-| Suíte completa `vitest run`, incluindo consulta do Console | **296/296 passaram**, 21 arquivos (290 da auditoria inicial + 6 da consulta manual) |
+| Comparação offline da projeção autenticada com o inventário | 15/15 iguais; zero diferenças; sem comparar schemas completos ou outputs de negócio |
+| `vitest run` completo | 436 aprovados, 2 pulados, 24 arquivos; os dois casos de recusa por chmod exigem POSIX sem root e são pulados no Windows |
+| `unittest discover -s test/contracts -p "test_*.py" -v`, venv Python | 6/6 aprovados |
 | `tsc --noEmit -p tsconfig.json` | passou |
 | `eslint .` | passou |
 | `vite build` | passou |
 | `git diff --check` | passou |
-| Healthcheck público | 200, `ok:true`; não é teste de integração MCP |
 
-Após o resultado genérico do Console, a correção de diagnóstico foi validada com **8/8 testes do probe**, TypeScript e ESLint dos arquivos alterados. A contagem 296/296 acima registra a suíte anterior; a suíte completa não foi repetida para essa correção isolada.
+Esses checks executaram somente fakes/fixtures. O único ensaio MCP novo foi `tools/list`, pelo usuário no Console, conforme a proveniência da fixture. Não houve `tools/call`, mutação externa, alteração de ambiente ou deploy por esta atualização.
 
-Não foi executada CI/Linux, login iFood, captura autenticada de saída, mutação real, aprovação ou envio. O login e os metadados Railway são evidência separada acima. A F7 já contém ajuste de portabilidade dos testes POSIX; por isso esta suíte não reproduz as duas falhas Windows da main antiga. Esses resultados não incluem os testes da branch API-01.
+- [x] Matriz distingue documento, input capturado, simulação, metadado autenticado e saída não observada.
+- [x] Saídas desconhecidas mantêm bloqueio; flags e checkout não são habilitados.
+- [x] Falta de recuperação sem IDs e de garantia externa de idempotência está registrada.
+- [x] Gatilho de fechamento e dependências foram alinhados à DEC-01 adotada.
+- [x] Nova consulta autenticada sanitizada e comparação de metadados registradas.
+- [ ] Saídas de negócio reais, unidades e erros por operação capturados e parsers validados com elas.
+- [ ] Mecanismo externo confiável de reconciliação sem cartId/orderId estabelecido.
 
-- [x] Matriz separa documentado, input capturado, simulado e observado nesta auditoria.
-- [x] Saídas desconhecidas bloqueiam confirmação da escrita; flag e checkout permanecem desabilitados.
-- [x] Lacunas de recuperação sem ID registradas; resultado desconhecido não é limpo por leitura.
-- [x] Plano relaciona gatilho de fechamento a DA10 e dependências para integrar F7.
-- [ ] Saídas autenticadas por operação capturadas/sanitizadas e parsers validados com elas.
-- [ ] Contrato/mecanismo de reconciliação e ambiente/limites confirmados; DA10 aceita.
-
-Os dois itens finais impedem declarar INT-01 concluída. Este relatório e a correção são uma entrega parcial revisável.
+As duas pendências finais impedem declarar integração real de carrinho/pedido validada e permanecem fora do ensaio da demo somente leitura. Não encerrar #7 como contrato externo integralmente validado. CI/Linux e avaliação de LLM não foram executadas nesta auditoria.
