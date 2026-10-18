@@ -1,5 +1,7 @@
 # OPS-02 — Observabilidade, limites, retenção e liberação gradual
 
+**Continuação CART-01:** [instrumentação e validação](cart-01-conclusao-offline.md) acrescentam métricas por ferramenta/resultado e contagens persistidas de intenções ao status, mesmo com escrita desligada. Isso cobre parte da #21; ensaios de plataforma/volume/recuperação continuam pendentes.
+
 [Issue #21](https://github.com/Modo-Escuro/api-backend/issues/21) · [DEC-01 D7/D8](decisoes-conversacionais.md) · [RUN-01](runtime-turnos.md) · [AI-02](ai-02-agente.md) · [OPS-01](ops-01-persistencia.md)
 
 ## Estado deste incremento

@@ -16,16 +16,20 @@ import { ObservedCartContract, type CartContractGate } from '../../src/server/ca
 import type { CartGateway, CartTool } from '../../src/server/cart/contracts';
 import type { IfoodLinkService, OperationalContext } from '../../src/server/links/service';
 import { TurnStore, scopeKey } from '../../src/server/turns/store';
+import { TurnRuntime } from '../../src/server/turns/runtime';
 import { candidate } from '../group/catalog';
 import { event as turnEvent, result as turnResult } from '../turns/helpers';
 import { ORG_A, connectAndConfirm, setup as setupLinks } from '../helpers/fakes';
 import { McpToolError } from '../../src/server/mcp/errors';
 import { addressSchema, linkFingerprint } from '../../src/server/services/address-reference';
+import { cartIntentSummary } from '../../src/server/cart/write-schema';
+import { metrics } from '../../src/server/ops/metrics';
 
 const M = '11111111-1111-4111-8111-111111111111', I = '22222222-2222-4222-8222-222222222222';
 const A = '33333333-3333-4333-8333-333333333333', L = 'link-sintetico-0001';
 const principal: AdapterPrincipal = { botId: '900001', organizerId: '111111111', conversationId: '111111111' };
 const token = 'synthetic-service-token-0123456789abcdef';
+const syntheticAddress = { addressId: A, alias: 'Casa', location: { neighborhood: 'Centro', city: 'Cidade sintética' }, coordinates: { latitude: -1, longitude: -2 } };
 const stores: TurnStore[] = [];
 afterEach(() => { for (const s of stores.splice(0)) s.close(); });
 
@@ -37,7 +41,7 @@ function setup() {
   // Referência de endereço explicitamente autorizada: origem humana simulada, sem MCP real.
   turns.db.exec('CREATE TABLE delivery_address_selected(scope TEXT PRIMARY KEY,link_hash TEXT,address_id TEXT,address_hash TEXT,expires INTEGER,choice_hash TEXT)');
   turns.db.prepare('INSERT INTO delivery_address_selected VALUES(?,?,?,?,?,?)').run(scopeKey(principal), linkFingerprint(L), A,
-    contentHash(addressSchema.parse({ addressId: A, coordinates: { latitude: -1, longitude: -2 } })), now() + 86_400_000, contentHash('synthetic-human-address-reference'));
+    contentHash(addressSchema.parse(syntheticAddress)), now() + 86_400_000, contentHash('synthetic-human-address-reference'));
   let s = applyPatch(null, [{ op: 'ADD_PARTICIPANT', displayName: 'Pessoa sintética' }], { seed: 'synthetic', eventId: 'e1' }).state;
   s = applyPatch(s, [{ op: 'SET_RESTRICTIONS', participantId: s.participants[0]!.participantId, value: 'NONE' },
     { op: 'SET_LIMIT', target: s.participants[0]!.participantId, value: 'NONE' }, { op: 'SET_LIMIT', target: 'GROUP', value: 'NONE' },
@@ -58,9 +62,9 @@ function setup() {
   save(s);
   let linked = L, price = 20;
   const rawListing = () => ({ itemId: I, itemName: 'Arroz', unitPrice: price,
-    merchant: { merchantId: M, isOpen: true, minimumOrderAmount: 0, deliveryMethod: { fee: 5, deliveryMethodId: 'DELIVERY', deliveryMethodMode: 'DELIVERY' } } });
+    merchant: { merchantId: M, merchantName: 'Loja sintética', isOpen: true, minimumOrderAmount: 0, deliveryMethod: { fee: 5, deliveryMethodId: 'DELIVERY', deliveryMethodMode: 'DELIVERY' } } });
   const rawDetail = () => ({ itemId: I, merchantId: M, itemName: 'Arroz', itemDescription: 'Arroz e água', unitPrice: price,
-    merchantMinimumOrderAmount: 0, optionGroups: [] });
+    merchantName: 'Loja sintética', merchantMinimumOrderAmount: 0, optionGroups: [] });
   type Remote = { cartId: string; merchantId: string; addressId: string;
     items: { cartItemId: string; itemId: string; quantity: number; options: { optionId: string; quantity: number }[]; unitPrice?: number }[];
     totals: { subtotal: number; deliveryFee: number; serviceFee: number; discount: number; total: number } };
@@ -69,7 +73,7 @@ function setup() {
     if (tool !== 'getCart' || !remote) throw new Error('leitura sintética inválida');
     return structuredClone(remote);
   });
-  const write = vi.fn(async (tool: string, args: Record<string, unknown>) => {
+  const write = vi.fn(async (tool: string, args: Record<string, unknown>): Promise<unknown> => {
     if (tool === 'createCart') remote = { cartId: randomUUID(), merchantId: String(args.merchantId), addressId: String(args.addressId),
       items: (args.items as Remote['items']).map(i => ({ ...i, cartItemId: randomUUID(), unitPrice:20 })),
       totals: { subtotal: 20, deliveryFee: 5, serviceFee: 1, discount: 0, total: 26 } };
@@ -84,10 +88,12 @@ function setup() {
     return tool === 'createCart' ? { cartId: remote!.cartId } : { success: true };
   });
   const gateway: CartGateway = { call: read, writeConfirmed: write };
-  const ctx = { linkId: L, cart: gateway, deps: { listAddresses: vi.fn(async () => ({ results: [{ addressId: A, coordinates: { latitude: -1, longitude: -2 } }] })),
-    searchOffers: vi.fn(async () => ({ results: [rawListing()] })), getItem: vi.fn(async () => rawDetail()) } } as unknown as OperationalContext;
+  const ctx = { linkId: L, cart: gateway, deps: { listAddresses: vi.fn(async () => ({ results: [structuredClone(syntheticAddress)] })),
+    searchOffers: vi.fn(async () => ({ results: [rawListing()] })), getItem: vi.fn(async (args: { itemId: string }) =>
+      ({ ...rawDetail(), itemId: args.itemId, itemName: args.itemId === I ? 'Arroz' : 'Outro item sintético' })) } } as unknown as OperationalContext;
   const links = { status: vi.fn(async () => ({ state: 'CONNECTED', operational: true, linkId: linked, attempt: null,
-    scopeEvidence: 'TOKEN_SCOPES', allowedOperations: ['CART_READ','CART_WRITE','OFFERS_EVALUATE'] })),
+    scopeEvidence: 'TOKEN_SCOPES', allowedOperations: ['CART_READ','CART_WRITE','OFFERS_EVALUATE','ADDRESSES_READ'],
+    account: { identity: { status: 'VERIFIED', displayName: 'Pessoa S.', emailMasked: 'p***@example.test', source: 'getUser' } } })),
     storageHealth: vi.fn(async () => ({ state: 'OK' })), sessionSummary: vi.fn(async () => ({ operational: 1 })),
     withOperational: vi.fn(async (_org: string, _op: string, fn: (c: OperationalContext) => Promise<unknown>) => fn(ctx)) } as unknown as Pick<IfoodLinkService,'status' | 'withOperational'>;
   const gate: CartContractGate = { verify: vi.fn(async () => undefined) }; // injeção exclusiva do teste, não evidência observada
@@ -105,6 +111,92 @@ function setup() {
 }
 
 describe('CART-01: confirmação humana, persistência e reconciliação (MCP mockado)', () => {
+  it('OPS-02 conta intenções persistidas e tentativas sem repetir métricas no replay', async () => {
+    const f = setup(), review = await f.service.prepare(principal), cmd = f.command(review.confirmationRef);
+    const before = metrics.counter('cart_write_attempts_total', { tool: 'createCart', outcome: 'RESULT_UNKNOWN' });
+    f.write.mockResolvedValueOnce({ queued: true });
+    expect((await f.service.confirm(principal, cmd)).state).toBe('RESULT_UNKNOWN');
+    await f.service.confirm(principal, cmd);
+    expect(metrics.counter('cart_write_attempts_total', { tool: 'createCart', outcome: 'RESULT_UNKNOWN' })).toBe(before + 1);
+    expect(cartIntentSummary(f.turns.db)).toEqual({ PENDING: 0, SUCCEEDED: 0, FAILED: 0, RESULT_UNKNOWN: 1 });
+    const app = createApp(undefined, { config: f.cfg, links: f.links as IfoodLinkService, conversations: new TurnRuntime(f.turns) });
+    const response = await app.request('/api/ops/status', { headers: { authorization: `Bearer ${token}`, 'x-telegram-user-id': principal.organizerId } });
+    expect(await response.json()).toMatchObject({ purchase: { cartPreparation: 'DISABLED', cartIntents: { RESULT_UNKNOWN: 1 } } });
+  });
+  it('revisão identifica conta mascarada, loja e endereço sem copiar rótulos ao plano técnico', async () => {
+    const f = setup(), review = await f.service.prepare(principal);
+    expect(review.display).toMatchObject({ accountLabel: 'Pessoa S. · p***@example.test', merchantName: 'Loja sintética', addressLabel: 'Casa · Centro · Cidade sintética' });
+    const plans = JSON.stringify(f.turns.db.prepare('SELECT plan FROM cart_write_reviews').all());
+    expect(plans).not.toMatch(/Pessoa S\.|example\.test|Casa|Cidade sintética|Loja sintética/);
+    expect(f.write).not.toHaveBeenCalled();
+  });
+  it('identidade indisponível bloqueia revisão e não gera referência humana', async () => {
+    const f = setup(), status = await f.links.status(principal.organizerId);
+    vi.mocked(f.links.status).mockResolvedValue({ ...status, account: null });
+    await expect(f.service.prepare(principal)).rejects.toMatchObject({ code: 'CART_REVIEW_NOT_DISPLAYABLE' });
+    expect(f.turns.db.prepare('SELECT count(*) n FROM cart_write_reviews').get()!['n']).toBe(0);
+    expect(f.write).not.toHaveBeenCalled();
+  });
+  it('troca de identificação da conta após revisão invalida a confirmação mesmo com mesmo total', async () => {
+    const f = setup(), review = await f.service.prepare(principal), status = await f.links.status(principal.organizerId);
+    vi.mocked(f.links.status).mockResolvedValue({ ...status, account: { ...status.account!, identity: { status: 'VERIFIED', displayName: 'Outra P.', emailMasked: null, source: 'getUser' } } });
+    await expect(f.service.confirm(principal, f.command(review.confirmationRef))).rejects.toMatchObject({ code: 'CART_REVIEW_CHANGED' });
+    expect(f.write).not.toHaveBeenCalled();
+  });
+  it('detalhamento de outro ID não é apresentado nem enviado como o produto escolhido', async () => {
+    const f = setup(), original = vi.mocked(f.ctx.deps.getItem).getMockImplementation()!;
+    vi.mocked(f.ctx.deps.getItem).mockImplementation(async (...args) => ({ ...(await original(...args) as object), itemId: randomUUID() }));
+    await expect(f.service.prepare(principal)).rejects.toMatchObject({ code: 'CART_IDENTITY_MISMATCH' });
+    expect(f.write).not.toHaveBeenCalled();
+  });
+  it('opções têm rótulos observados; opção sem nome impede confirmação', async () => {
+    const f = setup(), optionId = randomUUID(), groupId = randomUUID(), state = f.state();
+    state.bag!.lines[0]!.optionIds = [optionId]; f.save(state);
+    const original = vi.mocked(f.ctx.deps.getItem).getMockImplementation()!;
+    let name: string | undefined = 'Sem molho';
+    vi.mocked(f.ctx.deps.getItem).mockImplementation(async (...args) => ({ ...(await original(...args) as object),
+      optionGroups: [{ optionGroupId: groupId, minSelections: 0, maxSelections: 1, options: [{ optionId, name, additionalPrice: 0 }] }] }));
+    expect((await f.service.prepare(principal)).display.items[0]!.options).toEqual([{ optionId, name, quantity: 1 }]);
+    name = undefined;
+    await expect(f.service.prepare(principal)).rejects.toMatchObject({ code: 'CART_REVIEW_NOT_DISPLAYABLE' });
+    expect(f.write).not.toHaveBeenCalled();
+  });
+  it('regressão da auditoria: revisar e atualizar carrinho com opção mantém um único rótulo por configuração', async () => {
+    const f = setup(), optionId = randomUUID(), optionGroupId = randomUUID(), state = f.state();
+    state.bag!.lines[0]!.optionIds = [optionId]; f.save(state);
+    const original = vi.mocked(f.ctx.deps.getItem).getMockImplementation()!;
+    vi.mocked(f.ctx.deps.getItem).mockImplementation(async (...args) => ({ ...(await original(...args) as object),
+      optionGroups: [{ optionGroupId, minSelections: 0, maxSelections: 1, options: [{ optionId, name: 'Sem molho', additionalPrice: 0 }] }] }));
+    const first = await f.service.prepare(principal);
+    expect((await f.service.confirm(principal, f.command(first.confirmationRef))).state).toBe('SUCCEEDED');
+    const changed = f.state(); changed.bag!.lines[0]!.quantity = 2; changed.version++; f.save(changed);
+    const review = await f.service.prepare(principal);
+    expect(review.display.items).toEqual([{ itemId: I, name: 'Arroz', options: [{ optionId, quantity: 1, name: 'Sem molho' }] }]);
+    expect((await f.service.confirm(principal, f.command(review.confirmationRef))).state).toBe('SUCCEEDED');
+    expect(f.write.mock.calls.map(([tool]) => tool)).toEqual(['createCart', 'updateCartItem']);
+  });
+  it('remoção de item remoto exige nome e detecta mudança do nome antes da escrita', async () => {
+    const f = setup(), first = await f.service.prepare(principal);
+    await f.service.confirm(principal, f.command(first.confirmationRef));
+    const otherId = randomUUID(); f.remote().items.push({ cartItemId: randomUUID(), itemId: otherId, quantity: 1, options: [], unitPrice: 20 });
+    f.remote().totals.subtotal = 40; f.remote().totals.total = 46;
+    const review = await f.service.prepare(principal);
+    expect(review.display.items.find(i => i.itemId === otherId)?.name).toBe('Outro item sintético');
+    const original = vi.mocked(f.ctx.deps.getItem).getMockImplementation()!;
+    vi.mocked(f.ctx.deps.getItem).mockImplementation(async (...args) => ({ ...(await original(...args) as object), ...(args[0].itemId === otherId ? { itemName: 'Nome alterado' } : {}) }));
+    await expect(f.service.confirm(principal, f.command(review.confirmationRef))).rejects.toMatchObject({ code: 'CART_REVIEW_CHANGED' });
+    expect(f.write).toHaveBeenCalledTimes(1);
+  });
+  it('consulta final exibe composição e custos sem reexecutar a intenção', async () => {
+    const f = setup(), review = await f.service.prepare(principal), cmd = f.command(review.confirmationRef);
+    expect((await f.service.confirm(principal, cmd)).state).toBe('SUCCEEDED');
+    const current = await f.service.inspect(principal);
+    expect(current).toMatchObject({ display: { merchantName: 'Loja sintética' },
+      cart: { totals: { subtotal: 2000, deliveryFee: 500, serviceFee: 100, total: 2600 } },
+      budget: { status: 'WITHIN_LIMITS' }, purchaseAuthorized: false, checkoutEnabled: false, paymentEnabled: false });
+    expect(f.service.request(principal, cmd.requestId).state).toBe('SUCCEEDED');
+    expect(f.write).toHaveBeenCalledTimes(1);
+  });
   it('ID de endereço duplicado na lista remota é ambíguo e nunca permite preparar', async () => {
     const f = setup();
     vi.mocked(f.ctx.deps.listAddresses).mockResolvedValueOnce({ results: [

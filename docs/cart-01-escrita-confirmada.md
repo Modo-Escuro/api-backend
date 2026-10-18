@@ -1,5 +1,7 @@
 # CART-01 — Escrita de carrinho confirmada pelo organizador
 
+**Continuação:** [apresentação completa e auditoria](cart-01-conclusao-offline.md) acrescentam conta mascarada, loja/endereço e nomes de opções/remoções, vinculados por hash, além da composição/custos observados na consulta final. A publicação em draft não fornece evidência real do iFood nem ativa escrita.
+
 [Auditoria original](cart-01-auditoria.md) · [Integração atual](cart-01-integracao.md) · [INT-02 #40 — gate externo](https://github.com/Modo-Escuro/api-backend/issues/40).
 
 Revisão de escopo autorizada pelo usuário em 18/10/2026. Substitui a proibição geral de escrita da D8/D10 **somente** para criar e alterar itens do carrinho real, após confirmação humana específica. `submitOrder`, `setCartPayment` e processamento de pagamento continuam proibidos. Nenhuma produção foi alterada.

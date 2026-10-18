@@ -251,6 +251,7 @@ export class CartService {
       const key = this.attemptKey(organizer, linkId, requestId);
       if (this.existing(key, digest(['removeItemFromCart', cart.ref, { cartItemId }]))) return this.refresh(cart, gateway);
       await this.refresh(cart, gateway);
+      if (cart.unknown) throw new CartError('RESULT_UNKNOWN', 'Carrinho aguarda reconciliação; mutações bloqueadas.');
       if (!cart.snapshot!.items.some((i) => i.cartItemId === cartItemId)) throw new CartError('CART_ITEM_NOT_FOUND', 'Item não encontrado neste carrinho.', 404);
       return this.mutate(cart, gateway, requestId, 'removeItemFromCart', { cartItemId });
     });

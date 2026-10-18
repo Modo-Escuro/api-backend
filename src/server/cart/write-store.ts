@@ -12,6 +12,7 @@ export interface WritePlan {
   purpose: 'PREPARE_CART'; purchaseId: string; version: number; linkId: string;
   merchantId: string; addressId: string; purchaseHash: string;
   remoteHash: string | null; validationHash: string; steps: WriteStep[];
+  descriptionHashes: Record<string, string>;
   observedSubtotalCents: number; unknownCosts: true;
   expiresAt: number;
 }

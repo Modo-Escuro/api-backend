@@ -1,5 +1,7 @@
 # CART-01 — Integração sobre a main atual
 
+**Continuação publicada no mesmo draft #46:** [conclusão offline e auditoria](cart-01-conclusao-offline.md) integram a main com INT-02 #48 e endereço #47, completam a revisão e a consulta final do bot e adiantam a OPS-02. Os registros abaixo são históricos; o GO técnico continua restrito às flags desligadas.
+
 Integração de 18/10/2026, base `f3b8b5561acc0c0ae5e9efe12b52acc2f29bf218`, branch `codex/cart-01-confirmed-writes`. Código reaproveitado da implementação local anteriormente auditada sobre `8191a0f`, cujo [relatório original](cart-01-auditoria.md) é histórico. A implementação original e seu patch foram preservados; SHA-256 do patch: `3897aef6d8be0dcbca65aca8409e873ebf5837ea772ec016990343b97ed173c0`.
 
 ## Resultado e alcance

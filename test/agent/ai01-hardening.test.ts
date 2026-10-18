@@ -8,6 +8,7 @@ import type { Operation } from '../../src/server/contracts/conversation';
 import { ORG_A, ORG_B, connectAndConfirm, setup } from '../helpers/fakes';
 import { event, flush, principal, temporary } from '../turns/helpers';
 import { geminiReply } from '../helpers/gemini';
+import { DeliveryAddresses } from '../../src/server/services/delivery-addresses';
 
 const request = () => ({ input: demoInput(), signal: new AbortController().signal, maxOutputTokens: 2048, budgetScope: 's' });
 /** Resposta no formato real observado quando o raciocínio esgota o teto: MAX_TOKENS, JSON cortado, thoughtsTokenCount. */
@@ -70,6 +71,10 @@ describe('AI-01: falhas do modelo e do iFood no runtime montado', () => {
     await connectAndConfirm(env, ORG_A);
     await connectAndConfirm(env, ORG_B);
     const runtime = createConversationRuntime(env.cfg, env.links, transport)!;
+    const addresses = new DeliveryAddresses(runtime.store, env.links);
+    const who = { organizerId: ORG_A, botId: principal.botId, conversationId: ORG_A };
+    const choices = await addresses.review(who);
+    await addresses.select(who, choices.options[0]!.choiceRef); // clique humano sintético anterior à indisponibilidade.
     cleanup.push(() => { runtime.stop(); dir.clean(); });
     const p = (org: string) => ({ organizerId: org, botId: principal.botId, conversationId: org });
     const wait = async (org: string, operationId: string): Promise<Operation> => {

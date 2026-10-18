@@ -11,6 +11,8 @@ import { CartError, assertMutationConfirmation, confirmedTotals, id, parseCreate
 import type { CartContractGate } from './write-contract.js';
 import { CartWriteStore, type Head, type HumanCartCommand, type Intent, type WritePlan, type WriteStep } from './write-store.js';
 import { assertSelectedAddress, parseAddressList } from '../services/address-reference.js';
+import { describeItem, descriptionHashes, displayContext, labelKey, readable, type CartDisplay, type ItemLabel } from './presentation.js';
+import { metrics } from '../ops/metrics.js';
 
 type Item = { itemId: string; quantity: number; options: { optionId: string; quantity: 1 }[] };
 const itemKey = (i: { itemId: string; options: { optionId: string; quantity: number }[] }) =>
@@ -33,7 +35,7 @@ export class ConfirmedCartService {
     const status = await this.links.status(p.organizerId);
     if (status.state !== 'CONNECTED' || !status.operational || status.linkId !== linkId || status.attempt)
       throw new CartError('CART_LINK_CHANGED', 'Confirme o vínculo operacional atual antes de continuar.');
-    const required: Operation[] = write ? ['CART_WRITE','OFFERS_EVALUATE'] : ['CART_READ'];
+    const required: Operation[] = ['CART_READ', 'ADDRESSES_READ', 'OFFERS_EVALUATE', ...(write ? ['CART_WRITE' as const] : [])];
     if (status.scopeEvidence !== 'TOKEN_SCOPES' || !required.every(op => status.allowedOperations.includes(op)))
       throw new CartError('CART_PERMISSIONS_UNVERIFIED', 'Permissões desta operação não estão comprovadas no vínculo.', 403);
   }
@@ -72,7 +74,7 @@ export class ConfirmedCartService {
     const address = addresses.find(a => a.addressId === bag.addressId);
     this.assertAddress(p, ctx.linkId, address);
     const location = z.object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) }).parse(address?.coordinates);
-    const checks: unknown[] = [], items = new Map<string, Item>();
+    const checks: unknown[] = [], items = new Map<string, Item>(), labels = new Map<string, ItemLabel>(), merchantNames = new Set<string>();
     for (const line of bag.lines) {
       id.parse(line.itemId);
       const listingResult = z.object({ results: z.array(z.object({ itemId: id,
@@ -82,11 +84,17 @@ export class ConfirmedCartService {
       if (rows.length !== 1) throw new CartError('CART_ITEM_UNAVAILABLE', 'Produto não apareceu univocamente na leitura atual.');
       const rawDetail = await ctx.deps.getItem({ itemId: line.itemId, merchantId: bag.merchantId, userLocation: location }, { timeoutMs: 10_000 });
       const parsedDetail = parseItem(rawDetail); // também bloqueia variantes/customizações não suportadas
+      if (parsedDetail.itemId !== line.itemId || parsedDetail.merchantId !== bag.merchantId)
+        throw new CartError('CART_IDENTITY_MISMATCH', 'Detalhamento diverge do item ou da loja.');
       const currentName = parsedDetail.itemName ?? rows[0]!.itemName;
       if (typeof currentName !== 'string' || cleanName(currentName) !== line.name)
         throw new CartError('CART_ITEM_CHANGED', 'A identificação do produto mudou; gere outra proposta antes de confirmar.');
       const detail = normalizeItemDetail(rawDetail), listing = normalizeListingItem(rows[0]);
       const options = line.optionIds.map(optionId => ({ optionId: id.parse(optionId), quantity: 1 as const }));
+      const label = describeItem(parsedDetail, options);
+      labels.set(labelKey(label), label);
+      const merchantName = parsedDetail.merchantName ?? (listing.merchant.name.state === 'PRESENT' ? listing.merchant.name.value : undefined);
+      merchantNames.add(readable(merchantName));
       for (const consumerId of line.consumerIds) {
         const person = state.participants.find(x => x.participantId === consumerId);
         const restrictions = person && knownRestrictions(state, person);
@@ -106,7 +114,23 @@ export class ConfirmedCartService {
     }
     if (!items.size || items.size > 20) throw new CartError('CART_QUANTITY_UNSUPPORTED', 'Quantidade de linhas fora do contrato.');
     await this.current(p, ctx.linkId); this.store.assertUnchanged(p, purchaseHash);
-    return { state, address, purchaseHash, validationHash: contentHash([location, checks]), items: [...items.values()], evaluated };
+    if (merchantNames.size !== 1) throw new CartError('CART_REVIEW_NOT_DISPLAYABLE', 'Identificação da loja divergente.');
+    const status = await this.links.status(p.organizerId);
+    const display = { ...displayContext(status.account?.identity, address, [...merchantNames][0]), items: [...labels.values()] };
+    await this.current(p, ctx.linkId); this.store.assertUnchanged(p, purchaseHash);
+    return { state, address, location, display, purchaseHash, validationHash: contentHash([location, checks, display]), items: [...items.values()], evaluated };
+  }
+  private async remoteLabels(ctx: OperationalContext, merchantId: string, location: { latitude: number; longitude: number },
+    items: Snapshot['items'], known: ItemLabel[] = []): Promise<ItemLabel[]> {
+    const labels = new Map(known.map(i => [labelKey(i), i]));
+    for (const item of items) {
+      if (labels.has(labelKey(item))) continue;
+      const detail = parseItem(await ctx.deps.getItem({ itemId: item.itemId, merchantId, userLocation: location }, { timeoutMs: 10_000 }));
+      if (detail.itemId !== item.itemId || detail.merchantId !== merchantId)
+        throw new CartError('CART_IDENTITY_MISMATCH', 'Identificação do item remoto diverge da loja.');
+      const label = describeItem(detail, item.options); labels.set(labelKey(item), label);
+    }
+    return [...labels.values()];
   }
   private steps(items: Item[], head: Head | null): WriteStep[] {
     if (!head) return [{ tool: 'createCart', args: { items } }];
@@ -131,6 +155,8 @@ export class ConfirmedCartService {
       const check = await this.validate(p, ctx), { state } = check;
       let head = this.store.head(p, state);
       if (head) head = await this.read(p, state, gateway, head.cartId);
+      const display: CartDisplay = { ...check.display, items: await this.remoteLabels(ctx, state.bag!.merchantId,
+        check.location, head?.snapshot?.items ?? [], check.display.items) };
       const steps = this.steps(check.items, head);
       if (steps[0]!.tool === 'createCart') Object.assign(steps[0]!.args, { merchantId: state.bag!.merchantId, addressId: state.bag!.addressId });
       await this.contract.verify(gateway, steps.map(s => s.tool), steps.map(s => ({...s,args:{...s.args,...(head ? {cartId:head.cartId} : {})}})));
@@ -139,9 +165,10 @@ export class ConfirmedCartService {
       const plan: WritePlan = { purpose: 'PREPARE_CART', purchaseId: state.purchaseId, version: state.version, linkId: ctx.linkId,
         merchantId: state.bag!.merchantId, addressId: state.bag!.addressId!, purchaseHash: check.purchaseHash,
         validationHash: check.validationHash, remoteHash: head?.fingerprint ?? null, steps,
+        descriptionHashes: descriptionHashes(display.items),
         observedSubtotalCents: addCents(...state.bag!.lines.map(l => multiplyCents(l.unitMinCents,l.quantity))), unknownCosts: true,
         expiresAt: this.store.now() + 300_000 };
-      return { ...this.store.review(p, plan), lines: state.bag!.lines, coverage: check.evaluated.coverage,
+      return { ...this.store.review(p, plan), display, lines: state.bag!.lines, coverage: check.evaluated.coverage,
         changes: steps, remoteItems: head?.snapshot?.items ?? [],
         remoteCosts: head?.snapshot?.totals ?? null, purchaseAuthorized: false, checkoutEnabled: false };
     });
@@ -149,6 +176,21 @@ export class ConfirmedCartService {
   private result(intent: Intent) {
     return { operationId: intent.id, state: intent.state, completedOperations: intent.step, code: intent.code,
       purpose: 'PREPARE_CART', purchaseAuthorized: false, checkoutEnabled: false, paymentEnabled: false };
+  }
+  private async dispatch(gateway: CartGateway, step: WriteStep, args: Record<string, unknown>) {
+    const started = performance.now();
+    let outcome = 'RESULT_UNKNOWN';
+    try {
+      const response = await gateway.writeConfirmed!(step.tool, args);
+      const cartId = step.tool === 'createCart' ? parseCreatedCart(response).cartId : null;
+      if (step.tool !== 'createCart') assertMutationConfirmation(response);
+      outcome = 'ACKNOWLEDGED';
+      return cartId;
+    } finally {
+      // Rótulos fechados: nunca operação/conta/conversa, payload, referência ou mensagem externa.
+      metrics.inc('cart_write_attempts_total', { tool: step.tool, outcome });
+      metrics.observe('cart_write_duration_ms', { tool: step.tool, outcome }, performance.now() - started);
+    }
   }
   async confirm(p: AdapterPrincipal, command: HumanCartCommand) {
     const replay = this.store.find(p, command);
@@ -163,6 +205,9 @@ export class ConfirmedCartService {
       await this.contract.verify(gateway, plan.steps.map(s => s.tool), plan.steps.map(s => ({...s,args:{...s.args,...(head ? {cartId:head.cartId} : {})}})));
       if (head) head = await this.read(p, check.state, gateway, head.cartId);
       if ((head?.fingerprint ?? null) !== plan.remoteHash) throw new CartError('CART_REMOTE_CHANGED', 'Carrinho alterado externamente; revise e confirme novamente.');
+      const labels = await this.remoteLabels(ctx, plan.merchantId, check.location, head?.snapshot?.items ?? [], check.display.items);
+      if (contentHash(descriptionHashes(labels)) !== contentHash(plan.descriptionHashes))
+        throw new CartError('CART_REVIEW_CHANGED', 'A identificação de um item mudou; revise novamente.');
       await this.current(p, plan.linkId);
       const intent = this.store.reserve(p, command, plan);
       let cartId = head?.cartId ?? null;
@@ -175,6 +220,9 @@ export class ConfirmedCartService {
             const observed = await this.read(p, check.state, gateway, cartId);
             if (observed.fingerprint !== head?.fingerprint) throw new CartError('CART_REMOTE_CHANGED', 'Carrinho mudou antes da escrita.');
           }
+          const currentLabels = await this.remoteLabels(ctx, plan.merchantId, fresh.location, head?.snapshot?.items ?? [], fresh.display.items);
+          if (currentLabels.some(i => plan.descriptionHashes[labelKey(i)] !== contentHash(i)))
+            throw new CartError('CART_REVIEW_CHANGED', 'Identificação alterada antes da escrita; nova revisão necessária.');
           await this.current(p, plan.linkId);
           let expected: Item[] = (head?.snapshot?.items ?? []).map(i => ({ ...i, options: i.options.map(o => ({ optionId:o.optionId, quantity:1 })) }));
           if (step.tool === 'createCart') expected = step.args['items'] as Item[];
@@ -183,9 +231,8 @@ export class ConfirmedCartService {
           else expected.push(step.args as unknown as Item);
           const previousTotals = head?.snapshot?.totals;
           this.store.beforeCall(p, intent.id, plan.purchaseHash, () => this.assertAddress(p, plan.linkId, fresh.address)); sent = true;
-          const response = await gateway.writeConfirmed!(step.tool, { ...step.args, ...(cartId ? { cartId } : {}) });
-          if (step.tool === 'createCart') cartId = parseCreatedCart(response).cartId;
-          else assertMutationConfirmation(response);
+          const createdId = await this.dispatch(gateway, step, { ...step.args, ...(cartId ? { cartId } : {}) });
+          if (createdId) cartId = createdId;
           this.store.stepDone(p, check.state, intent.id, index + 1, cartId!); sent = false;
           // ID reconhecido é salvo antes da releitura: falha em GET nunca recria o carrinho.
           head = await this.read(p, check.state, gateway, cartId!);
@@ -239,15 +286,27 @@ export class ConfirmedCartService {
     return { status: allocation.budgetsSatisfied ? 'WITHIN_LIMITS' : 'LIMIT_EXCEEDED', allocation, purchaseAuthorized: false };
   }
   inspect(p: AdapterPrincipal) {
-    return this.using(p, async (_ctx, gateway) => {
+    return this.using(p, async (ctx, gateway) => {
       const state = this.store.purchase(p, true), head = this.store.head(p, state);
       if (!head) throw new CartError('CART_NOT_FOUND', 'Nenhum cartId conhecido; criação desconhecida exige reconciliação externa.', 404);
       const observed = await this.read(p, state, gateway, head.cartId, false);
       let active = true;
       try { this.store.purchase(p); } catch { active = false; }
-      return { cart: observed.snapshot, budget: active && state.bag ? this.budget(state, observed.snapshot!) : {status:'UNVERIFIED',reason:'Compra expirada; consulta técnica não renova confirmação.'},
+      const addresses = parseAddressList(await ctx.deps.listAddresses()), address = addresses.find(a => a.addressId === observed.snapshot!.addressId);
+      const location = z.object({ latitude: z.number(), longitude: z.number() }).parse(address?.coordinates);
+      const labels = await this.remoteLabels(ctx, observed.snapshot!.merchantId, location, observed.snapshot!.items);
+      // Nome da loja vem de getItem, nunca de ID ou texto fornecido pelo modelo.
+      const first = observed.snapshot!.items[0] ?? state.bag?.lines[0];
+      const detail = first ? parseItem(await ctx.deps.getItem({ itemId: first.itemId, merchantId: observed.snapshot!.merchantId, userLocation: location }, { timeoutMs: 10_000 })) : null;
+      if (detail && (detail.itemId !== first!.itemId || detail.merchantId !== observed.snapshot!.merchantId))
+        throw new CartError('CART_IDENTITY_MISMATCH', 'Identificação da loja divergente.');
+      const status = await this.links.status(p.organizerId);
+      await this.current(p, state.linkId!, false);
+      return { cart: observed.snapshot, display: { ...displayContext(status.account?.identity, address, detail?.merchantName), items: labels },
+        budget: active && state.bag ? this.budget(state, observed.snapshot!) : {status:'UNVERIFIED',reason:'Compra expirada; consulta técnica não renova confirmação.'},
         eligibility: 'NOT_REVALIDATED', requiresHumanReview: true,
-        note: 'Consulta não libera escrita de resultado desconhecido nem autoriza pedido ou pagamento.', purchaseAuthorized: false };
+        note: 'Consulta não libera escrita de resultado desconhecido nem autoriza pedido ou pagamento.',
+        purchaseAuthorized: false, checkoutEnabled: false, paymentEnabled: false };
     }, false);
   }
   operation(p: AdapterPrincipal, id: string) {

@@ -1,6 +1,10 @@
 # Documentação da API
 
-Esta branch reúne a implementação CART-01 do PR #46 sobre a main que já integrou #43/#44/#45. CART-01 continua separada da main; merge documental não comprova deploy ou validação do iFood.
+[Conclusão offline da integração CART-01](cart-01-conclusao-offline.md): ordem de integração, contrato humano completo, ensaio HTTP do bot, avanço da OPS-02 e gates externos remanescentes.
+
+[Continuidade e endereço iFood](continuidade-enderecos.md): correção da entrega automática no bot, confirmação humana de endereço e sequência coordenada de deploy, ainda sem ativação operacional.
+
+Esta branch integra os drafts de endereço #47 e CART-01 #46 sobre a main com a preparação offline INT-02 #48. Código local integrado não comprova merge remoto, deploy ou validação do iFood.
 
 [Estado remoto/local](estado-remoto-local.md): SHAs conferidos, merges e código CART-01 publicado no PR #46, ainda separado da main. A DEC-01 permite preparação real confirmada; documentação não habilita a operação.
 

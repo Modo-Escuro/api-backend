@@ -4,6 +4,7 @@ import { CartError } from './cart/contracts.js';
 import { CartService } from './cart/service.js';
 import { ConfirmedCartService } from './cart/write-service.js';
 import { CartWriteStore } from './cart/write-store.js';
+import { cartIntentSummary } from './cart/write-schema.js';
 import { ObservedCartContract } from './cart/write-contract.js';
 import { registerCartWriteRoutes } from './routes/cart-write.js';
 import { registerCartRoutes } from './routes/cart.js';
@@ -26,6 +27,7 @@ import { errorFields, log, newCorrelationId, routeTemplateLabel } from './ops/lo
 import { metrics, statusClass } from './ops/metrics.js';
 import { checkPrivatePath } from './ops/storage-check.js';
 import type { SpendBudget } from './ops/budget.js';
+import { DeliveryAddresses } from './services/delivery-addresses.js';
 
 type ErrStatus = 400 | 401 | 403 | 404 | 409 | 410 | 423 | 500 | 502 | 503;
 
@@ -120,7 +122,8 @@ export function createApp(auth: IfoodAuth = defaultAuth, opts: AppOptions = {}) 
   const cartWrites = opts.cartWrites ?? (cfg.confirmedCartWrites && opts.conversations
     ? new ConfirmedCartService(new CartWriteStore(opts.conversations.store), links, new ObservedCartContract(cfg.confirmedCartWrites.evidenceFile)) : undefined);
   registerCartWriteRoutes(app, cartWrites, cfg.conversationRuntime?.botId, cfg.conversationOrganizerIds);
-  registerConversationRoutes(app as unknown as Hono, opts.conversations, cfg.conversationRuntime?.botId, cfg.conversationOrganizerIds);
+  registerConversationRoutes(app as unknown as Hono, opts.conversations, cfg.conversationRuntime?.botId, cfg.conversationOrganizerIds,
+    opts.conversations ? new DeliveryAddresses(opts.conversations.store, links) : undefined);
 
   // ---------- OPS-02: status operacional (autenticado; só contagens, sem caminhos/identidades) ----------
   // Separa: saúde HTTP ≠ armazenamento ≠ sessão iFood operacional ≠ conversa ≠ capacidade de compra.
@@ -147,6 +150,7 @@ export function createApp(auth: IfoodAuth = defaultAuth, opts: AppOptions = {}) 
         cartPreparation: cartWrites ? 'HUMAN_CONFIRMATION_REQUIRED' : cfg.cartEnabled ? 'LEGACY_FLAG_ON' : 'DISABLED',
         submission: 'DISABLED',
         submitFlagIgnored: Boolean(cfg.submitFlagIgnored),
+        cartIntents: opts.conversations ? cartIntentSummary(opts.conversations.store.db) : null,
         reason: cartWrites ? 'PREPARE_CART_ONLY' : 'DEC01_D8_READ_ONLY',
       },
       metrics: metrics.snapshot(),

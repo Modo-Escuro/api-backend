@@ -1,5 +1,7 @@
 # Estado remoto, alterações locais e escopo — 18/10/2026
 
+**Continuação no draft #46:** [integração e auditoria offline](cart-01-conclusao-offline.md) incluem main `a027ed4` (INT-02 #48 e endereço #47), revisão completa e instrumentação parcial OPS-02. O quadro abaixo conserva referências históricas; código em draft não significa merge/deploy/ativação.
+
 Retrato conferido em 18/10/2026, horário de São Paulo. Não é monitoramento contínuo. SHAs identificam código publicado; não comprovam configuração, deploy ou ensaio online.
 
 | Superfície | Referência conferida | O que está comprovado |

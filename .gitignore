@@ -1,4 +1,6 @@
 node_modules/
+.work/
+.venv-bot/
 .int01-*.json
 .npm-cache/
 .venv-contract/
