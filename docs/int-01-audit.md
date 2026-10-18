@@ -104,6 +104,8 @@ Na execução seguinte, o usuário informou `READ_CONFIRMED_LINK / LINKS_FILE_MI
 
 **Atualização de escopo:** DEC-01 foi integrada via PR #25 e adota sacola simulada, com MCP somente leitura e zero chamadas de escrita. Ela substitui o plano condicional de preparação de carrinho acima: não executar createCart, alterações de carrinho, pagamento ou submitOrder. O inventário de F7 permanece histórico; não exigir mutações reais para validar a demo agora aprovada. As amostras autenticadas autorizadas devem se limitar às leituras necessárias à demo.
 
+Com o comando que carrega a configuração do serviço, o usuário voltou a informar `READ_CONFIRMED_LINK / LINKS_FILE_MISSING`, com `businessToolsCalled:false`. Em seguida, uma consulta pública a `/api/health` retornou HTTP 200, `ok:true` e `linksStorage:{state:"OK",durability:"VOLUME",acceptingNewLinks:true}`. O volume está disponível para novos vínculos, mas o arquivo de vínculos não foi encontrado pelo probe no caminho efetivo. O próximo passo é concluir o fluxo humano **Conectar iFood → autorização no navegador → Confirmar conexão** no bot com a conta de teste permitida; depois repetir o probe. Não criar `links.json` manualmente nem importar a sessão global. A criação do usuário de teste no portal iFood e o login Railway não estabelecem esse vínculo. A confirmação e a captura autenticada continuam pendentes; nenhum teste de negócio externo foi realizado.
+
 ## Reuso e dependências de integração
 
 - Reaproveitar gateway exclusivo, catálogo/getItem, validação de configuração, referências opacas, projeção e validação de totais e invalidação de revisão. Manter regressões F7.
