@@ -1,12 +1,13 @@
 import { serve } from '@hono/node-server';
 import { createApp } from './app.js';
 import { config } from './config.js';
-import { TurnRuntime } from './turns/runtime.js';
-import { TurnStore } from './turns/store.js';
+import { createConversationRuntime } from './conversation-runtime.js';
+import { IfoodLinkService } from './links/service.js';
+import { realSessionFactory } from './links/session.js';
 
-const conversations = config.conversationRuntime
-  ? new TurnRuntime(new TurnStore(config.conversationRuntime.dbFile)) : undefined;
-const app = createApp(undefined, { conversations });
+const links = new IfoodLinkService({ cfg: config, sessionFactory: realSessionFactory });
+const conversations = createConversationRuntime(config, links);
+const app = createApp(undefined, { links, conversations });
 
 const server = serve({ fetch: app.fetch, port: config.port }, (info) => {
   console.log(`[api] http://localhost:${info.port}  (login: /api/auth/login · diagnóstico: /api/diagnostics)`);
@@ -27,7 +28,9 @@ const server = serve({ fetch: app.fetch, port: config.port }, (info) => {
   }
 });
 conversations?.start();
-if (conversations) console.warn('[turnos] Infraestrutura ativa; processador DATA/IA ainda não instalado. Novos eventos retornam UNAVAILABLE.');
+if (conversations) console.warn(config.conversationModel
+  ? '[turnos] Processador de coleta ativo; sacola simulada, sem envio de pedidos. Limite de chamadas por processo.'
+  : '[turnos] Infraestrutura ativa sem processador; novos eventos retornam UNAVAILABLE.');
 const shutdown = () => {
   conversations?.stop();
   server.close();
