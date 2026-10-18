@@ -1,14 +1,30 @@
 # RANK-03 — Ordenação D9 e resposta de avaliação 2.0
 
-Issue [#11](https://github.com/Modo-Escuro/api-backend/issues/11). Implementação local na `branchBruna`,
-sem novo commit, push ou alteração de outra branch. Este documento não declara a issue integrada/encerrada.
+Issue [#11](https://github.com/Modo-Escuro/api-backend/issues/11). **Implementação integrada à main** pelo
+[PR #34](https://github.com/Modo-Escuro/api-backend/pull/34): código `8d54bfcfca13f99ff05f23c6abe93f187ac66216`,
+merge `2df4e54177ad31bdb1502883ac763f9d1a9485a7`. Esse estado foi confirmado por ancestralidade e leitura de código,
+não pelo estado da issue. Integração Git não comprova deploy nem validação real com iFood.
 
-## Diagnóstico e dependências
+## Estado conferido na auditoria documental — 18/10/2026
+
+- Backend remoto: `origin/main@dc448f9e117e05192004514a639c3ed5acd1098a`, contendo o merge #34. Conferidos
+  `src/server/domain/ranking.ts` (`RANKING_CONTRACT_VERSION = '2.0'`, D9 e políticas), `contracts/evaluate.ts`,
+  `services/evaluate.ts`, `services/evaluate-view.ts` e `services/cents.ts`.
+- Checkout local: `branchBruna@2df4e54`, já com o merge #34; referência remota `origin/branchBruna@8d54bfc`.
+  A main remota contém incrementos posteriores de GRP-01/AI-01/acesso. Não foram trazidos para o checkout
+  nesta auditoria; [estado das integrações](plano-conversacional.md).
+- A resposta de **avaliação/ranking é 2.0**; o [contrato de conversa é v1.0](conversation-api-v1.md).
+  São interfaces distintas, sem alteração de schemas, formatos ou regras por esta sincronização.
+- Esta atualização só corrige documentação. Não executa testes funcionais, aplicações, deploy ou chamadas de
+  modelo/iFood; resultados anteriores abaixo permanecem identificados como históricos.
+
+## Diagnóstico original e dependências — registro histórico da implementação
 
 Estado inicial: `branchBruna@d2883f1`, sem alterações rastreadas; `.agents/pipeline/` já existia como não rastreado.
 Foram executados `git branch --show-current`, `git status --short`, `git log -5 --oneline` e `git remote -v`.
 Após `git fetch origin`, `origin/main` também era `d2883f1` (divergência `0/0`). Nenhum checkout/merge/rebase
-foi executado; a integração final de alterações futuras exige autorização separada.
+foi executado durante aquela implementação local. Esse registro não é o estado atual: depois houve o commit
+`8d54bfc` e o merge #34 (`2df4e54`), confirmados acima. Esta auditoria não cria novos commits ou integrações.
 
 - **DEC-01 presente:** documento e commit `aeee828` registram adoção humana em 18/10/2026. D9 escolhe
   ordenação **estrita**, e não score ponderado. D3–D6 preservam centavos, desconhecidos e limites rígidos.
@@ -164,9 +180,18 @@ Recorte ilustrativo de uma única opção com total desconhecido (não é payloa
   não consome `/api/evaluate` nem apresenta score. Nenhuma mudança incompatível nesses endpoints.
 - **Testes/pipeline locais:** adaptados para declarar ECONOMY quando testam recomendações, validar D9,
   cobertura e chaves. Casos de #8/#9 preservam suas verificações; novos testes verificam ausência de prioridade.
-- **Bot remoto inspecionado, sem modificar:** `Modo-Escuro/telegram-bot`, main `e280807`, arquivos
-  `backend.py`, `runner.py`, `state.py`. Atualmente implementam login, não cliente direto de `/api/evaluate`.
-  Não foi declarado compatível um consumidor de ranking ainda inexistente nessa main.
+- **Bot no diagnóstico original:** `Modo-Escuro/telegram-bot/main@e280807` tinha login, sem cliente de conversa.
+  **Atualização desta auditoria:** em `main@9314c72`, o cliente de conversa v1.0, outbox e worker opt-in estão
+  integrados (PR #10, `c29cc04`), assim como a retomada de contexto (PR #11, `681d21d`) e acesso por senha
+  (PRs #13/#14). Conferidos `conversation.py`, `outbox.py`, `conversation_runner.py` e a CI. Não há cliente direto
+  de `/api/evaluate`: conversa v1.0 não é consumidor automático do ranking 2.0.
+- **Schemas e integração do bot são referências distintas:** `contracts-provenance.json` fixa schemas v1.0 em
+  `6ce3d99`; a CI HTTP do bot fixa a API em `2b77c95`, anterior à RANK-03. Nenhuma dessas referências prova
+  validação do cliente contra todo o backend atual. Não foram alteradas cópias, hashes ou configuração de CI.
+- **Composição coletiva no backend atual:** GRP-01, integrada pelo PR #37 (`8191a0f`), usa `rankCandidates`
+  para opções individuais; o ranqueador de planos é provisório. O fluxo de propostas da main não declara
+  total completo ou autorização de compra. A montagem opt-in foi integrada pelo #36 (`dc448f9`); isto não
+  comprova apresentação ponta a ponta no Telegram ou integração real com iFood.
 - **Futuro cliente de ranking/outros repositórios:** validar versão 2.0, enviar prioridade declarada, tratar
   PRIORITY_REQUIRED com pergunta, usar `rank`/ordem retornada (não reordenar por score), preservar os três
   buckets e todos os motivos, mostrar cobertura/limitações, não exibir score como satisfação e não reconstruir
@@ -179,10 +204,14 @@ Fixtures reais com preços, frete, serviço explícito e prazos sintéticos iden
 em memória e o pipeline com mocks; não autenticam conta real nem fazem chamadas iFood/MCP ou compras.
 
 Limites remanescentes: catálogo sem serviço não fornece total completo; redistribuição de score não foi
-aprovada como política de ordenação; adaptação externa e integração/commit exigem etapa separada autorizada.
+aprovada como política de ordenação; adaptação de um futuro consumidor direto do ranking e validação operacional
+continuam separadas. A implementação RANK-03 já tem commit e merge, conforme a evidência no início do documento.
 DEC-01 D10 exige ensaios/metas operacionais além dos testes offline, não declarados concluídos aqui.
 
-Resultados finais (Linux, Node v24.14.1, npm 11.11.0):
+### Resultados históricos da implementação RANK-03 (`8d54bfc`)
+
+Registro original em Linux, Node v24.14.1, npm 11.11.0. **Não reexecutados nesta auditoria** e não apresentados
+como resultado da main `dc448f9` ou do serviço implantado:
 
 | Comando efetivamente executado | Resultado |
 | --- | --- |
@@ -199,10 +228,15 @@ Na primeira execução direcionada de testes existentes, uma expectativa numéri
 ser atualizada para a soma das contribuições arredondadas com os pesos da prioridade declarada; a validação
 final acima passou. Nenhum teste foi removido, ignorado ou enfraquecido para contornar falhas de ambiente.
 
-Aviso observado: SQLite experimental do Node. Windows/CI não foram executados nesta tarefa; não houve
-falha POSIX no Linux. Nenhum ensaio real de iFood/MCP foi feito. `.env`, credenciais e conteúdo não rastreado
-preexistente foram preservados. As alterações permanecem somente no working tree da branchBruna.
+Aviso observado naquela execução: SQLite experimental do Node. Windows/CI não foram executados naquela
+implementação local; isso não descreve execuções posteriores de CI. Nenhum ensaio real de iFood/MCP foi feito
+na implementação registrada. `.env`, credenciais e conteúdo não rastreado foram preservados. A afirmação
+original de alterações somente no working tree foi superada pelo commit `8d54bfc` e merge `2df4e54`.
 
-Etapa posterior sujeita a autorização: revisar este diff e aprovar um commit focado de RANK-03; atualizar
-novamente as referências e apresentar eventual integração/PR separadamente. Não criar commit nem alterar
-outra branch automaticamente para cumprir o registro de integração pedido no texto da issue.
+### Pendências atuais
+
+- Confirmar separadamente versões implantadas, flags e ensaio integrado do bot/API/iFood depois das tasks.
+- Preservar bloqueio para alergias/`MANDATORY` não verificadas e para orçamento completo desconhecido;
+  somente elegíveis são recomendados. Sacola simulada não significa pedido enviado e o modelo não aprova.
+- A auditoria documental não muda o contrato nem resolve por suposição a aprovação simulada ainda pendente
+  de contrato/implementação próprios. Novos commits/publicação desta documentação dependem de autorização.
