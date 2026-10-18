@@ -11,7 +11,8 @@ import { geminiReply } from '../helpers/gemini';
 import { deferred, event, flush, principal, temporary } from './helpers';
 
 const cleanup: (() => void)[] = [];
-afterEach(() => { cleanup.splice(0).forEach((f) => f()); vi.restoreAllMocks(); });
+// Ordem inversa: fecha o runtime/SQLite antes de apagar a pasta (Windows não remove arquivo aberto).
+afterEach(() => { cleanup.splice(0).reverse().forEach((f) => f()); vi.restoreAllMocks(); });
 
 function runtimeAt(file: string, transport: typeof fetch, now: () => number, proposals?: Parameters<typeof createAgentProcessor>[0]['proposals']) {
   const runtime = new TurnRuntime(new TurnStore(file, {}, now), { processor: createAgentProcessor({
