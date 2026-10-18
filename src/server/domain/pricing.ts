@@ -331,18 +331,21 @@ export function computePrice({ detail, listing, selection = [], quantity = 1, ki
   };
 }
 
-/** Preço mínimo configurável: opções obrigatórias mais baratas (respeitando bloqueios), sem adicionais. */
+/** Preço mínimo sob condições obrigatórias, sem adicionais. Preferências só desempatam preços iguais;
+ * uma configuração preferida mais cara deve ser precificada separadamente como SELECTED. */
 export function computeMinimumConfigurablePrice(
   detail: NormalizedItemDetail,
   listing: NormalizedListingItem | null | undefined,
   blocked: ReadonlySet<string> = new Set(),
   quantity = 1,
-): { price: PriceBreakdown | null; selection: OptionSelection[] | null; problems: string[] } {
-  const minimal = cheapestRequiredSelection(detail, blocked);
-  if (!minimal.selection) return { price: null, selection: null, problems: minimal.problems };
+  avoided: ReadonlySet<string> = new Set(),
+): { price: PriceBreakdown | null; selection: OptionSelection[] | null; problems: string[]; preferenceGaps: string[] } {
+  const minimal = cheapestRequiredSelection(detail, blocked, avoided);
+  if (!minimal.selection) return { price: null, selection: null, problems: minimal.problems, preferenceGaps: [] };
   return {
     price: computePrice({ detail, listing, selection: minimal.selection, quantity, kind: 'MINIMUM_CONFIGURABLE' }),
     selection: minimal.selection,
     problems: [],
+    preferenceGaps: minimal.preferenceGaps,
   };
 }

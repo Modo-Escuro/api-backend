@@ -103,6 +103,7 @@ const ALLERGY_TO_SERVER: Partial<Record<Allergen, ItemRestriction>> = { GLUTEN: 
 export function serverFiltersFor(restrictions: RestrictionKey[]): ItemRestriction[] {
   const out = new Set<ItemRestriction>();
   for (const r of restrictions) {
+    if (requirementOf(r) !== 'MANDATORY') continue; // preferência nunca vira filtro obrigatório de busca
     const f = r.kind === 'DIETARY' ? DIETARY_TO_SERVER[r.code] : ALLERGY_TO_SERVER[r.code];
     if (f) out.add(f);
   }
@@ -173,6 +174,20 @@ export const RULES: Record<string, Rule | null> = {
 
 const NEGATIONS_BEFORE = ['sem', 'zero', 'nao contem', 'livre de'];
 
+/**
+ * As palavras imediatamente anteriores a um termo terminam com uma negação?
+ * Só o marcador colado ao termo nega: "sem bacon" nega "bacon", mas "sem gluten e bacon" NÃO nega "bacon".
+ * Reutilizado pela heurística de restrições (findTerms) e pela detecção de preferências (findTermMention).
+ */
+export function negatedContext(before: string): boolean {
+  const words = before.split(' ').filter(Boolean);
+  if (!words.length) return false;
+  return NEGATIONS_BEFORE.some((n) => {
+    const nw = n.split(' ');
+    return words.length >= nw.length && words.slice(words.length - nw.length).join(' ') === n;
+  });
+}
+
 /** minúsculas, sem acentos, só [a-z0-9 ]. */
 export function normalizeText(s: string): string {
   return s
@@ -193,12 +208,39 @@ export function findTerms(text: string, r: Rule): string[] {
       if (!tw.every((w, k) => words[i + k] === w)) continue;
       const before = words.slice(Math.max(0, i - 2), i).join(' ');
       const after = words.slice(i + tw.length, i + tw.length + 3).join(' ');
-      const negated = NEGATIONS_BEFORE.some((n) => ` ${before} `.includes(` ${n} `));
+      const negated = negatedContext(before);
       const marked = r.markersAfter.some((m) => ` ${after} `.includes(` ${m} `));
       if (!negated && !marked) found.add(term);
     }
   }
   return [...found];
+}
+
+export interface TermMention {
+  /** O termo aparece no texto (qualquer polaridade). */
+  mentioned: boolean;
+  /** Aparece ao menos uma vez SEM negação — presença afirmada. */
+  asserted: boolean;
+}
+
+/**
+ * Menções de um termo livre (texto de preferência do usuário) em um texto qualquer.
+ * Reaproveita normalização e detecção de negações das regras de restrição ("sem bacon", "zero açúcar",
+ * "livre de lactose" NÃO são presença). Fronteira de palavra: "baconhouse" não casa com "bacon".
+ * Heurística de texto: serve só para pontuar preferência, nunca para concluir segurança.
+ */
+export function findTermMention(text: string, term: string): TermMention {
+  const tw = normalizeText(term).split(' ').filter(Boolean);
+  if (!tw.length) return { mentioned: false, asserted: false };
+  const words = normalizeText(text).split(' ').filter(Boolean);
+  let mentioned = false;
+  let asserted = false;
+  for (let i = 0; i + tw.length <= words.length; i++) {
+    if (!tw.every((w, k) => words[i + k] === w)) continue;
+    mentioned = true;
+    if (!negatedContext(words.slice(Math.max(0, i - 2), i).join(' '))) asserted = true;
+  }
+  return { mentioned, asserted };
 }
 
 // ---------- avaliação ----------
@@ -336,7 +378,12 @@ export function evaluateRestrictions(restrictions: RestrictionKey[], input: Eval
   return restrictions.map((r) => evaluateRestriction(r, input));
 }
 
-/** União dos optionIds bloqueados por qualquer restrição. */
+/** União dos optionIds proibidos por restrições OBRIGATÓRIAS (preferência nunca proíbe opção). */
 export function blockedOptions(checks: RestrictionCheck[]): Set<string> {
-  return new Set(checks.flatMap((c) => c.blockedOptionIds));
+  return new Set(checks.filter((c) => c.requirement === 'MANDATORY').flatMap((c) => c.blockedOptionIds));
+}
+
+/** Opções indesejadas apenas por PREFERENCE: desempregam na configuração, nunca invalidam. */
+export function preferenceAvoidedOptions(checks: RestrictionCheck[]): Set<string> {
+  return new Set(checks.filter((c) => c.requirement === 'PREFERENCE').flatMap((c) => c.blockedOptionIds));
 }

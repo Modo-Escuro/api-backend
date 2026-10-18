@@ -12,11 +12,12 @@ import type { NormalizedItemDetail, NormalizedListingItem } from './normalize.js
 import {
   blockedOptions,
   evaluateRestrictions,
+  preferenceAvoidedOptions,
   type RestrictionCheck,
   type RestrictionKey,
   type TriState,
 } from './constraints.js';
-import { validateSelection, type ConfigValidation, type OptionSelection } from './configuration.js';
+import { preferredRequiredSelection, validateSelection, type ConfigValidation, type OptionSelection } from './configuration.js';
 import { computeMinimumConfigurablePrice, computePrice, type PriceBreakdown, type PriceRange } from './pricing.js';
 import type { ItemRestriction } from '../mcp/types.js';
 import { cents, formatCents } from './money.js';
@@ -60,13 +61,13 @@ export interface EligibilityResult {
   warnings: Issue[];
   availability: TriState;
   restrictions: RestrictionCheck[];
-  /** Configuração avaliada: a do usuário ou a mínima. */
-  selection: { source: 'USER' | 'MINIMUM_CONFIGURABLE'; options: OptionSelection[] } | null;
+  /** Configuração avaliada: a do usuário, a preferida viável ou a mínima obrigatória. */
+  selection: { source: 'USER' | 'MINIMUM_CONFIGURABLE' | 'PREFERENCE'; options: OptionSelection[] } | null;
   configuration: ConfigValidation | null;
   pricing: {
     /** "A partir de" honesto: obrigatórias mais baratas compatíveis com as restrições. */
     minimumConfigurable: PriceBreakdown | null;
-    /** Estimativa da configuração do usuário (null se não houve seleção). */
+    /** Estimativa da configuração do usuário ou da configuração preferida adotada. */
     selected: PriceBreakdown | null;
     /** Sempre null: só o carrinho confirma. */
     confirmedTotal: null;
@@ -152,13 +153,14 @@ export function evaluateCandidate(input: CandidateInput, constraints: UserConstr
   if (constraints.restrictions.length) {
     dataLimitations.push('O iFood não fornece ingredientes nem alérgenos estruturados; verificações textuais são heurísticas e nunca comprovam segurança');
   }
-  // Opções bloqueadas por preferência também são evitadas na configuração mínima.
+  // Proibição vem só de restrições OBRIGATÓRIAS; preferências não excluem opções (issue #8).
   const blocked = blockedOptions(restrictions);
+  const avoided = preferenceAvoidedOptions(restrictions);
 
   // ---- preço mínimo configurável (sempre calculado)
   const quantity = input.quantity ?? 1;
   let minimum: ReturnType<typeof computeMinimumConfigurablePrice>;
-  try { minimum = computeMinimumConfigurablePrice(detail, listing, blocked, quantity); }
+  try { minimum = computeMinimumConfigurablePrice(detail, listing, blocked, quantity, avoided); }
   catch (error) {
     if (!(error instanceof RangeError)) throw error;
     blockers.push({ code: 'PRICE_UNVERIFIED', message: 'Preço ou quantidade fora dos limites de cálculo seguro' });
@@ -173,8 +175,29 @@ export function evaluateCandidate(input: CandidateInput, constraints: UserConstr
 
   let configuration: ConfigValidation | null = null;
   let selected: PriceBreakdown | null = null;
+  if (!input.selection && avoided.size && minimum.selection) {
+    const preferred = preferredRequiredSelection(detail, blocked, avoided);
+    if (preferred.selection && validateSelection(detail, preferred.selection, blocked).status === 'VALID') {
+      try {
+        const price = computePrice({ detail, listing, selection: preferred.selection, quantity, kind: 'SELECTED' });
+        const cap = constraints.budget;
+        const fits = (cap?.maxItemPrice === undefined || checkCap(price.unitTotalRange, cap.maxItemPrice) === 'PASS') &&
+          (cap?.maxOrderTotal === undefined || checkCap(price.estimatedTotalRange, cap.maxOrderTotal) === 'PASS');
+        if (fits) {
+          selection = { source: 'PREFERENCE', options: preferred.selection };
+          selected = price;
+        }
+      } catch (error) {
+        if (!(error instanceof RangeError)) throw error;
+        // Uma preferência fora do intervalo seguro não invalida o mínimo obrigatório.
+      }
+    }
+  }
+  if (selection?.options.some((o) => avoided.has(o.optionId))) {
+    warnings.push({ code: 'PREFERENCE_NOT_MET', message: 'Preferência opcional não atendida: mantida a configuração viável sob as condições obrigatórias e os tetos informados' });
+  }
   if (selection) {
-    configuration = validateSelection(detail, selection.options, blocked);
+    configuration = validateSelection(detail, selection.options, blocked, avoided);
     if (configuration.status === 'UNKNOWN') blockers.push({ code: 'CONFIG_UNVERIFIED', message: 'Configuração obrigatória não verificável' });
     const hardCodes = ['UNKNOWN_OPTION', 'INVALID_QUANTITY', 'BELOW_MIN', 'ABOVE_MAX', 'BLOCKED_OPTION'];
     for (const i of configuration.issues) {

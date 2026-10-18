@@ -109,9 +109,11 @@ describe('DOM-01: limites obrigatórios conferidos depois da resposta MCP', () =
   });
   it('contrato → domínio → MCP → resposta não divide/multiplica duas vezes e não filtra preferências', async () => {
     const body = EvaluateBody.parse({ query: 'sintético', userLocation: { latitude: -1, longitude: -2 },
-      refinements: { maxDeliveryFeeCents: 499 }, softLimits: { maxDeliveryTimeMinutes: 30 } });
+      refinements: { maxDeliveryFeeCents: 499 }, softLimits: { maxDeliveryTimeMinutes: 30 },
+      preferences: { likedIngredients: ['bacon'], priority: 'ECONOMY' } });
     const request = toDomainRequest(body);
     expect(request.refinements?.maxDeliveryFee).toBe(499);
+    expect(request.preferences).toEqual({ likedIngredients: ['bacon'], priority: 'ECONOMY' });
     let sent: unknown;
     const result = await runEvaluation(request, { listAddresses: async () => ({ results: [] }),
       searchOffers: async (args) => { sent = args; return { results: [listing], hasMore: false }; },
@@ -122,6 +124,7 @@ describe('DOM-01: limites obrigatórios conferidos depois da resposta MCP', () =
     expect(output.blocked[0]!.pricing.minimumConfigurable!.unitTotalCents).toBe(1000);
     expect(output.blocked[0]!.limits).toContainEqual(expect.objectContaining({ metric: 'maxDeliveryFeeCents', limitCents: 499, status: 'FAIL' }));
     expect(output.blocked[0]!.pricing.minimumConfigurable!.estimatedTotalCents).toBeNull();
+    expect(output.recommendations).toEqual([]);
   });
 });
 
