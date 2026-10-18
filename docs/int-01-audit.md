@@ -81,7 +81,22 @@ DA10 deve nomear o estágio final e sua evidência: se sacola, cartId + estado/t
 5. Inspecionar outputs no canal privado e produzir fixture sanitizada com transformação registrada: remover credenciais/PAN/CVV/documentos, endereço, conta, notas e dados pessoais; substituir IDs por UUIDs sintéticos consistentes quando necessário. Registrar tipos, unidades, enums não privados, sucesso/erro e origem da transformação, preservando distinção entre captura sanitizada e fixture inventada. Não publicar saída privada bruta.
 6. Ajustar parsers somente com essa evidência, rodar fixtures reais sanitizadas e regressões e atualizar a coluna O. Confirmar mecanismo de reconciliação e resposta do provedor para lacunas. Se insuficiente, manter bloqueio e a tarefa pendente.
 
-O usuário prefere operar o navegador: login e inspeção do painel ficam com ele. O healthcheck público foi a única chamada externa de API nesta auditoria; não houve leitura de endereço, pagamento, pedido ou token, nem chamada real de carrinho/MCP.
+O usuário prefere operar o navegador: login e inspeção do painel ficam com ele. O healthcheck público foi a única chamada à API de aplicação nesta auditoria; não houve leitura de endereço, pagamento, pedido ou token iFood, nem chamada real de carrinho/MCP. A atualização de acesso Railway está registrada abaixo.
+
+### Acesso Railway e alternativa pelo Console — 18/10/2026
+
+O login humano no Railway CLI foi concluído e o acesso ao projeto/serviço `api-backend` confirmado. Uma consulta autenticada de metadados encontrou deploy `SUCCESS` e instância `RUNNING`; isso não identifica ou valida uma sessão iFood. Não foram lidas variáveis secretas nem reiniciado o serviço.
+
+O usuário autorizou criar/registrar uma chave SSH temporária e removê-la após o ensaio. A chave foi criada com ACL restrita ao usuário e registrada; a primeira conexão apresentou uma chave de host ainda não conhecida. A revisão automática bloqueou aceitá-la sem uma referência confiável de autenticidade. O [suporte Railway](https://station.railway.com/questions/confirm-ssh-host-fingerprint-for-ssh-rai-8cd06fc6), incluindo resposta de funcionário, informa que não publica fingerprints/CA de host para esse endpoint e indica o Console do painel como alternativa autenticada. A consulta SSH foi cancelada antes da aceitação. A chave temporária foi **revogada na Railway e os dois arquivos locais removidos**, conferindo o fingerprint da chave criada antes da exclusão. Nenhum comando executou no contêiner via SSH.
+
+Para avançar sem confiar nessa chave de host, o usuário pode executar o [comando autocontido do Console](int-01-console-command.sh) pela sessão autenticada do painel:
+
+1. Abrir o projeto Railway, serviço `api-backend`, ambiente `production`, aba **Console**. Estar na pasta da API (onde estão `package.json` e `node_modules`). Não precisa publicar este script no serviço.
+2. Colar o conteúdo completo de `int-01-console-command.sh`. O comando usa o SDK já instalado e lê somente o arquivo do vínculo confirmado correspondente à allowlist. Não usa `.tokens.json` global, não faz login/refresh, não modifica storage e não chama ferramentas de negócio.
+3. Compartilhar apenas o JSON final: ele contém nomes, propriedades/requeridos, presença de outputSchema e hints booleanos. Não inclui valores de schema, nomes da conta, IDs de conta/carrinho, tokens, erros privados ou cursores. `OBSERVED_METADATA` comprova apenas a nova leitura de tools/list, **não saídas reais de carrinho**.
+4. Se retornar `BLOCKED`, conservar a razão sanitizada. `VERIFY_LINK_THROUGH_EXISTING_API` exige verificar o vínculo pelo fluxo existente; o comando não rotaciona refresh tokens concorrendo com a API. Vínculo ausente/ambíguo, cliente/endereço MCP divergente ou formato desconhecido também bloqueiam.
+
+Fonte: `scripts/int01-console-probe.ts`; gerar o comando com `node --import tsx scripts/generate-int01-console.ts`. Os testes usam filesystem/cliente falsos e conferem paginação, ausência de fallback global, bloqueios e sanitização. O comando não foi executado no contêiner nesta sessão; aguarda ação do usuário no navegador. As saídas reais de cart e o mecanismo de recuperação sem IDs continuam pendentes.
 
 ## Reuso e dependências de integração
 
@@ -99,14 +114,14 @@ Windows, Node 24.19.0, dependências do mesmo `package-lock.json` de F7 reutiliz
 | Regressões INT-01 contra F7 antes da correção | 9 falharam / 2 passaram, confirmando o problema |
 | Regressões após correção | 11/11 passaram |
 | Inventário + parsers adicionais | 12/12 passaram |
-| Suíte completa `vitest run` | **290/290 passaram**, 20 arquivos |
+| Suíte completa `vitest run`, incluindo consulta do Console | **296/296 passaram**, 21 arquivos (290 da auditoria inicial + 6 da consulta manual) |
 | `tsc --noEmit -p tsconfig.json` | passou |
 | `eslint .` | passou |
 | `vite build` | passou |
 | `git diff --check` | passou |
 | Healthcheck público | 200, `ok:true`; não é teste de integração MCP |
 
-Não foi executada CI/Linux, login, captura autenticada de saída, mutação real, aprovação ou envio. A F7 já contém ajuste de portabilidade dos testes POSIX; por isso esta suíte não reproduz as duas falhas Windows da main antiga. Esses resultados não incluem os testes da branch API-01.
+Não foi executada CI/Linux, login iFood, captura autenticada de saída, mutação real, aprovação ou envio. O login e os metadados Railway são evidência separada acima. A F7 já contém ajuste de portabilidade dos testes POSIX; por isso esta suíte não reproduz as duas falhas Windows da main antiga. Esses resultados não incluem os testes da branch API-01.
 
 - [x] Matriz separa documentado, input capturado, simulado e observado nesta auditoria.
 - [x] Saídas desconhecidas bloqueiam confirmação da escrita; flag e checkout permanecem desabilitados.
