@@ -17,6 +17,7 @@ import type { AgentAction, AgentModelInput, AgentProposal, ParticipantSelector }
 export const ALLOWED_ACTIONS: readonly AgentAction['action'][] = [
   'ADD_PARTICIPANT', 'RENAME_PARTICIPANT', 'REMOVE_PARTICIPANT', 'ADD_RESTRICTION', 'SET_NO_RESTRICTIONS',
   'REMOVE_RESTRICTION', 'SET_LIMIT', 'SET_NO_LIMIT', 'SET_PRIORITY', 'ASK_CLARIFICATION', 'REQUEST_ORDER', 'CLOSE_PURCHASE',
+  'SUGGEST_PROPOSALS', 'SELECT_PROPOSAL', 'CLEAR_BAG',
 ];
 
 const CONFIRMATION = 'precisa de confirmação explícita sua, que ainda não pode ser dada por mensagem nesta etapa; nada foi alterado';
@@ -70,6 +71,8 @@ export interface Plan {
   applied: string[];
   /** Pendências para o usuário: confirmações, ambiguidades e ações não aplicadas. */
   notes: string[];
+  /** GRP-01: termo de busca pedido nesta mensagem (a composição roda depois, no processador). */
+  suggest: string | null;
 }
 
 type Preview = (change: DomainChange) => PurchaseState | null;
@@ -80,6 +83,8 @@ type Preview = (change: DomainChange) => PurchaseState | null;
  */
 export function planActions(
   purchase: PurchaseState | null, proposal: AgentProposal, preview: Preview, linkId: string | null, message: string,
+  /** Propostas exibidas no último snapshot (GRP-01): só dá para escolher o que o usuário viu. Ausente ⇒ sem filtro. */
+  visibleProposals?: ReadonlySet<string>,
 ): Plan {
   const ops: DomainOp[] = [];
   const applied: string[] = [];
@@ -123,8 +128,11 @@ export function planActions(
   const money = formatCents; // formatação da DOM-01 (sem regra monetária duplicada)
 
   const removedNow = new Set<string>();
+  let suggest: string | null = null;
   // Recusa do modelo descarta tudo: uma saída contraditória não muda o estado.
-  for (const a of proposal.refusal ? [] : proposal.actions) {
+  // A escolha de proposta vem primeiro: qualquer outra alteração invalida as propostas exibidas.
+  const actions = proposal.refusal ? [] : [...proposal.actions.filter((a) => a.action === 'SELECT_PROPOSAL'), ...proposal.actions.filter((a) => a.action !== 'SELECT_PROPOSAL')];
+  for (const a of actions) {
     switch (a.action) {
       case 'ADD_PARTICIPANT': {
         if (removedNow.has(fold(a.name))) {
@@ -231,10 +239,28 @@ export function planActions(
       case 'CLOSE_PURCHASE':
         notes.push(`${a.reason === 'CANCELLED' ? 'Cancelar' : 'Encerrar'} a compra apaga os dados dela e ${CONFIRMATION}.`);
         break;
+      case 'SUGGEST_PROPOSALS':
+        suggest = a.query;
+        break;
+      case 'SELECT_PROPOSAL': {
+        // "Sugere X e escolhe a 1" na mesma mensagem: a posição se referiria à lista ANTIGA. Não adivinhamos.
+        if (proposal.actions.some((x) => x.action === 'SUGGEST_PROPOSALS')) { notes.push('Veja as novas sugestões e depois diga qual proposta quer.'); break; }
+        const chosen = state?.proposals?.[a.position - 1];
+        if (!chosen) { notes.push(`Não há proposta ${a.position} disponível agora. Peça sugestões de novo.`); break; }
+        if (visibleProposals && !visibleProposals.has(chosen.proposalId)) {
+          notes.push(`A proposta ${a.position} não foi exibida (grupo grande); peça sugestões mais específicas antes de escolher.`);
+          break;
+        }
+        tryApply([{ op: 'SELECT_PROPOSAL', proposalId: chosen.proposalId }], `Proposta ${a.position} colocada na sacola simulada (nenhum pedido foi feito).`, `Escolher a proposta ${a.position}`);
+        break;
+      }
+      case 'CLEAR_BAG':
+        if (state?.bag) tryApply([{ op: 'CLEAR_BAG' }], 'Sacola simulada esvaziada.', 'Esvaziar a sacola');
+        break;
     }
   }
   if (proposal.refusal) notes.push('Não posso ajudar com esse pedido. Posso registrar participantes, restrições alimentares, orçamento e prioridade.');
-  return { ops, state, applied, notes: [...new Set(notes)] };
+  return { ops, state, applied, notes: [...new Set(notes)], suggest };
 }
 
 /** Pergunta só o que falta para a compra (issue #16: "pergunta apenas o que falta"). */

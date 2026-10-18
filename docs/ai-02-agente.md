@@ -35,7 +35,7 @@ mensagem (TEXT) ─► RUN-01 aceita (202, idempotente) ─► worker
 
 `ADD_PARTICIPANT`, `RENAME_PARTICIPANT`, `REMOVE_PARTICIPANT`, `ADD_RESTRICTION`, `SET_NO_RESTRICTIONS`,
 `REMOVE_RESTRICTION`, `SET_LIMIT`, `SET_NO_LIMIT`, `SET_PRIORITY`, `ASK_CLARIFICATION`, `REQUEST_ORDER`,
-`CLOSE_PURCHASE`. Participantes são indicados por `ref` (emitida pelo servidor no contexto) ou por nome.
+`CLOSE_PURCHASE`, `SUGGEST_PROPOSALS` (termo de busca), `SELECT_PROPOSAL` (posição 1–4, nunca ID) e `CLEAR_BAG` (GRP-01). Participantes são indicados por `ref` (emitida pelo servidor no contexto) ou por nome.
 Qualquer campo fora do schema (ex.: `humanConfirmed`, `linkId`, `merchantId`, aprovação) invalida a proposta inteira.
 Não há ação de loja, endereço, item, carrinho, aprovação, confirmação humana nem ferramenta MCP nesta etapa.
 

@@ -98,6 +98,52 @@ export type Evidence = z.infer<typeof EvidenceSchema>;
 
 export const PurchaseStatusSchema = z.enum(['ACTIVE', 'CLOSED', 'CANCELLED']);
 
+// ---------------- GRP-01: propostas e sacola simulada ----------------
+// Gerados por código do servidor a partir de respostas MCP de leitura (searchOffers/getItem); o modelo nunca fornece
+// IDs, preços ou consumidores. Preço por unidade guarda a faixa observada: min = max quando exato; max null = sem teto
+// conhecido. Nada aqui é carrinho real (DEC-01 D8).
+export const MAX_PROPOSALS = 4;
+export const PlanLineSchema = z.object({
+  lineId: serverId,
+  itemId: providerId,
+  name: shortText(200),
+  optionIds: z.array(providerId).max(50),
+  quantity: z.number().int().min(1).max(99),
+  consumerIds: z.array(serverId).min(1).max(CONTRACT_MAX_PARTICIPANTS),
+  unitMinCents: CentsSchema,
+  unitMaxCents: CentsSchema.nullable(),
+}).strict();
+export type PlanLine = z.infer<typeof PlanLineSchema>;
+export const ProposalSchema = z.object({
+  proposalId: serverId,
+  merchantId: providerId,
+  lines: z.array(PlanLineSchema).min(1).max(CONTRACT_MAX_PARTICIPANTS),
+  /** null = taxa de entrega não observada (nunca vira zero). */
+  deliveryFeeCents: CentsSchema.nullable(),
+  minimumOrderCents: CentsSchema.nullable(),
+  /** Cobertura por pessoa no momento da composição (preserva o motivo: dado insuficiente ≠ incompatível). */
+  coverage: z.array(z.object({
+    participantId: serverId,
+    status: z.enum(['COVERED', 'BLOCKED', 'NEEDS_VERIFICATION']),
+    reason: z.string().regex(/^[A-Z_]{1,40}$/).nullable(),
+    /** Assinatura das restrições usadas na composição; mudou ⇒ cobertura deixa de valer. */
+    restrictionsSig: z.string().regex(/^[A-Za-z0-9_-]{8,64}$/).optional(),
+  }).strict()).max(CONTRACT_MAX_PARTICIPANTS).optional(),
+  /** Endereço usado na leitura MCP (proveniência). */
+  addressId: providerId.nullable().optional(),
+  /** Observações divergentes do MCP para a mesma loja (incerteza explícita, nunca resolvida por ordem). */
+  uncertainties: z.array(z.enum(['DELIVERY_FEE_DIVERGENT', 'MINIMUM_ORDER_DIVERGENT'])).max(2).optional(),
+}).strict();
+export type Proposal = z.infer<typeof ProposalSchema>;
+export const BagSchema = ProposalSchema.extend({
+  /** NEEDS_REVALIDATION: participantes, restrições, tetos ou endereço mudaram depois da escolha. */
+  status: z.enum(['CURRENT', 'NEEDS_REVALIDATION']),
+  origin: z.object({ eventId: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/) }).strict(),
+  /** A loja foi fixada pela própria escolha (não declarada antes): esvaziar a sacola a desfaz. */
+  merchantSetBySelection: z.boolean().optional(),
+}).strict();
+export type Bag = z.infer<typeof BagSchema>;
+
 export const PurchaseStateSchema = z.object({
   schemaVersion: z.literal(1),
   purchaseId: serverId,
@@ -111,6 +157,10 @@ export const PurchaseStateSchema = z.object({
   priority: declared(z.enum(['ECONOMY', 'SPEED'])),
   evidence: z.array(EvidenceSchema).max(200),
   clarifications: z.array(ClarificationSchema).max(MAX_CLARIFICATIONS),
+  /** Propostas da última busca; qualquer outra alteração as invalida (apaga). */
+  proposals: z.array(ProposalSchema).max(MAX_PROPOSALS).optional(),
+  /** Sacola simulada escolhida (consumo por participante). */
+  bag: BagSchema.optional(),
 }).strict();
 export type PurchaseState = z.infer<typeof PurchaseStateSchema>;
 
@@ -138,6 +188,9 @@ export const DomainOpSchema = z.discriminatedUnion('op', [
   z.object({ op: z.literal('SET_MERCHANT'), merchantId: providerId }).strict(),
   z.object({ op: z.literal('SET_ADDRESS'), addressId: providerId }).strict(),
   z.object({ op: z.literal('END'), reason: z.enum(['CLOSED', 'CANCELLED']) }).strict(),
+  z.object({ op: z.literal('SET_PROPOSALS'), proposals: z.array(ProposalSchema).max(MAX_PROPOSALS) }).strict(),
+  z.object({ op: z.literal('SELECT_PROPOSAL'), proposalId: serverId }).strict(),
+  z.object({ op: z.literal('CLEAR_BAG') }).strict(),
 ]);
 export type DomainOp = z.infer<typeof DomainOpSchema>;
 export const DomainPatchSchema = z.array(DomainOpSchema).min(1).max(MAX_OPS_PER_PATCH);
@@ -155,7 +208,9 @@ export type DomainErrorCode =
   | 'CLARIFICATION_LIMIT'
   | 'REQUIRES_HUMAN_CONFIRMATION'
   | 'EVIDENCE_SOURCE_UNVERIFIED'
-  | 'INVALID_STATE';
+  | 'INVALID_STATE'
+  | 'PROPOSAL_NOT_FOUND'
+  | 'PROPOSAL_INVALID';
 
 /** Erro de domínio: mensagem sem dados pessoais, só o código e a posição da operação. */
 export class DomainError extends Error {
@@ -206,6 +261,22 @@ export function parsePurchaseState(value: unknown): PurchaseState {
  * Aplica um patch sobre o estado atual (ou cria a compra, se não houver uma ativa) e devolve o novo estado e os
  * caminhos afetados. `version` não é alterada aqui: quem grava define version = versão do snapshot resultante.
  */
+/** Restrições conhecidas da pessoa; null quando não informadas, ambíguas ou com pergunta pendente (bloqueia). */
+export function knownRestrictions(state: PurchaseState, p: Participant): RestrictionKey[] | null {
+  if (state.clarifications.some((c) => c.target === p.participantId && c.field === 'RESTRICTIONS')) return null;
+  if (p.restrictions.state === 'NONE') return [];
+  if (p.restrictions.state === 'DECLARED') return p.restrictions.value.map((r) => r.key);
+  return null;
+}
+
+/** Assinatura estável das restrições atuais da pessoa (GRP-01): mudou ⇒ cobertura calculada antes deixa de valer. */
+export function restrictionsSig(state: PurchaseState, p: Participant): string {
+  const keys = knownRestrictions(state, p);
+  // Normaliza a obrigatoriedade (omitida = obrigatória; alergia é sempre obrigatória) antes de assinar.
+  const norm = keys === null ? ['UNKNOWN'] : keys.map((k) => JSON.stringify(k.kind === 'ALLERGY' ? [k.kind, k.code] : [k.kind, k.code, k.requirement ?? 'MANDATORY'])).sort();
+  return createHash('sha256').update(JSON.stringify(['GRP-01', 'restrictions', ...norm])).digest('base64url').slice(0, 24);
+}
+
 export function applyPatch(current: PurchaseState | null, rawOps: unknown, ctx: PatchContext): { state: PurchaseState; paths: ChangePath[] } {
   const parsed = DomainPatchSchema.safeParse(rawOps);
   if (!parsed.success) throw new DomainError('INVALID_PATCH');
@@ -222,8 +293,14 @@ export function applyPatch(current: PurchaseState | null, rawOps: unknown, ctx: 
   const origin: Origin = { eventId: ctx.eventId };
   const paths = new Set<ChangePath>();
 
+  /** Operações que mudam quem é atendido, o que pode comer ou quanto pode gastar: a sacola precisa ser revalidada. */
+  const REVALIDATE = new Set(['ADD_PARTICIPANT', 'REMOVE_PARTICIPANT', 'SET_RESTRICTIONS', 'ADD_RESTRICTION', 'REMOVE_RESTRICTION',
+    'SET_LIMIT', 'MARK_UNCLEAR', 'RESOLVE_CLARIFICATION', 'SET_ADDRESS']);
   ops.forEach((op, i) => {
     if (s.status !== 'ACTIVE') throw new DomainError('PURCHASE_NOT_ACTIVE', i); // nada depois de END
+    // Propostas valem só para o estado em que foram geradas: qualquer outra alteração as apaga.
+    if (op.op !== 'SET_PROPOSALS' && op.op !== 'SELECT_PROPOSAL' && s.proposals) { delete s.proposals; paths.add('PROPOSALS'); }
+    if (REVALIDATE.has(op.op) && s.bag) { s.bag.status = 'NEEDS_REVALIDATION'; paths.add('CART'); }
     const participant = (id: string) => {
       const p = s.participants.find((x) => x.participantId === id);
       if (!p) throw new DomainError('PARTICIPANT_NOT_FOUND', i);
@@ -260,6 +337,14 @@ export function applyPatch(current: PurchaseState | null, rawOps: unknown, ctx: 
         }
         s.participants = s.participants.filter((p) => p.participantId !== op.participantId);
         s.clarifications = s.clarifications.filter((c) => c.target !== op.participantId);
+        // Consumo órfão não sobrevive: a pessoa sai das linhas da sacola e linhas sem consumidor somem.
+        if (s.bag) {
+          s.bag.lines = s.bag.lines
+            .map((l) => ({ ...l, consumerIds: l.consumerIds.filter((c) => c !== op.participantId) }))
+            .filter((l) => l.consumerIds.length > 0);
+          if (s.bag && s.bag.coverage) s.bag.coverage = s.bag.coverage.filter((c) => c.participantId !== op.participantId);
+          if (!s.bag.lines.length) delete s.bag;
+        }
         paths.add('PARTICIPANTS');
         break;
       }
@@ -379,6 +464,8 @@ export function applyPatch(current: PurchaseState | null, rawOps: unknown, ctx: 
         const changed = s.merchant.state !== 'DECLARED' || s.merchant.value.merchantId !== op.merchantId;
         s.merchant = { state: 'DECLARED', value: { merchantId: op.merchantId }, origin };
         if (changed) s.evidence = s.evidence.filter((e) => e.merchantId === op.merchantId);
+        if (changed && s.bag && s.bag.merchantId !== op.merchantId) { delete s.bag; paths.add('CART'); } // loja única (D2)
+        if (s.bag?.merchantSetBySelection) s.bag.merchantSetBySelection = false; // agora é escolha explícita do usuário
         resolveFor('PURCHASE', 'MERCHANT');
         paths.add('PROPOSALS');
         break;
@@ -391,6 +478,60 @@ export function applyPatch(current: PurchaseState | null, rawOps: unknown, ctx: 
       case 'END':
         s.status = op.reason;
         paths.add('PHASE');
+        break;
+      case 'SET_PROPOSALS': {
+        const ids = new Set(s.participants.map((p) => p.participantId));
+        const seen = new Set<string>();
+        for (const pr of op.proposals) {
+          const lines = new Set<string>();
+          const unknownConsumer = pr.lines.some((l) => l.consumerIds.some((c) => !ids.has(c)) || new Set(l.consumerIds).size !== l.consumerIds.length);
+          const badPrice = pr.lines.some((l) => l.unitMaxCents !== null && l.unitMaxCents < l.unitMinCents);
+          const dupLine = pr.lines.some((l) => (lines.has(l.lineId) ? true : (lines.add(l.lineId), false)));
+          const wrongMerchant = s.merchant.state === 'DECLARED' && s.merchant.value.merchantId !== pr.merchantId;
+          // Revalidação no commit (não confia só no processador): cobertura de todos, e quem consome precisa ter sido
+          // avaliado com as restrições conhecidas ATUAIS (assinatura igual). Restrição mudou ⇒ proposta recusada.
+          const cov = pr.coverage ?? [];
+          const badCoverage = cov.length !== ids.size || new Set(cov.map((c) => c.participantId)).size !== cov.length || cov.some((c) => {
+            const person = s.participants.find((p) => p.participantId === c.participantId);
+            if (!person) return true;
+            const consumes = pr.lines.some((l) => l.consumerIds.includes(c.participantId));
+            if ((c.status === 'COVERED') !== consumes) return true;
+            return consumes && (knownRestrictions(s, person) === null || c.restrictionsSig !== restrictionsSig(s, person));
+          });
+          const wrongAddress = pr.addressId != null && s.address.state === 'DECLARED' && s.address.value.addressId !== pr.addressId;
+          if (badCoverage || wrongAddress) throw new DomainError('PROPOSAL_INVALID', i);
+          if (seen.has(pr.proposalId) || unknownConsumer || badPrice || dupLine || wrongMerchant) throw new DomainError('PROPOSAL_INVALID', i);
+          seen.add(pr.proposalId);
+        }
+        if (op.proposals.length) s.proposals = op.proposals; else delete s.proposals;
+        paths.add('PROPOSALS');
+        break;
+      }
+      case 'SELECT_PROPOSAL': {
+        const pr = s.proposals?.find((x) => x.proposalId === op.proposalId);
+        if (!pr) throw new DomainError('PROPOSAL_NOT_FOUND', i);
+        // Loja fixada só por uma escolha anterior pode ser trocada por outra escolha; loja declarada pelo usuário, não.
+        const bySelection = s.bag?.merchantSetBySelection === true && s.merchant.state === 'DECLARED' && s.merchant.value.merchantId === s.bag.merchantId;
+        if (s.merchant.state === 'DECLARED' && s.merchant.value.merchantId !== pr.merchantId && !bySelection) throw new DomainError('PROPOSAL_INVALID', i);
+        const setBySelection = s.merchant.state !== 'DECLARED' || bySelection;
+        if (setBySelection && (s.merchant.state !== 'DECLARED' || s.merchant.value.merchantId !== pr.merchantId)) {
+          s.evidence = s.evidence.filter((e) => e.merchantId === pr.merchantId);
+          s.merchant = { state: 'DECLARED', value: { merchantId: pr.merchantId }, origin };
+        }
+        s.bag = { ...structuredClone(pr), status: 'CURRENT', origin, merchantSetBySelection: setBySelection };
+        paths.add('CART');
+        break;
+      }
+      case 'CLEAR_BAG':
+        if (s.bag) {
+          // Loja fixada só pela escolha volta a "não perguntada"; loja declarada pelo usuário é preservada.
+          if (s.bag.merchantSetBySelection && s.merchant.state === 'DECLARED' && s.merchant.value.merchantId === s.bag.merchantId) {
+            s.merchant = { state: 'NOT_ASKED' };
+            paths.add('PROPOSALS');
+          }
+          delete s.bag;
+        }
+        paths.add('CART');
         break;
     }
   });
@@ -412,13 +553,18 @@ export function applyLinkChange(
   const event = current.linkId === null ? 'ASSOCIATED' : 'CHANGED';
   s.linkId = linkId;
   const dependent = s.merchant.state !== 'NOT_ASKED' || s.address.state !== 'NOT_ASKED' || s.evidence.length > 0 ||
+    s.bag !== undefined || s.proposals !== undefined ||
     s.clarifications.some((c) => c.target === 'PURCHASE' && (c.field === 'MERCHANT' || c.field === 'ADDRESS'));
   if (!dependent) return { state: parsePurchaseState(s), paths: [], event };
   s.merchant = { state: 'NOT_ASKED' };
   s.address = { state: 'NOT_ASKED' };
   s.evidence = [];
+  // Preços, itens e loja dependem da conta: sacola e propostas não sobrevivem à troca.
+  const hadBag = s.bag !== undefined;
+  delete s.bag;
+  delete s.proposals;
   s.clarifications = s.clarifications.filter((c) => !(c.target === 'PURCHASE' && (c.field === 'MERCHANT' || c.field === 'ADDRESS')));
-  return { state: parsePurchaseState(s), paths: ['PROPOSALS'], event };
+  return { state: parsePurchaseState(s), paths: hadBag ? ['PROPOSALS', 'CART'] : ['PROPOSALS'], event };
 }
 
 /**
