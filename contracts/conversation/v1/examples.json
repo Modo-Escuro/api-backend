@@ -1,0 +1,1076 @@
+[
+  {
+    "name": "evento de texto",
+    "schema": "event",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "eventId": "tg-update-500",
+      "conversationId": "111111111",
+      "expectedVersion": 0,
+      "source": {
+        "channel": "TELEGRAM",
+        "botId": "900001",
+        "conversationId": "111111111",
+        "kind": "MESSAGE",
+        "messageId": "30"
+      },
+      "input": {
+        "kind": "TEXT",
+        "text": "Agora temos R$150; manter a restrição da participante A."
+      }
+    }
+  },
+  {
+    "name": "texto Unicode conta code points",
+    "schema": "event",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "eventId": "tg-update-500",
+      "conversationId": "111111111",
+      "expectedVersion": 0,
+      "source": {
+        "channel": "TELEGRAM",
+        "botId": "900001",
+        "conversationId": "111111111",
+        "kind": "MESSAGE",
+        "messageId": "30"
+      },
+      "input": {
+        "kind": "TEXT",
+        "text": "🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕"
+      }
+    }
+  },
+  {
+    "name": "evento de botão",
+    "schema": "event",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "eventId": "tg-update-501",
+      "conversationId": "111111111",
+      "expectedVersion": 1,
+      "source": {
+        "channel": "TELEGRAM",
+        "botId": "900001",
+        "conversationId": "111111111",
+        "kind": "CALLBACK",
+        "messageId": "30",
+        "callbackQueryId": "callback_test_001"
+      },
+      "input": {
+        "kind": "ACTION",
+        "action": "REQUEST_REVIEW",
+        "actionRef": "action_test_000001"
+      }
+    }
+  },
+  {
+    "name": "aprovação em canal humano",
+    "schema": "approval",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "conversationId": "111111111",
+      "eventId": "tg-update-502",
+      "expectedVersion": 1,
+      "source": {
+        "channel": "TELEGRAM",
+        "botId": "900001",
+        "conversationId": "111111111",
+        "kind": "CALLBACK",
+        "messageId": "30",
+        "callbackQueryId": "callback_test_001"
+      },
+      "reviewRef": "review_test_000001",
+      "approvalRef": "approval_test_0001"
+    }
+  },
+  {
+    "name": "cancelamento local",
+    "schema": "cancel",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "eventId": "tg-update-503",
+      "conversationId": "111111111",
+      "expectedVersion": 1,
+      "source": {
+        "channel": "TELEGRAM",
+        "botId": "900001",
+        "conversationId": "111111111",
+        "kind": "CALLBACK",
+        "messageId": "30",
+        "callbackQueryId": "callback_test_001"
+      },
+      "operationId": "operation_test_0001"
+    }
+  },
+  {
+    "name": "resultado de cancelamento local",
+    "schema": "cancelResult",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "eventId": "tg-update-503",
+      "conversationId": "111111111",
+      "targetOperationId": "operation_test_0001",
+      "status": "REQUESTED",
+      "remoteCancellation": "NOT_REQUESTED"
+    }
+  },
+  {
+    "name": "operação aceita",
+    "schema": "operation",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "operationId": "operation_test_0001",
+      "eventId": "tg-update-500",
+      "conversationId": "111111111",
+      "status": "ACCEPTED",
+      "baseVersion": 0,
+      "resultVersion": null,
+      "createdAt": "2026-10-18T04:00:00Z",
+      "deadlineAt": "2026-10-18T04:01:00Z",
+      "pollAfterMs": 1000,
+      "completeness": "NONE",
+      "snapshot": null,
+      "changes": [],
+      "error": null
+    }
+  },
+  {
+    "name": "cancelamento local pendente",
+    "schema": "operation",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "operationId": "operation_test_0001",
+      "eventId": "tg-update-500",
+      "conversationId": "111111111",
+      "status": "CANCEL_REQUESTED",
+      "baseVersion": 0,
+      "resultVersion": null,
+      "createdAt": "2026-10-18T04:00:00Z",
+      "deadlineAt": "2026-10-18T04:01:00Z",
+      "pollAfterMs": 1000,
+      "completeness": "NONE",
+      "snapshot": null,
+      "changes": [],
+      "error": null
+    }
+  },
+  {
+    "name": "cancelamento local concluído",
+    "schema": "operation",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "operationId": "operation_test_0001",
+      "eventId": "tg-update-500",
+      "conversationId": "111111111",
+      "status": "CANCELLED",
+      "baseVersion": 0,
+      "resultVersion": null,
+      "createdAt": "2026-10-18T04:00:00Z",
+      "deadlineAt": "2026-10-18T04:01:00Z",
+      "pollAfterMs": null,
+      "completeness": "NONE",
+      "snapshot": null,
+      "changes": [],
+      "error": null
+    }
+  },
+  {
+    "name": "operação concluída com proveniência",
+    "schema": "operation",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "operationId": "operation_test_0001",
+      "eventId": "tg-update-500",
+      "conversationId": "111111111",
+      "status": "SUCCEEDED",
+      "baseVersion": 0,
+      "resultVersion": 1,
+      "createdAt": "2026-10-18T04:00:00Z",
+      "deadlineAt": "2026-10-18T04:01:00Z",
+      "pollAfterMs": null,
+      "completeness": "COMPLETE",
+      "snapshot": {
+        "contractVersion": "1.0",
+        "conversationId": "111111111",
+        "version": 1,
+        "phase": "COLLECTING",
+        "blocks": [
+          {
+            "kind": "GROUP",
+            "participants": [
+              {
+                "participantRef": "participant_test_A",
+                "displayName": "Participante A",
+                "conditions": [
+                  "Restrição obrigatória pendente de evidência."
+                ]
+              }
+            ],
+            "budgetCents": 15000
+          }
+        ],
+        "pending": [
+          "Faltam participantes e evidência alimentar."
+        ],
+        "allowedActions": [],
+        "humanApproval": null
+      },
+      "changes": [
+        {
+          "changeId": "change_test_000001",
+          "eventId": "tg-update-500",
+          "source": {
+            "channel": "TELEGRAM",
+            "botId": "900001",
+            "conversationId": "111111111",
+            "kind": "MESSAGE",
+            "messageId": "30"
+          },
+          "baseVersion": 0,
+          "resultVersion": 1,
+          "paths": [
+            "BUDGET"
+          ],
+          "cause": "USER"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "name": "resultado parcial exige continuação explícita",
+    "schema": "operation",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "operationId": "operation_test_0001",
+      "eventId": "tg-update-500",
+      "conversationId": "111111111",
+      "status": "SUCCEEDED",
+      "baseVersion": 0,
+      "resultVersion": 1,
+      "createdAt": "2026-10-18T04:00:00Z",
+      "deadlineAt": "2026-10-18T04:01:00Z",
+      "pollAfterMs": null,
+      "completeness": "PARTIAL",
+      "snapshot": {
+        "contractVersion": "1.0",
+        "conversationId": "111111111",
+        "version": 1,
+        "phase": "COLLECTING",
+        "blocks": [
+          {
+            "kind": "GROUP",
+            "participants": [
+              {
+                "participantRef": "participant_test_A",
+                "displayName": "Participante A",
+                "conditions": [
+                  "Restrição obrigatória pendente de evidência."
+                ]
+              }
+            ],
+            "budgetCents": 15000
+          }
+        ],
+        "pending": [
+          "Faltam participantes e evidência alimentar."
+        ],
+        "allowedActions": [],
+        "humanApproval": null
+      },
+      "changes": [
+        {
+          "changeId": "change_test_000001",
+          "eventId": "tg-update-500",
+          "source": {
+            "channel": "TELEGRAM",
+            "botId": "900001",
+            "conversationId": "111111111",
+            "kind": "MESSAGE",
+            "messageId": "30"
+          },
+          "baseVersion": 0,
+          "resultVersion": 1,
+          "paths": [
+            "BUDGET"
+          ],
+          "cause": "USER"
+        }
+      ],
+      "error": null
+    }
+  },
+  {
+    "name": "revisão humana sintética",
+    "schema": "snapshot",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "conversationId": "111111111",
+      "version": 1,
+      "phase": "AWAITING_APPROVAL",
+      "blocks": [
+        {
+          "kind": "REVIEW",
+          "reviewRef": "review_test_000001",
+          "coverage": [
+            {
+              "participantRef": "participant_test_A",
+              "status": "COVERED"
+            }
+          ],
+          "blockers": [],
+          "price": {
+            "kind": "CONFIRMED",
+            "currency": "BRL",
+            "totalCents": 15000,
+            "expiresAt": "2026-10-18T04:05:00Z",
+            "components": [
+              {
+                "kind": "ITEMS",
+                "amountCents": 14000
+              },
+              {
+                "kind": "DELIVERY",
+                "amountCents": 1200
+              },
+              {
+                "kind": "DISCOUNT",
+                "amountCents": 200
+              }
+            ]
+          }
+        }
+      ],
+      "pending": [],
+      "allowedActions": [],
+      "humanApproval": {
+        "reviewRef": "review_test_000001",
+        "approvalRef": "approval_test_0001",
+        "expectedVersion": 1,
+        "expiresAt": "2026-10-18T04:04:00Z"
+      }
+    }
+  },
+  {
+    "name": "snapshot sem preços confirmados",
+    "schema": "snapshot",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "conversationId": "111111111",
+      "version": 1,
+      "phase": "COLLECTING",
+      "blocks": [
+        {
+          "kind": "GROUP",
+          "participants": [
+            {
+              "participantRef": "participant_test_A",
+              "displayName": "Participante A",
+              "conditions": [
+                "Restrição obrigatória pendente de evidência."
+              ]
+            }
+          ],
+          "budgetCents": 15000
+        }
+      ],
+      "pending": [
+        "Faltam participantes e evidência alimentar."
+      ],
+      "allowedActions": [],
+      "humanApproval": null
+    }
+  },
+  {
+    "name": "prazo esgotado sem efeito externo",
+    "schema": "operation",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "operationId": "operation_test_0001",
+      "eventId": "tg-update-500",
+      "conversationId": "111111111",
+      "status": "FAILED",
+      "baseVersion": 0,
+      "resultVersion": null,
+      "createdAt": "2026-10-18T04:00:00Z",
+      "deadlineAt": "2026-10-18T04:01:00Z",
+      "pollAfterMs": null,
+      "completeness": "NONE",
+      "snapshot": null,
+      "changes": [],
+      "error": {
+        "code": "DEADLINE_EXCEEDED",
+        "message": "Prazo de processamento excedido.",
+        "recovery": "POLL_OPERATION"
+      }
+    }
+  },
+  {
+    "name": "resultado externo desconhecido",
+    "schema": "operation",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "operationId": "operation_test_0001",
+      "eventId": "tg-update-500",
+      "conversationId": "111111111",
+      "status": "RESULT_UNKNOWN",
+      "baseVersion": 0,
+      "resultVersion": null,
+      "createdAt": "2026-10-18T04:00:00Z",
+      "deadlineAt": "2026-10-18T04:01:00Z",
+      "pollAfterMs": null,
+      "completeness": "NONE",
+      "snapshot": null,
+      "changes": [],
+      "error": {
+        "code": "RESULT_UNKNOWN",
+        "message": "Resultado externo desconhecido. Não repita o envio.",
+        "recovery": "CONTACT_SUPPORT"
+      }
+    }
+  },
+  {
+    "name": "contexto mínimo do modelo",
+    "schema": "modelContext",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "conversationId": "111111111",
+      "version": 1,
+      "phase": "COLLECTING",
+      "participantRefs": [
+        "participant_test_A"
+      ],
+      "pending": [
+        "Faltam participantes e evidência alimentar."
+      ]
+    }
+  },
+  {
+    "name": "erro INVALID_REQUEST",
+    "schema": "error",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "error": {
+        "code": "INVALID_REQUEST",
+        "message": "Requisição inválida.",
+        "recovery": "FIX_REQUEST"
+      }
+    }
+  },
+  {
+    "name": "erro UNSUPPORTED_VERSION",
+    "schema": "error",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "error": {
+        "code": "UNSUPPORTED_VERSION",
+        "message": "Versão do contrato não suportada.",
+        "recovery": "FIX_REQUEST"
+      }
+    }
+  },
+  {
+    "name": "erro UNAUTHENTICATED",
+    "schema": "error",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "error": {
+        "code": "UNAUTHENTICATED",
+        "message": "Autenticação necessária.",
+        "recovery": "FIX_REQUEST"
+      }
+    }
+  },
+  {
+    "name": "erro FORBIDDEN",
+    "schema": "error",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "error": {
+        "code": "FORBIDDEN",
+        "message": "Acesso não permitido.",
+        "recovery": "NONE"
+      }
+    }
+  },
+  {
+    "name": "erro NOT_FOUND",
+    "schema": "error",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "error": {
+        "code": "NOT_FOUND",
+        "message": "Recurso não encontrado.",
+        "recovery": "NONE"
+      }
+    }
+  },
+  {
+    "name": "erro EVENT_CONFLICT",
+    "schema": "error",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "error": {
+        "code": "EVENT_CONFLICT",
+        "message": "Evento já recebido com outro conteúdo.",
+        "recovery": "FIX_REQUEST"
+      }
+    }
+  },
+  {
+    "name": "erro STALE_VERSION",
+    "schema": "error",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "error": {
+        "code": "STALE_VERSION",
+        "message": "A conversa mudou. Consulte a revisão atual.",
+        "recovery": "READ_SNAPSHOT"
+      }
+    }
+  },
+  {
+    "name": "erro INVALID_SOURCE",
+    "schema": "error",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "error": {
+        "code": "INVALID_SOURCE",
+        "message": "Origem incompatível com a conversa autenticada.",
+        "recovery": "FIX_REQUEST"
+      }
+    }
+  },
+  {
+    "name": "erro ACTION_UNAVAILABLE",
+    "schema": "error",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "error": {
+        "code": "ACTION_UNAVAILABLE",
+        "message": "Ação indisponível nesta revisão.",
+        "recovery": "READ_SNAPSHOT"
+      }
+    }
+  },
+  {
+    "name": "erro REFERENCE_EXPIRED",
+    "schema": "error",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "error": {
+        "code": "REFERENCE_EXPIRED",
+        "message": "Referência expirada. Consulte a revisão atual.",
+        "recovery": "READ_SNAPSHOT"
+      }
+    }
+  },
+  {
+    "name": "erro LINK_CHANGED",
+    "schema": "error",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "error": {
+        "code": "LINK_CHANGED",
+        "message": "O vínculo mudou. Uma nova revisão é necessária.",
+        "recovery": "READ_SNAPSHOT"
+      }
+    }
+  },
+  {
+    "name": "erro DEADLINE_EXCEEDED",
+    "schema": "error",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "error": {
+        "code": "DEADLINE_EXCEEDED",
+        "message": "Prazo de processamento excedido.",
+        "recovery": "POLL_OPERATION"
+      }
+    }
+  },
+  {
+    "name": "erro LIMIT_EXCEEDED",
+    "schema": "error",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "error": {
+        "code": "LIMIT_EXCEEDED",
+        "message": "Limite de processamento atingido.",
+        "recovery": "POLL_OPERATION"
+      }
+    }
+  },
+  {
+    "name": "erro UNAVAILABLE",
+    "schema": "error",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "error": {
+        "code": "UNAVAILABLE",
+        "message": "Serviço temporariamente indisponível.",
+        "recovery": "POLL_OPERATION"
+      }
+    }
+  },
+  {
+    "name": "erro RESULT_UNKNOWN",
+    "schema": "error",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "error": {
+        "code": "RESULT_UNKNOWN",
+        "message": "Resultado externo desconhecido. Não repita o envio.",
+        "recovery": "CONTACT_SUPPORT"
+      }
+    }
+  },
+  {
+    "name": "erro INTERNAL",
+    "schema": "error",
+    "valid": true,
+    "value": {
+      "contractVersion": "1.0",
+      "error": {
+        "code": "INTERNAL",
+        "message": "Não foi possível concluir o processamento.",
+        "recovery": "POLL_OPERATION"
+      }
+    }
+  },
+  {
+    "name": "versão futura",
+    "schema": "event",
+    "valid": false,
+    "value": {
+      "contractVersion": "2.0",
+      "eventId": "tg-update-500",
+      "conversationId": "111111111",
+      "expectedVersion": 0,
+      "source": {
+        "channel": "TELEGRAM",
+        "botId": "900001",
+        "conversationId": "111111111",
+        "kind": "MESSAGE",
+        "messageId": "30"
+      },
+      "input": {
+        "kind": "TEXT",
+        "text": "Agora temos R$150; manter a restrição da participante A."
+      }
+    }
+  },
+  {
+    "name": "versão anterior",
+    "schema": "event",
+    "valid": false,
+    "value": {
+      "contractVersion": "0",
+      "eventId": "tg-update-500",
+      "conversationId": "111111111",
+      "expectedVersion": 0,
+      "source": {
+        "channel": "TELEGRAM",
+        "botId": "900001",
+        "conversationId": "111111111",
+        "kind": "MESSAGE",
+        "messageId": "30"
+      },
+      "input": {
+        "kind": "TEXT",
+        "text": "Agora temos R$150; manter a restrição da participante A."
+      }
+    }
+  },
+  {
+    "name": "identidade no corpo",
+    "schema": "event",
+    "valid": false,
+    "value": {
+      "contractVersion": "1.0",
+      "eventId": "tg-update-500",
+      "conversationId": "111111111",
+      "expectedVersion": 0,
+      "source": {
+        "channel": "TELEGRAM",
+        "botId": "900001",
+        "conversationId": "111111111",
+        "kind": "MESSAGE",
+        "messageId": "30"
+      },
+      "input": {
+        "kind": "TEXT",
+        "text": "Agora temos R$150; manter a restrição da participante A."
+      },
+      "organizerId": "222222222"
+    }
+  },
+  {
+    "name": "consentimento do modelo",
+    "schema": "event",
+    "valid": false,
+    "value": {
+      "contractVersion": "1.0",
+      "eventId": "tg-update-500",
+      "conversationId": "111111111",
+      "expectedVersion": 0,
+      "source": {
+        "channel": "TELEGRAM",
+        "botId": "900001",
+        "conversationId": "111111111",
+        "kind": "MESSAGE",
+        "messageId": "30"
+      },
+      "input": {
+        "kind": "TEXT",
+        "text": "Agora temos R$150; manter a restrição da participante A."
+      },
+      "userConsent": true
+    }
+  },
+  {
+    "name": "campo inesperado no input",
+    "schema": "event",
+    "valid": false,
+    "value": {
+      "contractVersion": "1.0",
+      "eventId": "tg-update-500",
+      "conversationId": "111111111",
+      "expectedVersion": 0,
+      "source": {
+        "channel": "TELEGRAM",
+        "botId": "900001",
+        "conversationId": "111111111",
+        "kind": "MESSAGE",
+        "messageId": "30"
+      },
+      "input": {
+        "kind": "TEXT",
+        "text": "sim",
+        "approved": true
+      }
+    }
+  },
+  {
+    "name": "texto vazio",
+    "schema": "event",
+    "valid": false,
+    "value": {
+      "contractVersion": "1.0",
+      "eventId": "tg-update-500",
+      "conversationId": "111111111",
+      "expectedVersion": 0,
+      "source": {
+        "channel": "TELEGRAM",
+        "botId": "900001",
+        "conversationId": "111111111",
+        "kind": "MESSAGE",
+        "messageId": "30"
+      },
+      "input": {
+        "kind": "TEXT",
+        "text": ""
+      }
+    }
+  },
+  {
+    "name": "texto excessivo",
+    "schema": "event",
+    "valid": false,
+    "value": {
+      "contractVersion": "1.0",
+      "eventId": "tg-update-500",
+      "conversationId": "111111111",
+      "expectedVersion": 0,
+      "source": {
+        "channel": "TELEGRAM",
+        "botId": "900001",
+        "conversationId": "111111111",
+        "kind": "MESSAGE",
+        "messageId": "30"
+      },
+      "input": {
+        "kind": "TEXT",
+        "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      }
+    }
+  },
+  {
+    "name": "texto Unicode excessivo",
+    "schema": "event",
+    "valid": false,
+    "value": {
+      "contractVersion": "1.0",
+      "eventId": "tg-update-500",
+      "conversationId": "111111111",
+      "expectedVersion": 0,
+      "source": {
+        "channel": "TELEGRAM",
+        "botId": "900001",
+        "conversationId": "111111111",
+        "kind": "MESSAGE",
+        "messageId": "30"
+      },
+      "input": {
+        "kind": "TEXT",
+        "text": "🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕🍕"
+      }
+    }
+  },
+  {
+    "name": "origem ausente",
+    "schema": "event",
+    "valid": false,
+    "value": {
+      "contractVersion": "1.0",
+      "eventId": "tg-update-500",
+      "conversationId": "111111111",
+      "expectedVersion": 0,
+      "source": null,
+      "input": {
+        "kind": "TEXT",
+        "text": "Agora temos R$150; manter a restrição da participante A."
+      }
+    }
+  },
+  {
+    "name": "aprovação no evento geral",
+    "schema": "event",
+    "valid": false,
+    "value": {
+      "contractVersion": "1.0",
+      "eventId": "tg-update-501",
+      "conversationId": "111111111",
+      "expectedVersion": 1,
+      "source": {
+        "channel": "TELEGRAM",
+        "botId": "900001",
+        "conversationId": "111111111",
+        "kind": "CALLBACK",
+        "messageId": "30",
+        "callbackQueryId": "callback_test_001"
+      },
+      "input": {
+        "kind": "ACTION",
+        "action": "APPROVE_PURCHASE",
+        "actionRef": "action_test_000001"
+      }
+    }
+  },
+  {
+    "name": "booleano não é versão",
+    "schema": "event",
+    "valid": false,
+    "value": {
+      "contractVersion": "1.0",
+      "eventId": "tg-update-500",
+      "conversationId": "111111111",
+      "expectedVersion": true,
+      "source": {
+        "channel": "TELEGRAM",
+        "botId": "900001",
+        "conversationId": "111111111",
+        "kind": "MESSAGE",
+        "messageId": "30"
+      },
+      "input": {
+        "kind": "TEXT",
+        "text": "Agora temos R$150; manter a restrição da participante A."
+      }
+    }
+  },
+  {
+    "name": "versão fracionária",
+    "schema": "event",
+    "valid": false,
+    "value": {
+      "contractVersion": "1.0",
+      "eventId": "tg-update-500",
+      "conversationId": "111111111",
+      "expectedVersion": 1.5,
+      "source": {
+        "channel": "TELEGRAM",
+        "botId": "900001",
+        "conversationId": "111111111",
+        "kind": "MESSAGE",
+        "messageId": "30"
+      },
+      "input": {
+        "kind": "TEXT",
+        "text": "Agora temos R$150; manter a restrição da participante A."
+      }
+    }
+  },
+  {
+    "name": "versão não segura",
+    "schema": "event",
+    "valid": false,
+    "value": {
+      "contractVersion": "1.0",
+      "eventId": "tg-update-500",
+      "conversationId": "111111111",
+      "expectedVersion": 9007199254740992,
+      "source": {
+        "channel": "TELEGRAM",
+        "botId": "900001",
+        "conversationId": "111111111",
+        "kind": "MESSAGE",
+        "messageId": "30"
+      },
+      "input": {
+        "kind": "TEXT",
+        "text": "Agora temos R$150; manter a restrição da participante A."
+      }
+    }
+  },
+  {
+    "name": "credencial na resposta",
+    "schema": "operation",
+    "valid": false,
+    "value": {
+      "contractVersion": "1.0",
+      "operationId": "operation_test_0001",
+      "eventId": "tg-update-500",
+      "conversationId": "111111111",
+      "status": "ACCEPTED",
+      "baseVersion": 0,
+      "resultVersion": null,
+      "createdAt": "2026-10-18T04:00:00Z",
+      "deadlineAt": "2026-10-18T04:01:00Z",
+      "pollAfterMs": 1000,
+      "completeness": "NONE",
+      "snapshot": null,
+      "changes": [],
+      "error": null,
+      "accessToken": "synthetic_forbidden"
+    }
+  },
+  {
+    "name": "erro bruto do provedor",
+    "schema": "error",
+    "valid": false,
+    "value": {
+      "contractVersion": "1.0",
+      "error": {
+        "code": "INTERNAL",
+        "message": "Não foi possível concluir o processamento.",
+        "recovery": "POLL_OPERATION",
+        "providerPayload": {}
+      }
+    }
+  },
+  {
+    "name": "referência humana no modelo",
+    "schema": "modelContext",
+    "valid": false,
+    "value": {
+      "contractVersion": "1.0",
+      "conversationId": "111111111",
+      "version": 1,
+      "phase": "COLLECTING",
+      "participantRefs": [],
+      "pending": [],
+      "approvalRef": "approval_test_0001"
+    }
+  },
+  {
+    "name": "centavos fracionários",
+    "schema": "snapshot",
+    "valid": false,
+    "value": {
+      "contractVersion": "1.0",
+      "conversationId": "111111111",
+      "version": 1,
+      "phase": "COLLECTING",
+      "blocks": [
+        {
+          "kind": "GROUP",
+          "participants": [],
+          "budgetCents": 1.5
+        }
+      ],
+      "pending": [
+        "Faltam participantes e evidência alimentar."
+      ],
+      "allowedActions": [],
+      "humanApproval": null
+    }
+  },
+  {
+    "name": "ausente não é zero",
+    "schema": "snapshot",
+    "valid": false,
+    "value": {
+      "contractVersion": "1.0",
+      "conversationId": "111111111",
+      "version": 1,
+      "phase": "COLLECTING",
+      "blocks": [
+        {
+          "kind": "GROUP",
+          "participants": []
+        }
+      ],
+      "pending": [
+        "Faltam participantes e evidência alimentar."
+      ],
+      "allowedActions": [],
+      "humanApproval": null
+    }
+  },
+  {
+    "name": "origem com identidade inventada",
+    "schema": "event",
+    "valid": false,
+    "value": {
+      "contractVersion": "1.0",
+      "eventId": "tg-update-500",
+      "conversationId": "111111111",
+      "expectedVersion": 0,
+      "source": {
+        "channel": "TELEGRAM",
+        "botId": "900001",
+        "conversationId": "111111111",
+        "kind": "MESSAGE",
+        "messageId": "30",
+        "organizerId": "222222222"
+      },
+      "input": {
+        "kind": "TEXT",
+        "text": "Agora temos R$150; manter a restrição da participante A."
+      }
+    }
+  }
+]
