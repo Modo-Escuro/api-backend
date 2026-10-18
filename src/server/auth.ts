@@ -2,13 +2,14 @@
 // Endpoints vêm do OIDC discovery (https://id.ifood.com.br/.well-known/openid-configuration).
 //
 // Uma instância de IfoodAuth = um conjunto de tokens (uma sessão). Tokens ficam em memória e,
-// quando `tokenFile` é definido, também em arquivo (modo 600, fora do Git). Nunca em HTTP/log.
+// quando `tokenFile` é definido, também em arquivo (modo 600, fora do Git, gravação durável). Nunca em HTTP/log.
 // Falha de rede/provedor é PROVIDER_UNREACHABLE/PROVIDER_ERROR — nunca equivale a logout.
 
 import { createHash, randomBytes } from 'node:crypto';
-import { chmod, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
+import { mkdir, readFile, rm } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { config as defaultConfig, type AppConfig } from './config.js';
+import { writeFileDurable } from './storage/durableFile.js';
 
 export interface StoredTokens {
   clientId: string | null;
@@ -66,6 +67,10 @@ export class IfoodAuth {
   private fetchFn: typeof fetch;
   private tokenFile: string | null;
   private now: () => number;
+  /** Gravações em fila: cada uma grava o estado MAIS RECENTE, então a última no disco é sempre a atual. */
+  private writeChain: Promise<unknown> = Promise.resolve();
+  /** Tokens em memória ainda não gravados (falha de disco após refresh); nova tentativa no próximo uso. */
+  private persistPending = false;
 
   constructor(
     private readonly cfg: AppConfig = defaultConfig,
@@ -82,28 +87,68 @@ export class IfoodAuth {
   private async load(): Promise<void> {
     if (this.loaded) return;
     this.loaded = true;
+    let text: string;
     try {
-      const raw = JSON.parse(await readFile(this.tokenFile!, 'utf8')) as StoredTokens;
+      text = await readFile(this.tokenFile!, 'utf8');
+    } catch (e) {
+      const code = (e as NodeJS.ErrnoException).code;
+      if (code !== 'ENOENT') console.error('[auth] arquivo de token ilegível:', code ?? 'erro'); // sem caminho/conteúdo
+      return;
+    }
+    try {
+      const raw = JSON.parse(text) as StoredTokens;
       if (raw.clientId && this.cfg.clientId && raw.clientId !== this.cfg.clientId) {
         console.warn('[auth] arquivo de token pertence a outro clientId — ignorado.');
         return;
       }
       if (raw.accessToken) this.tokens = raw;
     } catch {
-      /* sem arquivo de token ainda */
+      console.error('[auth] arquivo de token corrompido — tratado como ausente.'); // não é sobrescrito até novo login
     }
+  }
+
+  /** Enfileira a gravação do estado atual (ou a remoção, se não houver tokens). */
+  private persist(): Promise<void> {
+    const file = this.tokenFile;
+    const run = async () => {
+      if (!file || this.tokenFile !== file) return;
+      if (!this.tokens) {
+        await rm(file, { force: true });
+        this.persistPending = false;
+        return;
+      }
+      // Diretório ausente é criado (700); permissão de diretório existente é responsabilidade do dono (LinkStore.ensureDir).
+      await mkdir(dirname(file), { recursive: true, mode: 0o700 });
+      await writeFileDurable(file, JSON.stringify(this.tokens, null, 2), 0o600);
+      this.persistPending = false;
+    };
+    const p = this.writeChain.then(run, run);
+    this.writeChain = p.catch(() => undefined);
+    return p;
   }
 
   private async save(t: StoredTokens): Promise<void> {
     // Memória primeiro: num refresh o AS já rotacionou o refresh_token; perder o novo por falha de disco
-    // derrubaria a sessão. Falha de gravação ainda é propagada ao chamador.
+    // derrubaria a sessão. Falha de gravação é propagada e fica marcada para nova tentativa.
     this.tokens = t;
-    if (this.tokenFile) {
-      // Diretório ausente é criado (700); permissão de diretório existente é responsabilidade do dono (LinkStore.ensureDir).
-      await mkdir(dirname(this.tokenFile), { recursive: true, mode: 0o700 });
-      await writeFile(this.tokenFile, JSON.stringify(t, null, 2), { mode: 0o600 });
-      await chmod(this.tokenFile, 0o600); // arquivo pré-existente mantém a permissão antiga sem isto
+    if (!this.tokenFile) return;
+    try {
+      await this.persist();
+    } catch (e) {
+      this.persistPending = true;
+      throw e;
     }
+  }
+
+  /** Nova tentativa de gravar tokens que ficaram só em memória. Nunca lança. */
+  private async retryPersist(): Promise<void> {
+    if (!this.persistPending || !this.tokenFile) return;
+    await this.persist().catch((e) => console.error('[auth] tokens ainda não gravados:', (e as NodeJS.ErrnoException)?.code ?? 'erro'));
+  }
+
+  /** true quando há tokens em memória que ainda não chegaram ao disco. */
+  get hasUnpersistedTokens(): boolean {
+    return this.persistPending;
   }
 
   /** Define tokens já obtidos (ex.: após troca de código numa tentativa de vínculo). */
@@ -120,7 +165,8 @@ export class IfoodAuth {
 
   async logout(): Promise<void> {
     this.tokens = null;
-    if (this.tokenFile) await rm(this.tokenFile, { force: true });
+    this.persistPending = false;
+    if (this.tokenFile) await this.persist(); // passa pela fila: uma gravação pendente não recria o arquivo depois
   }
 
   // ---------- metadata ----------
@@ -269,7 +315,13 @@ export class IfoodAuth {
       const md = await this.getMetadata();
       const json = await this.postForm(md.token_endpoint, { grant_type: 'refresh_token', refresh_token: rt, resource: this.cfg.mcpUrl });
       const t = this.toStored(json, `${this.tokens?.source ?? 'oauth'}+refresh`, rt);
-      await this.save(t);
+      try {
+        await this.save(t);
+      } catch (e) {
+        // O refresh_token anterior já foi rotacionado no AS: os tokens novos seguem válidos em memória e a
+        // gravação é tentada de novo no próximo uso. Falhar a operação aqui não recuperaria nada.
+        console.error('[auth] tokens renovados não foram gravados; nova tentativa no próximo uso:', (e as NodeJS.ErrnoException)?.code ?? 'erro');
+      }
       return t;
     })();
     try {
@@ -282,6 +334,7 @@ export class IfoodAuth {
   /** Access token válido (renova se expira em < 60s). */
   async getAccessToken(): Promise<string> {
     await this.load();
+    await this.retryPersist();
     if (!this.tokens) throw new AuthError('Não autenticado', 'LOGIN_REQUIRED', 401);
     if (this.tokens.expiresAt && this.tokens.expiresAt - this.now() < REFRESH_SKEW_MS) {
       return (await this.refresh()).accessToken;

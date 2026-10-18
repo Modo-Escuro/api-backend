@@ -1,4 +1,8 @@
 node_modules/
+.npm-cache/
+.venv-contract/
+__pycache__/
+.contract-test-results.json
 dist/
 .env
 .env.*
@@ -7,6 +11,8 @@ dist/
 *.log
 *.html
 .ifood-links/
+.conversations/
+*.sqlite*
 # arquivos temporários de editor (podem conter segredos do .env)
 *.kate-swp
 *.swp

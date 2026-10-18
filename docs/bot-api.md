@@ -234,6 +234,12 @@ Redirect registrado: **`http://localhost:8000`** (exato). Para a demo: Telegram 
 Abrir pelo celular não funciona (e é bloqueado). Para uso pelo celular seria preciso outro redirect cadastrado no iFood e
 `PUBLIC_BASE_URL` público — e então a proteção "mesma máquina" deixa de existir (restam navegador vinculado + confirmação).
 
+## 9b. Callback por ambiente
+
+No desenvolvimento, `http://localhost:8000` exige cadastro exato e navegador no computador do backend.
+No serviço online, o ensaio usou `https://api-backend-production-9c4c.up.railway.app/callback`, com cadastro aprovado segundo o usuário e conexão operacional observada. PUBLIC_BASE_URL e IFOOD_REDIRECT_URI devem coincidir com o ambiente/cadastro; não substituir o HTTPS por defaults locais.
+Com origem pública, a proteção de loopback não se aplica; permanecem navegador vinculado por cookie e confirmação humana do organizador. Consulte o estado observado no bot; esta documentação não verifica continuamente o deploy.
+
 ## 10. Recorte da demo (não é isolamento multiusuário completo)
 
 - Um organizador em `ALLOWED_ORGANIZER_IDS`, uma conta iFood dedicada de teste.
@@ -255,3 +261,10 @@ BACKEND_URL=http://localhost:8000
 BOT_API_TOKEN=<o mesmo segredo>
 TELEGRAM_ALLOWED_USER_ID=<mesmo ID de ALLOWED_ORGANIZER_IDS>   # enviado como X-Telegram-User-Id
 ```
+
+
+## 13. F7 — Contrato do carrinho e revisão
+
+Rotas em `/api/bot/cart` usam a mesma autenticação de adaptador deste documento, JSON estrito, centavos inteiros e vínculo operacional. O contrato completo de endpoints, corpos, respostas, estados e retries está em [f7-cart-checkout.md](f7-cart-checkout.md#endpoints-do-telegram).
+
+Fluxo: consultar `/catalog` com endereço da conta → escolher itemRef/opções → criar carrinho → consultar e selecionar entrega/pagamento/cupom → ler getCart → revisão informativa. O bot gera requestId por intenção e preserva em retries. Não inventar referências nem obter IDs da LLM. A revisão não oferece compra: approve/submit retornam CHECKOUT_DISABLED. RESULT_UNKNOWN exige reconciliação, nunca um novo requestId automático. Cartões não expõem tokens e a configuração real ainda depende da validação das saídas MCP; as correções #2/#3 já estão incorporadas. O catálogo devolve resultados parciais e erros sanitizados por candidato; tentativas de releitura com o mesmo requestId não repetem escritas confirmadas.
