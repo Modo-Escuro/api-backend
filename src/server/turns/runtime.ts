@@ -3,6 +3,8 @@ import { randomBytes } from 'node:crypto';
 import { ContractError, type AdapterPrincipal } from '../contracts/guards.js';
 import type { ConversationEvent, Operation, Snapshot } from '../contracts/conversation.js';
 import { nextPurchase, type DomainChange, type PurchaseState } from '../domain/purchase.js';
+import { log } from '../ops/log.js';
+import { metrics } from '../ops/metrics.js';
 import { scopeKey, TurnStore, type CancelCommand, type Job } from './store.js';
 
 export interface TurnResult {
@@ -78,7 +80,14 @@ export class TurnRuntime {
       if (this.store.now() - this.lastPurge >= TurnRuntime.PURGE_INTERVAL_MS) {
         this.lastPurge = this.store.now();
         // Falha de expurgo não derruba a fila: o próximo ciclo tenta de novo (falhas por conversa já são isoladas).
-        try { this.store.purge(); } catch { /* sem logar caminho/identidade */ }
+        try {
+          const r = this.store.purge();
+          if (r.purged) metrics.inc('retention_purged_total', {}, r.purged);
+          if (r.failed) metrics.inc('retention_purge_failed_total', {}, r.failed);
+        } catch (e) {
+          metrics.inc('retention_purge_failed_total', { kind: 'CYCLE' });
+          log('error', 'retention.purge_cycle_failed', { component: 'turns', code: (e as { code?: string })?.code }); // sem caminho/identidade
+        }
       }
       if (!this.healthy) return;
       for (const slot of this.active.values()) {
@@ -98,11 +107,15 @@ export class TurnRuntime {
       }
     } catch {
       // Fail closed sem logar caminho do banco, payload, identidade ou exceção.
+      if (this.healthy) log('error', 'turns.runtime_unhealthy', { component: 'turns', reason: 'TICK_FAILED' });
       this.healthy = false;
       for (const { controller } of this.active.values()) controller.abort();
     }
   }
   private async execute(job: Job, controller: AbortController) {
+    const started = this.store.now();
+    metrics.observe('turn_queue_wait_ms', {}, started - Date.parse(job.operation.createdAt));
+    let outcome = 'SUCCEEDED';
     try {
       const result = await this.options.processor!({
         event: structuredClone(job.event), snapshot: structuredClone(job.snapshot), signal: controller.signal,
@@ -120,17 +133,37 @@ export class TurnRuntime {
           throw new ContractError('ACTION_UNAVAILABLE');
         },
       });
-      if (!this.stopped) this.store.finish(job, result);
+      if (!this.stopped && !this.store.finish(job, result)) outcome = 'NOT_COMMITTED';
     } catch (error) {
+      outcome = error instanceof ContractError ? error.code : 'INTERNAL';
       if (!this.stopped) {
         try { this.store.fail(job, error instanceof ContractError ? error.code : 'INTERNAL'); }
         catch { this.healthy = false; }
       }
     } finally {
+      metrics.observe('turn_run_duration_ms', {}, this.store.now() - started);
+      metrics.inc('turn_operations_total', { outcome });
+      log(outcome === 'SUCCEEDED' ? 'info' : 'warn', 'turns.operation_finished', {
+        component: 'turns', outcome, durationMs: this.store.now() - started,
+      });
       if (this.active.get(job.operation.operationId)?.job.token === job.token) {
         this.active.delete(job.operation.operationId);
       }
     }
+  }
+  /** OPS-02: estado do runtime para o status operacional (sem identidade nem conteúdo). */
+  health() {
+    let stats: ReturnType<TurnStore['stats']> | null = null;
+    try { if (!this.stopped) stats = this.store.stats(); } catch { /* banco indisponível ⇒ null */ }
+    return {
+      accepting: !this.stopped && this.healthy && Boolean(this.options.processor),
+      healthy: this.healthy && !this.stopped,
+      processorInstalled: Boolean(this.options.processor),
+      activeSlots: this.active.size,
+      concurrency: this.concurrency,
+      storage: this.stopped ? 'CLOSED' as const : stats ? 'OK' as const : 'UNAVAILABLE' as const,
+      ...(stats ?? {}),
+    };
   }
   /** Não espera indefinidamente processador não cooperativo; lease permitirá recuperação. */
   stop() {

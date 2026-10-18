@@ -91,6 +91,11 @@ export interface ModelRequest {
   signal: AbortSignal;
   /** Teto de tokens de saída que o provedor deve respeitar. */
   maxOutputTokens: number;
+  /**
+   * OPS-02: o provedor informa o uso real (só contagens). Sem relato, o orçamento mantém a reserva conservadora
+   * (`maxOutputTokens` + estimativa da entrada).
+   */
+  reportUsage?(usage: { inputTokens?: number; outputTokens?: number }): void;
 }
 
 /** Interface de provedor. A implementação real vem da AI-01; testes usam o modelo determinístico. */

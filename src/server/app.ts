@@ -16,6 +16,12 @@ import { registerEvaluate } from './routes/evaluate.js';
 import { registerConversationRoutes } from './routes/conversation.js';
 import type { TurnRuntime } from './turns/runtime.js';
 import { runEvaluation } from './services/evaluate.js';
+import { dirname } from 'node:path';
+import { routePath } from 'hono/route';
+import { errorFields, log, newCorrelationId, routeTemplateLabel } from './ops/log.js';
+import { metrics, statusClass } from './ops/metrics.js';
+import { checkPrivatePath } from './ops/storage-check.js';
+import type { SpendBudget } from './ops/budget.js';
 
 type ErrStatus = 400 | 401 | 403 | 404 | 409 | 410 | 423 | 500 | 502 | 503;
 
@@ -36,8 +42,8 @@ export function errorBody(err: unknown): { status: ErrStatus; body: Record<strin
     const status = err.code === 'LOGIN_REQUIRED' || err.status === 401 ? 401 : err.status === 400 ? 400 : 502;
     return { status, body: { error: { kind: 'AUTH_ERROR', code: err.code, message: err.message } } };
   }
-  const message = err instanceof Error ? err.message : String(err);
-  return { status: 500, body: { error: { kind: 'INTERNAL', message } } };
+  // OPS-02: mensagem fixa; a exceção bruta pode carregar conteúdo de usuário/provedor e não sai na resposta.
+  return { status: 500, body: { error: { kind: 'INTERNAL', message: 'Erro interno' } } };
 }
 
 /** Escolhe o endereço: id explícito (precisa existir na lista) ou único. Nunca inventa. */
@@ -55,6 +61,8 @@ export interface AppOptions {
   sessionFactory?: SessionFactory;
   carts?: CartService;
   conversations?: TurnRuntime;
+  /** OPS-02: orçamento do agente, só para o status operacional. */
+  budget?: SpendBudget;
 }
 
 export function createApp(auth: IfoodAuth = defaultAuth, opts: AppOptions = {}) {
@@ -62,18 +70,28 @@ export function createApp(auth: IfoodAuth = defaultAuth, opts: AppOptions = {}) 
   const links = opts.links ?? new IfoodLinkService({ cfg, sessionFactory: opts.sessionFactory ?? realSessionFactory });
   const app = new Hono();
   const carts = opts.carts ?? new CartService(links, cfg.cartEnabled);
+  const correlation = new WeakMap<Request, string>();
 
-  // Log mínimo: método, caminho (sem query — o callback OAuth carrega `code`), status, duração. Sem identidades.
+  // OPS-02: log estruturado por requisição — método, rota redigida (sem query: o callback OAuth carrega `code`),
+  // status, duração e correlação opaca. Sem identidades, cabeçalhos, corpo ou mensagens.
   app.use('*', async (c, next) => {
     const t0 = Date.now();
+    const cid = newCorrelationId();
+    correlation.set(c.req.raw, cid);
     await next();
-    const path = new URL(c.req.url).pathname;
-    console.log(`${c.req.method} ${path.startsWith('/api/bot/v1/') ? '/api/bot/v1/[redigido]' : path} ${c.res.status} ${Date.now() - t0}ms`);
+    c.header('X-Correlation-Id', cid);
+    const route = routeTemplateLabel(routePath(c, -1), c.res.status);
+    const durationMs = Date.now() - t0;
+    metrics.inc('http_requests_total', { method: c.req.method, route, statusClass: statusClass(c.res.status) });
+    metrics.observe('http_request_duration_ms', { route }, durationMs);
+    log(c.res.status >= 500 ? 'error' : 'info', 'http.request', { cid, method: c.req.method, route, status: c.res.status, durationMs });
   });
 
   app.onError((err, c) => {
     const { status, body } = errorBody(err);
-    if (status === 500) console.error('[error]', err instanceof Error ? err.message : err);
+    const cid = correlation.get(c.req.raw);
+    if (status === 500) log('error', 'http.unhandled_error', { cid, ...errorFields(err) });
+    if (status === 500) (body.error as Record<string, unknown>).correlationId = cid ?? null;
     return c.json(body, status);
   });
 
@@ -94,7 +112,38 @@ export function createApp(auth: IfoodAuth = defaultAuth, opts: AppOptions = {}) 
   app.use('/api/evaluate', requireBot);
   registerBotRoutes(app as unknown as Hono, links);
   registerCartRoutes(app, carts);
-  registerConversationRoutes(app as unknown as Hono, opts.conversations, cfg.conversationRuntime?.botId);
+  registerConversationRoutes(app as unknown as Hono, opts.conversations, cfg.conversationRuntime?.botId, cfg.conversationOrganizerIds);
+
+  // ---------- OPS-02: status operacional (autenticado; só contagens, sem caminhos/identidades) ----------
+  // Separa: saúde HTTP ≠ armazenamento ≠ sessão iFood operacional ≠ conversa ≠ capacidade de compra.
+  app.use('/api/ops/*', async (c, next) => { c.header('Cache-Control', 'no-store'); await next(); });
+  app.use('/api/ops/*', requireBot);
+  app.get('/api/ops/status', async (c) => {
+    const storage = await links.storageHealth();
+    const conversation = opts.conversations?.health() ?? null;
+    return c.json({
+      http: { ok: true },
+      linksStorage: { ...storage, permissions: checkPrivatePath(cfg.linksDir) },
+      sessions: await links.sessionSummary().catch(() => null),
+      conversation: {
+        enabled: Boolean(cfg.conversationRuntime && opts.conversations),
+        rollout: cfg.conversationOrganizerIds?.length
+          ? { mode: 'ALLOWLIST', organizers: cfg.conversationOrganizerIds.length } : { mode: 'ALL_AUTHORIZED', organizers: cfg.allowedOrganizerIds.length },
+        runtime: conversation,
+        storagePermissions: cfg.conversationRuntime ? checkPrivatePath(dirname(cfg.conversationRuntime.dbFile)) : null,
+        budget: opts.budget?.summary() ?? null,
+      },
+      // DEC-01 D8: demo somente leitura. Nenhuma flag isolada habilita envio.
+      purchase: {
+        capable: false,
+        cartPreparation: cfg.cartEnabled ? 'LEGACY_FLAG_ON' : 'DISABLED',
+        submission: 'DISABLED',
+        submitFlagIgnored: Boolean(cfg.submitFlagIgnored),
+        reason: 'DEC01_D8_READ_ONLY',
+      },
+      metrics: metrics.snapshot(),
+    });
+  });
 
   // ---------- Navegador: início do login e callback OAuth (redirect registrado: http://localhost:8000) ----------
   // Callback localhost ⇒ só conexões da própria máquina abrem o início/retorno do login (anti link encaminhado).

@@ -7,6 +7,7 @@ import { dirname, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { CancelResultSchema, OperationSchema, SnapshotSchema, type ConversationEvent, type ErrorCode, type Operation, type Snapshot } from '../contracts/conversation.js';
 import { contractErrorResponse } from '../contracts/errors.js';
+import { log } from '../ops/log.js';
 import { assertOperation, assertReplay, assertScope, assertSnapshot, assertVersion, contentHash, ContractError, eventKey, type AdapterPrincipal } from '../contracts/guards.js';
 import {
   CONTRACT_MAX_PARTICIPANTS, DEFAULT_MAX_PARTICIPANTS, DomainError, nextPurchase, parsePurchaseState,
@@ -467,7 +468,7 @@ export class TurnStore {
           failed++;
         }
       }
-      if (failed) console.error('[runtime] expurgo D7 falhou em', failed, 'conversa(s); nova tentativa no próximo ciclo');
+      if (failed) log('error', 'retention.purge_failed', { component: 'turns', failed }); // nova tentativa no próximo ciclo
       return { purged, failed };
     });
   }
@@ -495,6 +496,21 @@ export class TurnStore {
       this.write(saved, scrubbed);
     }
     this.db.prepare(`UPDATE events SET source='"PURGED"' WHERE scope=? AND operation_id<>?`).run(scope, keep ?? '');
+  }
+
+  /**
+   * OPS-02: contagens agregadas para observabilidade (sem escopo, identidade ou conteúdo).
+   * `resultUnknown` inclui operações com marcador de escrita ainda não resolvido.
+   */
+  stats(): { pending: number; running: number; resultUnknown: number; activePurchases: number; records: number } {
+    const n = (sql: string) => Number(this.db.prepare(sql).get()!['n']);
+    return {
+      pending: n("SELECT count(*) AS n FROM operations WHERE status IN ('ACCEPTED','CANCEL_REQUESTED')"),
+      running: n("SELECT count(*) AS n FROM operations WHERE status='RUNNING'"),
+      resultUnknown: n("SELECT count(*) AS n FROM operations WHERE status='RESULT_UNKNOWN' OR (effect=1 AND status NOT IN ('SUCCEEDED','FAILED','CANCELLED'))"),
+      activePurchases: n('SELECT count(*) AS n FROM conversations WHERE domain IS NOT NULL'),
+      records: n('SELECT count(*) AS n FROM events'),
+    };
   }
 
   fail(job: Job, code: ErrorCode = 'INTERNAL') {

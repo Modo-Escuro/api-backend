@@ -3,6 +3,7 @@
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { getMcpClient, MCP_TIMEOUT_MS } from './client.js';
 import { extractErrors, McpToolError } from './errors.js';
+import { metrics } from '../ops/metrics.js';
 import type {
   GetItemResult,
   LatLng,
@@ -65,8 +66,20 @@ export async function callReadTool<T>(
   if (!ALLOWED_TOOLS.has(name)) throw new Error(`Tool não permitida no MVP: ${name}`);
   const c = client ?? (await getMcpClient());
   const timeout = Math.max(1, Math.min(opts.timeoutMs ?? MCP_TIMEOUT_MS, MCP_TIMEOUT_MS));
-  const r = (await c.callTool({ name, arguments: args }, undefined, { timeout, signal: opts.signal })) as RawToolResult;
-  return parseToolResult(name, r) as T;
+  const t0 = Date.now();
+  // OPS-02: só ferramenta, resultado e código do erro (nunca argumentos, coordenadas ou payload).
+  let outcome = 'OK', code: string | undefined;
+  try {
+    const r = (await c.callTool({ name, arguments: args }, undefined, { timeout, signal: opts.signal })) as RawToolResult;
+    return parseToolResult(name, r) as T;
+  } catch (e) {
+    outcome = e instanceof McpToolError ? 'TOOL_ERROR' : 'TRANSPORT_ERROR';
+    code = e instanceof McpToolError ? (e.code ?? 'UNSPECIFIED') : undefined;
+    throw e;
+  } finally {
+    metrics.inc('mcp_tool_calls_total', { tool: name, outcome, code });
+    metrics.observe('mcp_tool_duration_ms', { tool: name }, Date.now() - t0);
+  }
 }
 
 export const listAddresses = (client?: Client) => callReadTool<ListAddressesResult>('listAddresses', {}, client);

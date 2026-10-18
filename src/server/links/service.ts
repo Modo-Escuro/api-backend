@@ -746,6 +746,22 @@ export class IfoodLinkService {
     };
   }
 
+  /**
+   * OPS-02: sessões operacionais a partir do estado já conhecido (sem chamada remota, sem identidade).
+   * `operational` = última verificação OK; `unverified` = nunca verificado neste processo. Token presente ≠ operacional.
+   */
+  async sessionSummary() {
+    await this.init();
+    let operational = 0, unavailable = 0, reconnectRequired = 0, unverified = 0;
+    for (const rt of this.links.values()) {
+      if (rt.record.reconnectReason || rt.lastCheck?.outcome === 'RECONNECT') reconnectRequired++;
+      else if (!rt.lastCheck) unverified++;
+      else if (rt.lastCheck.outcome === 'OK') operational++;
+      else unavailable++;
+    }
+    return { confirmed: this.links.size, operational, unavailable, reconnectRequired, unverified };
+  }
+
   /** Resumo sem identidades, para o diagnóstico. */
   async summary() {
     await this.init();

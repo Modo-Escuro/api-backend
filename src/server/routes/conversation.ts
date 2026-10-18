@@ -47,10 +47,15 @@ async function body(c: Context): Promise<unknown> {
   }
 }
 
-export function registerConversationRoutes(app: Hono, runtime: TurnRuntime | undefined, botId: string | undefined) {
+export function registerConversationRoutes(
+  app: Hono, runtime: TurnRuntime | undefined, botId: string | undefined, rollout: readonly string[] = [],
+) {
   const principal = (c: Context): AdapterPrincipal => {
     if (!runtime || !botId || !numericId(botId)) throw new ContractError('UNAVAILABLE');
-    const organizerId = organizerOf(c), conversationId = c.req.header('x-telegram-chat-id') ?? '';
+    const organizerId = organizerOf(c);
+    // OPS-02: fora da liberação gradual ⇒ mesma resposta de recurso desligado (não revela a lista).
+    if (rollout.length && !rollout.includes(organizerId)) throw new ContractError('UNAVAILABLE');
+    const conversationId = c.req.header('x-telegram-chat-id') ?? '';
     if (!numericId(conversationId) || conversationId !== organizerId) throw new ContractError('INVALID_SOURCE');
     if (c.req.param('conversationId') !== conversationId) throw new ContractError('NOT_FOUND');
     return { organizerId, botId, conversationId };

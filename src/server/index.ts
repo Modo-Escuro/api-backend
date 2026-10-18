@@ -1,6 +1,8 @@
 import { serve } from '@hono/node-server';
 import { createApp } from './app.js';
 import { config } from './config.js';
+import { log } from './ops/log.js';
+import { checkPrivatePath } from './ops/storage-check.js';
 import { TurnRuntime } from './turns/runtime.js';
 import { TurnStore } from './turns/store.js';
 
@@ -22,6 +24,10 @@ const server = serve({ fetch: app.fetch, port: config.port }, (info) => {
   } else {
     console.log(`[links] armazenamento: ${where}`);
   }
+  // OPS-02: permissões verificadas na plataforma real; no Windows o resultado é UNVERIFIED_PLATFORM (conferir ACL).
+  const perm = checkPrivatePath(config.linksDir);
+  log(perm.state === 'PRIVATE' || perm.state === 'MISSING' ? 'info' : 'warn', 'storage.permissions', { component: 'links', state: perm.state, platform: perm.platform });
+  if (config.submitFlagIgnored) log('warn', 'config.submit_flag_ignored', { component: 'purchase', reason: 'DEC01_D8_READ_ONLY' });
   if (!config.clientId || !config.clientSecret) {
     console.warn('[api] IFOOD_CLIENT_ID/IFOOD_CLIENT_SECRET ausentes — rode `npm run setup:env` ou crie .env');
   }
