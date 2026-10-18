@@ -44,6 +44,16 @@ export interface AppConfig {
   cartEnabled: boolean;
   /** Opt-in da infraestrutura RUN-01; o modelo tem opt-in separado. */
   conversationRuntime?: { dbFile: string; botId: string };
+  /**
+   * OPS-02: liberação gradual da conversa. Lista vazia = todos os organizadores autorizados (ALLOWED_ORGANIZER_IDS).
+   * Só restringe; nunca autoriza alguém fora de ALLOWED_ORGANIZER_IDS.
+   */
+  conversationOrganizerIds?: string[];
+  /**
+   * OPS-02: envio de pedido não tem flag. Se alguém definir IFOOD_SUBMIT_ENABLED, o valor é ignorado e reportado
+   * (checkout nunca é habilitado por configuração isolada — DEC-01 D8 / BUY-01/02).
+   */
+  submitFlagIgnored?: boolean;
   /** AI-01: opt-in separado (CONVERSATION_MODEL_ENABLED), provedor Gemini, limites explícitos. */
   conversationModel?: ConversationModelConfig;
 }
@@ -102,6 +112,17 @@ export function resolveLinksStorage(env: NodeJS.ProcessEnv): { dir: string; stor
     durability = 'LOCAL_DEV';
   }
   return { dir, storage: { durability, platform, explicitDir, allowEphemeral: env.IFOOD_LINKS_ALLOW_EPHEMERAL === 'true' } };
+}
+
+/**
+ * OPS-02: lista de liberação gradual. Ausente ou vazia = todos os autorizados. Definida com qualquer entrada inválida
+ * ⇒ erro de configuração (falha fechada): descartar entradas em silêncio esvaziaria a lista e abriria para todos.
+ */
+export function parseRollout(raw: string | undefined): string[] {
+  if (raw === undefined || raw === '') return [];
+  const ids = raw.split(',').map((s) => s.trim());
+  if (!ids.every((s) => /^[1-9][0-9]{0,19}$/.test(s))) throw new Error('CONVERSATION_ORGANIZER_IDS inválido: use IDs numéricos separados por vírgula.');
+  return [...new Set(ids)];
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -177,6 +198,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     devGlobalSession: env.DEV_GLOBAL_SESSION === 'true',
     cartEnabled: env.IFOOD_CART_ENABLED === 'true',
     conversationRuntime,
+    conversationOrganizerIds: parseRollout(env.CONVERSATION_ORGANIZER_IDS),
+    submitFlagIgnored: env.IFOOD_SUBMIT_ENABLED !== undefined,
     conversationModel,
   };
 }

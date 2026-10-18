@@ -12,7 +12,11 @@ import { createHash } from 'node:crypto';
 import { ContractError } from '../contracts/guards.js';
 import { evaluatePlan, planCoverage, type GroupResult } from '../domain/group.js';
 import { DomainError, type PurchaseState } from '../domain/purchase.js';
+import { conversationKey, type SpendBudget } from '../ops/budget.js';
+import { log } from '../ops/log.js';
+import { metrics } from '../ops/metrics.js';
 import type { TurnContext, TurnProcessor, TurnResult } from '../turns/runtime.js';
+import { scopeKey } from '../turns/store.js';
 import { AgentProposalSchema, type ConversationModel } from './model.js';
 import { buildModelInput, missingQuestions, planActions } from './policy.js';
 import { renderSnapshot, SNAPSHOT_BUDGET_BYTES } from './render.js';
@@ -32,15 +36,24 @@ export interface AgentOptions {
   proposals?(organizerId: string, state: PurchaseState, query: string, signal: AbortSignal): Promise<GroupResult & { linkId?: string }>;
   /** Prazo da busca de propostas (padrão 30 s). */
   proposalsTimeoutMs?: number;
+  /** OPS-02: orçamento por conversa/global. Estouro ⇒ LIMIT_EXCEEDED antes de chamar o modelo. */
+  budget?: SpendBudget;
+  /** Relógio para medir duração (testes). */
+  now?: () => number;
 }
 
 const DEFAULT_TIMEOUT_MS = 20_000;
 const MAX_TIMEOUT_MS = 60_000;
 
 function fail(code: string): never {
-  console.error('[agente] turno não processado:', code); // sem conteúdo do turno
+  log('error', 'agent.turn_failed', { component: 'agent', code }); // sem conteúdo do turno
+  metrics.inc('agent_turns_total', { outcome: 'FAILED', code });
   throw new ContractError('UNAVAILABLE');
 }
+
+/** Estimativa conservadora da entrada (≈ 1 token a cada 3 bytes do JSON enviado). */
+const estimateInputTokens = (input: unknown) => Math.ceil(Buffer.byteLength(JSON.stringify(input)) / 3);
+const count = (n: unknown) => (typeof n === 'number' && Number.isSafeInteger(n) && n >= 0 ? n : null);
 
 /**
  * Corre `work` contra o sinal do turno + prazo. Dependência que ignore o sinal (provedor, consulta de vínculo) não
@@ -82,6 +95,7 @@ const reason = (e: unknown, prefix: string) =>
 export function createAgentProcessor(opts: AgentOptions): TurnProcessor {
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const maxOutputTokens = opts.maxOutputTokens ?? 1024;
+  const now = opts.now ?? Date.now;
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > MAX_TIMEOUT_MS) throw new Error('timeoutMs do agente inválido.');
   if (!Number.isSafeInteger(maxOutputTokens) || maxOutputTokens < 1) throw new Error('maxOutputTokens do agente inválido.');
   return async (ctx: TurnContext): Promise<TurnResult> => {
@@ -95,12 +109,41 @@ export function createAgentProcessor(opts: AgentOptions): TurnProcessor {
       fail(reason(e, 'LINK_LOOKUP'));
     }
     const input = buildModelInput(ctx.purchase, ctx.snapshot.phase, ctx.event.input.text);
+    const reservedTokens = estimateInputTokens(input) + maxOutputTokens;
+    const reserved = opts.budget?.reserve(conversationKey(scopeKey(ctx.principal)), reservedTokens);
+    if (reserved && !reserved.ok) {
+      // Parada clara antes do provedor: nada é gravado, o snapshot e a compra continuam na versão atual.
+      log('warn', 'agent.budget_exceeded', { component: 'agent', kind: reserved.denial, reservedTokens });
+      metrics.inc('agent_budget_exceeded_total', { kind: reserved.denial });
+      metrics.inc('agent_turns_total', { outcome: 'FAILED', code: 'LIMIT_EXCEEDED' });
+      throw new ContractError('LIMIT_EXCEEDED');
+    }
+    let usage: { inputTokens: number | null; outputTokens: number | null; costMicroUsd: number | null } | null = null;
+    let settledUsage = false;
+    // Relato tardio (depois do prazo do turno, quando a reserva já foi fechada) é ignorado: nada é cobrado duas vezes.
+    const reportUsage = (u: { inputTokens?: number; outputTokens?: number; costMicroUsd?: number }) => {
+      if (settledUsage) return;
+      usage = { inputTokens: count(u?.inputTokens), outputTokens: count(u?.outputTokens), costMicroUsd: count(u?.costMicroUsd) };
+    };
     let raw: unknown;
+    const t0 = now();
     try {
-      raw = await withDeadline(signal, ctx.signal, (s) => opts.model.propose({ input, signal: s, maxOutputTokens,
+      raw = await withDeadline(signal, ctx.signal, (s) => opts.model.propose({ input, signal: s, maxOutputTokens, reportUsage,
         budgetScope: scopeHash(ctx.principal) }));
+      metrics.inc('model_calls_total', { outcome: 'OK' });
     } catch (e) {
+      metrics.inc('model_calls_total', { outcome: reason(e, 'MODEL') });
       fail(reason(e, 'MODEL'));
+    } finally {
+      metrics.observe('model_call_duration_ms', {}, now() - t0);
+      settledUsage = true;
+      const u = usage as { inputTokens: number | null; outputTokens: number | null; costMicroUsd: number | null } | null;
+      const used = u && u.inputTokens !== null && u.outputTokens !== null ? u.inputTokens + u.outputTokens : null;
+      if (reserved?.ok) reserved.reservation.settle(used);
+      if (u?.inputTokens != null) metrics.inc('model_tokens_total', { kind: 'input' }, u.inputTokens);
+      if (u?.outputTokens != null) metrics.inc('model_tokens_total', { kind: 'output' }, u.outputTokens);
+      if (used === null) metrics.inc('model_tokens_total', { kind: 'reserved_unreported' }, reservedTokens);
+      if (u?.costMicroUsd != null && u.costMicroUsd > 0) metrics.inc('model_cost_micro_usd_total', {}, u.costMicroUsd);
     }
     const parsed = AgentProposalSchema.safeParse(raw);
     if (!parsed.success) fail('MODEL_OUTPUT_INVALID');
@@ -125,7 +168,8 @@ export function createAgentProcessor(opts: AgentOptions): TurnProcessor {
           extraNotes.push(...result.explanation);
         } catch (e) {
           extraNotes.push(proposalFailureText(e));
-          console.error('[agente] sugestões indisponíveis:', reason(e, 'PROPOSALS'));
+          log('error', 'agent.proposals_unavailable', { component: 'agent', code: reason(e, 'PROPOSALS') });
+          metrics.inc('agent_proposals_total', { outcome: reason(e, 'PROPOSALS') });
         }
       }
     }
@@ -150,6 +194,7 @@ export function createAgentProcessor(opts: AgentOptions): TurnProcessor {
       extraNotes.unshift('O grupo é grande demais para mostrar a revisão da sacola; a escolha não foi registrada. Reduza o grupo ou as condições e tente de novo.');
       snapshot = render();
     }
+    metrics.inc('agent_turns_total', { outcome: 'OK' });
     return {
       snapshot,
       completeness: plan.notes.length ? 'PARTIAL' : 'COMPLETE',

@@ -111,7 +111,17 @@ export function createGeminiModel(options: GeminiOptions): ConversationModel {
   let calls = 0;
   let charged = 0;
   const scopes = new Map<string, number>();
-  return { id: GEMINI_MODEL, async propose(request: ModelRequest) {
+  // OPS-02: chamada recusada antes da rede não consome o provedor ⇒ reporta uso zero, sem reserva presa no orçamento.
+  // Depois do envio, só uso reportado pelo provedor ajusta a reserva; timeout/falha sem uso mantém a reserva (conservador).
+  const propose = async (request: ModelRequest): Promise<AgentProposal> => {
+    const call = { fetched: false };
+    try { return await proposeOnce(request, call); } catch (error) {
+      if (!call.fetched) request.reportUsage?.({ inputTokens: 0, outputTokens: 0, costMicroUsd: 0 });
+      throw error;
+    }
+  };
+  return { id: GEMINI_MODEL, propose };
+  async function proposeOnce(request: ModelRequest, call: { fetched: boolean }): Promise<AgentProposal> {
     const scope = request.budgetScope ?? 'unscoped'; // chave local opaca; jamais enviada ao provedor
     if (request.signal.aborted) throw new GeminiFailure('TIMEOUT');
     if (calls >= maxRequests || (scopes.get(scope) ?? 0) >= perConversation) throw new GeminiFailure('BUDGET');
@@ -141,6 +151,7 @@ export function createGeminiModel(options: GeminiOptions): ConversationModel {
       reserve = Math.ceil((Buffer.byteLength(init.body) + 4096) * PRICE_MICRO_USD_PER_TOKEN.input + maxOutputTokens * PRICE_MICRO_USD_PER_TOKEN.output);
       if (charged + reserve > budget || calls >= maxRequests || (scopes.get(scope) ?? 0) >= perConversation) throw new GeminiFailure('BUDGET');
       fetched = true;
+      call.fetched = true;
       charged += reserve;
       calls++;
       scopes.set(scope, (scopes.get(scope) ?? 0) + 1);
@@ -175,7 +186,12 @@ export function createGeminiModel(options: GeminiOptions): ConversationModel {
       if (settled || !fetched) return;
       settled = true;
       const known = !!usage && Number.isSafeInteger(usage.inputTokens) && Number.isSafeInteger(usage.outputTokens) && usage.inputTokens! >= 0 && usage.outputTokens! >= 0;
-      if (known) charged += Math.ceil(usage.inputTokens! * PRICE_MICRO_USD_PER_TOKEN.input + usage.outputTokens! * PRICE_MICRO_USD_PER_TOKEN.output) - reserve;
+      if (known) {
+        const cost = Math.ceil(usage.inputTokens! * PRICE_MICRO_USD_PER_TOKEN.input + usage.outputTokens! * PRICE_MICRO_USD_PER_TOKEN.output);
+        charged += cost - reserve;
+        // Tokens reportados pelo provedor; custo pelo preço de referência (não é fatura).
+        request.reportUsage?.({ inputTokens: usage.inputTokens!, outputTokens: usage.outputTokens!, costMicroUsd: cost });
+      }
       options.onUsage?.({ inputTokens: known ? usage.inputTokens! : null, outputTokens: known ? usage.outputTokens! : null, chargedMicroUsd: charged, modelVersion });
     };
     const finish = (reason: unknown) => `FINISH_${String(reason).toUpperCase().replace(/[^A-Z_]/g, '_').slice(0, 24)}`;
@@ -208,5 +224,5 @@ export function createGeminiModel(options: GeminiOptions): ConversationModel {
       if (request.signal.aborted || (error instanceof Error && /Timeout|Abort/.test(error.name))) throw new GeminiFailure('TIMEOUT');
       throw new GeminiFailure('INVALID_OUTPUT'); // nunca expor corpo, headers ou mensagem do SDK
     }
-  } };
+  }
 }
