@@ -461,10 +461,24 @@ describe('CART-01: confirmação humana, persistência e reconciliação (MCP mo
     await expect(f.service.prepare(principal)).rejects.toMatchObject({ code: 'CART_REVIEW_CHANGED' });
     expect(f.write).not.toHaveBeenCalled();
   });
-  it('reavalia alergia por pessoa mesmo se cobertura persistida disser COVERED', async () => {
+  it('reavalia alergia por pessoa: sem dado do iFood a preparação segue com a restrição na revisão (aviso, não bloqueio)', async () => {
     const f = setup(), s = f.state(), person = s.participants[0]!;
     person.restrictions = { state: 'DECLARED', value: [{ restrictionId: 'restriction00000001', key: { kind: 'ALLERGY', code: 'MILK' }, origin: { eventId: 'fake' } }], origin: { eventId: 'fake' } };
     s.bag!.coverage![0]!.restrictionsSig = restrictionsSig(s,person); f.save(s);
+    const review = await f.service.prepare(principal);
+    expect(review).toMatchObject({ purpose: 'PREPARE_CART', purchaseAuthorized: false });
+    expect(review.coverage).toEqual(expect.arrayContaining([expect.objectContaining({ participantId: person.participantId, status: 'COVERED' })]));
+    expect(f.write).not.toHaveBeenCalled();
+  });
+  it('reavalia alergia por pessoa mesmo se cobertura persistida disser COVERED: conflito informado bloqueia', async () => {
+    const f = setup(), s = f.state(), person = s.participants[0]!;
+    person.restrictions = { state: 'DECLARED', value: [{ restrictionId: 'restriction00000001', key: { kind: 'ALLERGY', code: 'MILK' }, origin: { eventId: 'fake' } }], origin: { eventId: 'fake' } };
+    s.bag!.coverage![0]!.restrictionsSig = restrictionsSig(s,person);
+    s.bag!.lines[0]!.name = 'Arroz com leite'; f.save(s);
+    const listing = vi.mocked(f.ctx.deps.searchOffers).getMockImplementation()!, detail = vi.mocked(f.ctx.deps.getItem).getMockImplementation()!;
+    vi.mocked(f.ctx.deps.searchOffers).mockImplementation(async (...a) => { const r = await listing(...a) as { results: Record<string, unknown>[] };
+      return { results: r.results.map((x) => ({ ...x, itemName: 'Arroz com leite' })) }; });
+    vi.mocked(f.ctx.deps.getItem).mockImplementation(async (...a) => ({ ...(await detail(...a) as Record<string, unknown>), itemName: 'Arroz com leite' }));
     await expect(f.service.prepare(principal)).rejects.toMatchObject({ code: 'CART_ITEM_BLOCKED' });
     expect(f.write).not.toHaveBeenCalled();
   });

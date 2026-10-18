@@ -11,6 +11,14 @@ export function shortReply(state: PurchaseState | null, snapshot: Snapshot, mess
   if (/^(?:esvaziar|esvazia|limpar|limpa) (?:a )?sacola(?: simulada)?[.!]?$/.test(text)) {
     return { proposal: { actions: [{ action: 'CLEAR_BAG' }] }, policyMessage: message };
   }
+  // Escolha do início da conversa (botões do bot). Individual cria uma única pessoa "Você", sem modelo.
+  if (/^e um pedido individual, so para mim[.!]?$/.test(text)) {
+    if (state && state.status === 'ACTIVE' && state.participants.length) return null; // já há pessoas: o modelo decide
+    return { proposal: { actions: [{ action: 'ADD_PARTICIPANT', name: 'Você' }] }, policyMessage: message };
+  }
+  // Grupo: nenhuma ação; o servidor pergunta quem participa.
+  if (/^e um pedido em grupo[.!]?$/.test(text) && !(state && state.status === 'ACTIVE' && state.participants.length))
+    return { proposal: { actions: [] }, policyMessage: message };
   if (!/^(?:nao|nenhuma)[.!]?$/.test(text) || !state || state.status !== 'ACTIVE'
     || snapshot.phase !== 'COLLECTING' || state.clarifications.length) return null;
   const questions = missingQuestions(state);

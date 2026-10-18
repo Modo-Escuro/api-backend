@@ -118,17 +118,19 @@ describe('preferência opcional respeita viabilidade e mantém mínimo real', ()
     expect(evaluation.budget.orderTotal).toBe('UNKNOWN');
   });
 
-  it('seleção explícita não é trocada; MANDATORY e alergia continuam bloqueando', () => {
+  it('seleção explícita não é trocada; MANDATORY com dado bloqueia e alergia sem dado vira aviso', () => {
     const input = required();
     const explicit = evaluateCandidate({ ...input, selection: [{ optionId: input.vegetal.optionId }] }, { restrictions: [veganPref], budget: { maxItemPrice: 2500 } });
     expect(explicit.eligible).toBe(false);
     expect(explicit.selection!.source).toBe('USER');
-    for (const restriction of [{ ...veganPref, requirement: 'MANDATORY' as const }, { kind: 'ALLERGY' as const, code: 'PEANUT' as const }]) {
-      const evaluation = evaluateCandidate(required(false), { restrictions: [restriction, veganPref], budget: { maxItemPrice: 2500 } });
-      expect(evaluation.eligible).toBe(false);
-      expect(evaluation.blockers.length).toBeGreaterThan(0);
-      expect(rankCandidates([{ ...input, evaluation }]).recommendations).toEqual([]);
-    }
+    const mandatory = evaluateCandidate(required(false), { restrictions: [{ ...veganPref, requirement: 'MANDATORY' as const }, veganPref], budget: { maxItemPrice: 2500 } });
+    expect(mandatory.eligible).toBe(false);
+    expect(mandatory.blockers.length).toBeGreaterThan(0);
+    expect(rankCandidates([{ ...input, evaluation: mandatory }]).recommendations).toEqual([]);
+    // Decisão 18/10/2026: alergia sem dado do iFood não bloqueia; fica como aviso explícito.
+    const allergy = evaluateCandidate(required(false), { restrictions: [{ kind: 'ALLERGY' as const, code: 'PEANUT' as const }, veganPref], budget: { maxItemPrice: 2500 } });
+    expect(allergy.blockers.map((b) => b.code)).not.toContain('ALLERGY_UNVERIFIED');
+    expect(allergy.warnings.map((w) => w.code)).toContain('ALLERGY_UNVERIFIED');
   });
 });
 

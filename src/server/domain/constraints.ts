@@ -64,7 +64,7 @@ export interface RestrictionCheck {
   source: EvidenceSource;
   /** true quando o status depende de heurística textual (UI deve rotular como tal). */
   heuristic: boolean;
-  /** MANDATORY e status ≠ PASS. */
+  /** MANDATORY e status FAIL (conflito informado). UNKNOWN não bloqueia: vira aviso. */
   blocking: boolean;
   /** A evidência (filtro do iFood) se refere ao item-base; opções nunca são verificadas por ela. */
   coversOptions: false;
@@ -307,8 +307,10 @@ export function evaluateRestriction(r: RestrictionKey, input: EvaluationInput): 
   let source: EvidenceSource;
   if (r.kind === 'ALLERGY') {
     // Alergia: só há dois desfechos possíveis — FAIL (heurística encontrou o alérgeno) ou UNKNOWN. Nunca PASS.
-    if (strongHit) {
+    // Desde 18/10/2026 UNKNOWN só avisa; por isso alérgeno citado na DESCRIÇÃO também conta como conflito informado.
+    if (strongHit || descHits.length) {
       if (nameHits.length) reasons.push(`nome do item menciona: ${termsOf(nameHits)} (heurística)`);
+      if (descHits.length) reasons.push(`descrição menciona: ${termsOf(descHits)} (heurística)`);
       if (impossibleGroups.length) reasons.push(`grupo obrigatório sem opção compatível: ${impossibleGroups.join(', ')} (heurística)`);
       status = 'FAIL';
       source = 'HEURISTIC';
@@ -324,7 +326,6 @@ export function evaluateRestriction(r: RestrictionKey, input: EvaluationInput): 
         source = 'NO_DATA';
         reasons.push('informação indisponível — verifique com a loja');
       }
-      if (descHits.length) reasons.push(`descrição menciona: ${termsOf(descHits)} (heurística)`);
     }
   } else if (strongHit) {
     if (nameHits.length) reasons.push(`nome do item menciona: ${termsOf(nameHits)} (heurística)`);
@@ -359,7 +360,8 @@ export function evaluateRestriction(r: RestrictionKey, input: EvaluationInput): 
   }
   if (optionHits.length && status !== 'FAIL') reasons.push(`evitar opções: ${termsOf(optionHits)} (heurística)`);
 
-  const blocking = requirement === 'MANDATORY' && status !== 'PASS';
+  // Só conflito informado (FAIL) bloqueia; UNKNOWN obrigatório vira aviso (decisão de produto, 18/10/2026).
+  const blocking = requirement === 'MANDATORY' && status === 'FAIL';
   return {
     restriction: r,
     requirement,

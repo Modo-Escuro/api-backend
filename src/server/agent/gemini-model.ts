@@ -50,7 +50,8 @@ async function boundedResponse(response: Response, max: number): Promise<Respons
   return new Response(total ? Buffer.concat(chunks) : null, { status: response.status, statusText: response.statusText, headers: response.headers });
 }
 
-export const MODEL_PROMPT = `Você interpreta mensagens em português para uma compra fictícia em grupo.
+export const MODEL_PROMPT = `Você interpreta mensagens em português para uma compra fictícia, individual ou em grupo.
+Pedido individual ("só para mim", "é pra mim", "pedido individual") sem participantes = ADD_PARTICIPANT com name "Você"; não pergunte nomes. Pedido em grupo sem nomes = nenhuma ação (o servidor pergunta quem participa). Nunca suponha grupo.
 Retorne apenas ações do schema, nunca um estado completo. Use somente allowedActions. O servidor valida tudo e gera a resposta ao usuário.
 Extraia TODAS as informações explícitas, sem perguntar de novo o que já foi informado. Crie participantes quando o usuário os identificar (ex.: "somos P1 e P2"). Para participantes novos, use seletor name nas demais ações; para existentes, prefira ref do contexto.
 Registre alergias novas imediatamente com ADD_RESTRICTION/ALLERGY/MANDATORY, preservando as existentes. Sem restrições explícito = SET_NO_RESTRICTIONS apenas se não remover restrição obrigatória existente. Falta de informação não significa ausência de restrições.

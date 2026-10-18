@@ -27,11 +27,12 @@ describe('restrições obrigatórias precedem o resto', () => {
     expect(e.budget).toEqual({ itemPrice: null, orderTotal: 'UNKNOWN' });
   });
 
-  it('obrigatória UNKNOWN (sem evidência) bloqueia', () => {
+  it('obrigatória UNKNOWN (sem evidência) não bloqueia: vira aviso RESTRICTION_UNVERIFIED', () => {
     const d = item('Açai Artesanal');
     const e = evaluateCandidate({ listing: listingFor(d.itemId), detail: d, serverFilters: [] }, { restrictions: [VEGAN] });
-    expect(e.eligible).toBe(false);
-    expect(codes(e.blockers)).toEqual(['RESTRICTION_UNVERIFIED']);
+    expect(e.eligible).toBe(true);
+    expect(codes(e.blockers)).not.toContain('RESTRICTION_UNVERIFIED');
+    expect(codes(e.warnings)).toContain('RESTRICTION_UNVERIFIED');
   });
 
   it('a mesma restrição como preferência só gera aviso', () => {
@@ -41,11 +42,12 @@ describe('restrições obrigatórias precedem o resto', () => {
     expect(codes(e.warnings)).toContain('PREFERENCE_UNKNOWN');
   });
 
-  it('conflito filtro × descrição em obrigatória bloqueia ("Maria salada Veg")', () => {
+  it('conflito filtro × descrição em obrigatória (UNKNOWN) vira aviso, não bloqueio ("Maria salada Veg")', () => {
     const d = item('Maria salada Veg');
     const e = evaluateCandidate({ listing: listingFor(d.itemId), detail: d, serverFilters: ['VEGAN'] }, { restrictions: [VEGAN] });
-    expect(e.eligible).toBe(false);
-    expect(e.blockers[0]!.message).toMatch(/não é possível concluir/);
+    expect(e.eligible).toBe(true);
+    const w = e.warnings.find((x) => x.code === 'RESTRICTION_UNVERIFIED');
+    expect(w?.message).toMatch(/não é possível concluir/);
   });
 
   it('FAIL obrigatório bloqueia', () => {
@@ -65,32 +67,35 @@ describe('restrições obrigatórias precedem o resto', () => {
 });
 
 describe('alergias', () => {
-  it('sem evidência ⇒ bloqueia', () => {
+  it('sem evidência ⇒ aviso ALLERGY_UNVERIFIED, sem bloqueio', () => {
     const d = item('Vegano Brooks');
     const e = evaluateCandidate({ listing: listingFor(d.itemId), detail: d, serverFilters: ['VEGAN'] }, { restrictions: [{ kind: 'ALLERGY', code: 'PEANUT' }] });
-    expect(codes(e.blockers)).toEqual(['ALLERGY_UNVERIFIED']);
+    expect(codes(e.blockers)).not.toContain('ALLERGY_UNVERIFIED');
+    expect(codes(e.warnings)).toContain('ALLERGY_UNVERIFIED');
   });
 
-  it('GLUTEN_FREE do iFood em item sem opções ⇒ NÃO elegível (alergia nunca é aprovada pelo catálogo)', () => {
+  it('GLUTEN_FREE do iFood em item sem opções ⇒ elegível com aviso (alergia nunca é aprovada pelo catálogo)', () => {
     const d = item('Veggie Burger');
     const e = evaluateCandidate({ listing: listingFor(d.itemId), detail: d, serverFilters: ['GLUTEN_FREE'] }, { restrictions: [{ kind: 'ALLERGY', code: 'GLUTEN' }] });
-    expect(e.eligible).toBe(false);
-    expect(codes(e.blockers)).toEqual(['ALLERGY_UNVERIFIED']);
+    expect(e.eligible).toBe(true);
+    expect(codes(e.blockers)).toEqual([]);
+    expect(codes(e.warnings)).toContain('ALLERGY_UNVERIFIED');
     expect(e.restrictions[0]).toMatchObject({ status: 'UNKNOWN', source: 'SERVER_FILTER_INSUFFICIENT' });
   });
 
-  it('GLUTEN_FREE + descrição com "pão" ⇒ UNKNOWN ⇒ bloqueia', () => {
+  it('GLUTEN_FREE + descrição com "pão" ⇒ alérgeno citado bloqueia (RESTRICTION_FAIL)', () => {
     const d = item('Vegano Brooks');
     const e = evaluateCandidate({ listing: listingFor(d.itemId), detail: d, serverFilters: ['GLUTEN_FREE'] }, { restrictions: [{ kind: 'ALLERGY', code: 'GLUTEN' }] });
-    expect(codes(e.blockers)).toEqual(['ALLERGY_UNVERIFIED']);
+    expect(codes(e.blockers)).toContain('RESTRICTION_FAIL');
+    expect(e.eligible).toBe(false);
   });
 
-  it('item com opções obrigatórias e GLUTEN_FREE ⇒ continua bloqueado', () => {
+  it('item com opções obrigatórias e GLUTEN_FREE ⇒ UNKNOWN continua não verificado (aviso, não PASS)', () => {
     const a = item('Açai Artesanal');
     const e = evaluateCandidate({ listing: listingFor(a.itemId), detail: a, serverFilters: ['GLUTEN_FREE'] }, { restrictions: [{ kind: 'ALLERGY', code: 'GLUTEN' }] });
-    expect(e.eligible).toBe(false);
     expect(e.restrictions[0]!.status).toBe('UNKNOWN');
-    expect(codes(e.blockers)).toContain('ALLERGY_UNVERIFIED');
+    expect(codes(e.blockers)).not.toContain('ALLERGY_UNVERIFIED');
+    expect(codes(e.warnings)).toContain('ALLERGY_UNVERIFIED');
   });
 });
 

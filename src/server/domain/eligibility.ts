@@ -144,7 +144,9 @@ export function evaluateCandidate(input: CandidateInput, constraints: UserConstr
     if (c.requirement === 'MANDATORY') {
       if (c.status === 'FAIL') blockers.push({ code: 'RESTRICTION_FAIL', message: msg });
       else if (c.status === 'UNKNOWN') {
-        blockers.push({ code: c.restriction.kind === 'ALLERGY' ? 'ALLERGY_UNVERIFIED' : 'RESTRICTION_UNVERIFIED', message: msg });
+        // Decisão de produto (18/10/2026): dado ausente do iFood (ingredientes/alérgenos) vira AVISO, não bloqueio.
+        // Conflito informado (FAIL) continua excluindo o item. O aviso precisa chegar ao usuário ("confirme com o restaurante").
+        warnings.push({ code: c.restriction.kind === 'ALLERGY' ? 'ALLERGY_UNVERIFIED' : 'RESTRICTION_UNVERIFIED', message: msg });
       } else if (c.restriction.kind === 'ALLERGY' || c.heuristic) warnings.push({ code: 'RESTRICTION_NOTE', message: msg });
     } else if (c.status !== 'PASS') {
       warnings.push({ code: c.status === 'FAIL' ? 'PREFERENCE_FAIL' : 'PREFERENCE_UNKNOWN', message: msg });
