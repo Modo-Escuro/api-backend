@@ -1,7 +1,7 @@
 // Persistência local dos vínculos confirmados (metadados). Tokens ficam em arquivos próprios por vínculo.
 // Diretório fora do Git; escrita atômica (tmp + rename), modo 600. Tentativas pendentes nunca são persistidas.
 
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { AccountIdentity } from './identity.js';
 
@@ -31,6 +31,12 @@ export class LinkStore {
     return join(this.dir, fileName);
   }
 
+  /** Cria o diretório (700) se faltar e corrige a permissão se estiver frouxa. Chamar antes de gravar tokens. */
+  async ensureDir(): Promise<void> {
+    await mkdir(this.dir, { recursive: true, mode: 0o700 });
+    await chmod(this.dir, 0o700);
+  }
+
   async load(): Promise<Record<string, LinkRecord>> {
     try {
       const raw = JSON.parse(await readFile(join(this.dir, 'links.json'), 'utf8')) as FileShape;
@@ -44,9 +50,10 @@ export class LinkStore {
   save(links: Record<string, LinkRecord>): Promise<void> {
     const snapshot: FileShape = { version: 1, links: structuredClone(links) };
     const run = async () => {
-      await mkdir(this.dir, { recursive: true, mode: 0o700 });
+      await this.ensureDir();
       const tmp = join(this.dir, `links.json.${process.pid}.tmp`);
       await writeFile(tmp, JSON.stringify(snapshot, null, 2), { mode: 0o600 });
+      await chmod(tmp, 0o600);
       await rename(tmp, join(this.dir, 'links.json'));
     };
     const p = this.chain.then(run, run);

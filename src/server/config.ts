@@ -23,6 +23,13 @@ export interface AppConfig {
   devGlobalSession: boolean;
 }
 
+import { isAbsolute, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+/** Raiz do projeto (src/server/config.ts → ../../). Caminhos relativos de armazenamento são resolvidos a partir dela. */
+export const PROJECT_ROOT = fileURLToPath(new URL('../../', import.meta.url));
+const fromRoot = (p: string) => (isAbsolute(p) ? p : resolve(PROJECT_ROOT, p));
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   return {
     mcpUrl: env.IFOOD_MCP_URL || 'https://consumer-mcp.ifood.com.br/marketplace',
@@ -33,14 +40,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     scope: env.IFOOD_SCOPE || undefined,
     webOrigin: env.WEB_ORIGIN || 'http://localhost:5173',
     port: Number(env.PORT || 8000),
-    tokenFile: env.IFOOD_TOKEN_FILE || '.tokens.json',
+    tokenFile: fromRoot(env.IFOOD_TOKEN_FILE || '.tokens.json'),
     authServer: env.IFOOD_AUTH_SERVER || 'https://id.ifood.com.br',
     botApiToken: env.BOT_API_TOKEN && env.BOT_API_TOKEN.length >= 32 ? env.BOT_API_TOKEN : undefined,
     allowedOrganizerIds: (env.ALLOWED_ORGANIZER_IDS || '')
       .split(',')
       .map((s) => s.trim())
       .filter((s) => /^[1-9][0-9]{0,19}$/.test(s)),
-    linksDir: env.IFOOD_LINKS_DIR || '.ifood-links',
+    linksDir: fromRoot(env.IFOOD_LINKS_DIR || '.ifood-links'),
     publicBaseUrl: (env.PUBLIC_BASE_URL || `http://localhost:${Number(env.PORT || 8000)}`).replace(/\/$/, ''),
     devGlobalSession: env.DEV_GLOBAL_SESSION === 'true',
   };

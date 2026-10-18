@@ -428,18 +428,36 @@ export class IfoodLinkService {
       accountIdentity: a.identity,
     };
     const rt = this.runtimeFor(record);
-    await rt.auth.setTokens(tokens);
-    // Defesa em profundidade: se algo encerrou a tentativa durante a gravação, desfaz e não instala.
-    if (a.status !== 'CONFIRMING' || this.current.get(organizerId) !== a.attemptId) {
-      await rt.auth.logout();
-      throw new LinkError('CONFIRMATION_INVALID', 'Tentativa encerrada durante a confirmação — gere um novo link', 410);
-    }
-    // Troca de conta/reconexão: encerra o vínculo anterior (tokens, sessão e cache).
     const previous = this.links.get(organizerId) ?? null;
-    if (previous) await this.closeRuntime(previous);
+    const previousRecord = this.records[organizerId];
+
+    // Ordem transacional: (1) diretório + tokens novos, (2) links.json apontando para o novo vínculo,
+    // (3) só então instalar em memória e encerrar o anterior. Falha em (1) ou (2) ⇒ rollback completo.
+    try {
+      await this.store.ensureDir();
+      await rt.auth.setTokens(tokens);
+      // Defesa em profundidade (issue #2): se algo encerrou a tentativa durante a gravação, não instala.
+      if (a.status !== 'CONFIRMING' || this.current.get(organizerId) !== a.attemptId) {
+        await rt.auth.logout().catch(() => undefined);
+        throw new LinkError('CONFIRMATION_INVALID', 'Tentativa encerrada durante a confirmação — gere um novo link', 410);
+      }
+      this.records[organizerId] = record;
+      await this.store.save(this.records);
+    } catch (e) {
+      // Rollback: metadados e arquivo de token do vínculo novo; o vínculo anterior (se houver) fica intacto.
+      if (previousRecord) this.records[organizerId] = previousRecord;
+      else delete this.records[organizerId];
+      await rt.auth.logout().catch(() => undefined);
+      if (e instanceof LinkError) throw e;
+      // Tentativa volta a ser confirmável com o MESMO confirmationId (tokens continuam só em memória).
+      if (a.status === 'CONFIRMING') a.status = 'PENDING_CONFIRMATION';
+      console.error('[links] falha ao gravar vínculo:', (e as NodeJS.ErrnoException)?.code ?? 'erro'); // sem caminho/tokens
+      throw new LinkError('LINK_STORAGE_FAILED', 'Não foi possível salvar a conexão no backend — tente confirmar de novo', 503, 'AWAITING_CONFIRMATION');
+    }
+
+    // Troca de conta/reconexão: encerra o vínculo anterior (tokens, sessão e cache) depois do novo estar persistido.
     this.links.set(organizerId, rt);
-    this.records[organizerId] = record;
-    await this.store.save(this.records);
+    if (previous) await this.closeRuntime(previous).catch(() => undefined);
     this.endAttempt(a, 'CONFIRMED', 'CONFIRMED');
     this.lastEnd.delete(organizerId);
     return { rt, previousLinkId: previous?.record.linkId ?? null };
