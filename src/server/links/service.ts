@@ -198,7 +198,7 @@ export class IfoodLinkService {
       const records = await this.store.load();
       const links = new Map<string, LinkRuntime>();
       for (const r of Object.values(records)) {
-        if (!this.cfg.allowedOrganizerIds.includes(r.organizerId)) continue; // organizador removido da allowlist
+        if (!this.cfg.botPasswordAccess && !this.cfg.allowedOrganizerIds.includes(r.organizerId)) continue; // organizador removido da allowlist
         links.set(r.organizerId, this.runtimeFor(r));
       }
       this.records = records;
