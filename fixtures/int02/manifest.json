@@ -1,0 +1,15 @@
+{
+  "source": "OBSERVED_AUTHENTICATED",
+  "endpoint": "https://consumer-mcp.ifood.com.br/marketplace",
+  "session": "login OAuth isolado (client da produção, conta de teste), tokens fora do Git",
+  "businessToolsCalled": true,
+  "cartToolsCalled": false,
+  "toolsListObservedAt": "2026-10-18T12:23:48.714Z",
+  "toolsListMatchesFixture": true,
+  "toolsListSha256_sortedInputSchemas": "716ea31e0bfaceb63a8f354fb4b331dfe0e5e737594e70a7e1293a7b7e4ad9f9",
+  "samples": {
+    "listAddresses-empty.json": "e3eba4026fbf6598dc68f4adabeb0adcdd6dedc4d607dac3475e3327d9deeb90",
+    "createAddress-geocode.json": "da1af08571518caf0fd9425fb706686a771af590b7f17beaddf7dd49c064931c",
+    "createAddress-error-ADR-2001.json": "d3a4f109288e880ba20984816435676d437259ab43d9e9b7448e710d21aabbd5"
+  }
+}

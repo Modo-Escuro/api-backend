@@ -173,7 +173,13 @@ describe('OPS-02 × AI-01 Gemini: orçamento, reportUsage e falhas', () => {
     expect(st.conversation.budget.global).toMatchObject({ calls: 1, tokens: REPORTED });
     expect(st.purchase).toMatchObject({ capable: false, submission: 'DISABLED' });
     for (const call of transport.mock.calls) expect(String(call[0])).toMatch(/^https:\/\/generativelanguage\.googleapis\.com\//);
-    const all = lines.join('\n');
+    const all = lines.map(line => {
+      const record = JSON.parse(line);
+      // Correlação aleatória pode conter "Ana" por acaso; só o campo cid é excluído da busca de conteúdo.
+      if (record.cid !== undefined) expect(record.cid).toMatch(/^[A-Za-z0-9_-]{16}$/);
+      delete record.cid;
+      return JSON.stringify(record);
+    }).join('\n');
     expect(all).not.toContain(KEY);
     expect(all).not.toMatch(/Ana|amendoim/);
     expect(all).toContain('turns.operation_finished');

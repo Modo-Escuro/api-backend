@@ -2,6 +2,15 @@
 
 # CLAUDE.md — Compra com Contexto (SEMCOMP × iFood)
 
+## CART-01 — integração de 18/10/2026
+
+Consultar [escrita confirmada](docs/cart-01-escrita-confirmada.md) e [integração/auditoria](docs/cart-01-integracao.md).
+O incremento permite preparar itens de carrinho somente após revisão, confirmação humana PREPARE_CART e gate de
+evidência; fica desligado por padrão. A F7 legada não escreve. Pagamento, envio de pedido e produção permanecem
+fora deste incremento. O schema SQLite agora é v3; binário v2 deve recusar o banco, sem downgrade ou restauração
+antiga sobre intenções pendentes. Os trechos abaixo que dizem MCP somente leitura descrevem o recorte anterior;
+a sincronização completa da decisão está no PR documental #43. Testes sintéticos não comprovam integração iFood.
+
 ## Planejamento vigente — 18/10/2026
 
 Ler docs/estado-remoto-local.md: distinguir código remoto integrado de patch CART-01 local. A decisão de carrinho real confirmado já foi aprovada; saídas reais e ativação continuam pendentes. Esta revisão altera documentação, não flags ou runtime.

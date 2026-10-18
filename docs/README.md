@@ -1,10 +1,12 @@
 # Documentação da API
 
+[Conclusão offline da integração CART-01](cart-01-conclusao-offline.md): ordem de integração, contrato humano completo, ensaio HTTP do bot, avanço da OPS-02 e gates externos remanescentes.
+
 [Continuidade e endereço iFood](continuidade-enderecos.md): correção da entrega automática no bot, confirmação humana de endereço e sequência coordenada de deploy, ainda sem ativação operacional.
 
-Esta revisão altera somente documentação. A implementação CART-01 local, suas rotas e resultados de testes não fazem parte das mains remotas conferidas.
+Esta branch integra os drafts de endereço #47 e CART-01 #46 sobre a main com a preparação offline INT-02 #48. Código local integrado não comprova merge remoto, deploy ou validação do iFood.
 
-[Estado remoto/local](estado-remoto-local.md): SHAs conferidos, merges, decisão vigente e código CART-01 ainda não publicado. A DEC-01 permite preparação real confirmada; esta revisão documental não habilita a operação.
+[Estado remoto/local](estado-remoto-local.md): SHAs conferidos, merges e código CART-01 publicado no PR #46, ainda separado da main. A DEC-01 permite preparação real confirmada; documentação não habilita a operação.
 
 [Acesso por senha no bot](acesso-bot-senha.md): opt-in para usuários admitidos pelo adaptador autenticado,
 com vínculos isolados e sem ampliar a fronteira de compra da DEC-01.
@@ -23,10 +25,11 @@ com vínculos isolados e sem ampliar a fronteira de compra da DEC-01.
 12. [Montagem AI-01 e ensaio BOT-02](ai-01-montagem-ensaio.md): Gemini 3.8 Flash (seleção do #35), configuração explícita, limites, avaliações e pendências operacionais.
 
 13. [Operação (OPS-02)](ops-02-operacao.md): logs sanitizados, métricas, orçamento do modelo, status operacional, rollout/rollback e ensaios pendentes.
+14. [Carrinho com confirmação humana (CART-01)](cart-01-escrita-confirmada.md): revisão PREPARE_CART, intenção durável, bloqueio de resultado desconhecido e [integração/auditoria](cart-01-integracao.md). Desligado até INT-02 e callback BOT-03 validados.
 
-O [plano revisado do telegram-bot](https://github.com/Modo-Escuro/telegram-bot/blob/codex/revisao-escopo-cart01/docs/plano-conversacional.md) acompanha esta revisão em branch separada; publicação em branch/PR não significa merge. A [StRS preservada](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/baseline/stakeholder-requirements-specification.md) continua em validação.
+O [plano revisado do telegram-bot](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/plano-conversacional.md) já foi integrado pelo #16. O incremento de callback CART-01 é código separado, ainda desligado. A [StRS preservada](https://github.com/Modo-Escuro/telegram-bot/blob/main/docs/baseline/stakeholder-requirements-specification.md) continua em validação.
 
-F7 foi incorporada pelo [PR #4](https://github.com/Modo-Escuro/api-backend/pull/4) e permanece desabilitada por padrão. Outputs provisórios e testes simulados não comprovam carrinho real. A [DEC-01 vigente](decisoes-conversacionais.md) permite carrinho real somente após confirmação humana específica. A nova CART-01 continua local e a validação externa está na [INT-02 #40](https://github.com/Modo-Escuro/api-backend/issues/40). Preparação não usa a rota de aprovação de pedido; envio/pagamento continuam proibidos.
+F7 foi incorporada pelo [PR #4](https://github.com/Modo-Escuro/api-backend/pull/4) e seu caminho legado não pode escrever. A CART-01 acrescenta preparação de itens após confirmação humana específica conforme a [DEC-01 vigente](decisoes-conversacionais.md). Outputs provisórios e testes sintéticos não comprovam iFood; a validação externa está na [INT-02 #40](https://github.com/Modo-Escuro/api-backend/issues/40). PREPARE_CART não aprova compra nem habilita pagamento/envio.
 
 A infraestrutura RUN-01 mantém os schemas da API-01; a montagem do modelo tem opt-in separado na AI-01.
 [Validação histórica de API-01](api-01-validation.md) e testes SQLite são evidências offline; não comprovam operação implantada.

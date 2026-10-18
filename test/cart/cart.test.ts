@@ -44,23 +44,24 @@ describe('F7: carrinho com MCP exclusivamente simulado', () => {
     f.env.clock.advance(5 * 60_000 + 1);
     expect((await f.carts.getCart(ORG_A, f.linkId, f.cart.cartRef)).review).toBeNull();
   });
-  it('erro inline após escrita é conservador, sanitizado e nunca repetido', async () => {
+  it('rota legada não chega à escrita, mesmo quando provedor ofereceria erro retryable', async () => {
     const f = await ready();
     f.fake.hook = async (tool) => { if (tool === 'addItemToCart') throw new McpToolError(tool, [{ code: 'INTERNAL', message: 'segredo-sintético-que-não-deve-sair', retryable: true }]); };
+    const before = f.fake.call.mock.calls.length;
     const result = await f.call('POST', `/api/bot/cart/${f.cart.cartRef}/items`, { linkId: f.linkId, requestId: randomUUID(), item: f.item });
     expect(result.status).toBe(409);
     const text = await result.text();
-    expect(text).toContain('RESULT_UNKNOWN');
-    expect(text).toContain('INTERNAL');
+    expect(text).toContain('CART_CONFIRMATION_REQUIRED');
     expect(text).not.toContain('segredo-sintético');
     expect(JSON.parse(text).error.retryable).toBe(false);
+    expect(f.fake.call.mock.calls).toHaveLength(before);
   });
   it('gateway interpreta error singular e success=false sem confirmar mutação', async () => {
     const callTool = vi.fn().mockResolvedValueOnce({ structuredContent: { error: { code: 'OUT_OF_STOCK', message: 'Sem estoque', retryable: false } } })
       .mockResolvedValueOnce({ structuredContent: { success: false } });
     const gateway = cartGateway(async () => ({ callTool }) as unknown as Client);
-    await expect(gateway.call('addItemToCart', {})).rejects.toMatchObject({ code: 'OUT_OF_STOCK' });
-    await expect(gateway.call('addItemToCart', {})).rejects.toMatchObject({ code: 'UNCONFIRMED' });
+    await expect(gateway.writeConfirmed!('addItemToCart', {})).rejects.toMatchObject({ code: 'OUT_OF_STOCK' });
+    await expect(gateway.writeConfirmed!('addItemToCart', {})).rejects.toMatchObject({ code: 'UNCONFIRMED' });
     expect(callTool).toHaveBeenCalledTimes(2);
   });
 
@@ -227,9 +228,8 @@ describe('F7: carrinho com MCP exclusivamente simulado', () => {
 
 describe('contrato HTTP e preparação F7.3', () => {
 
-  it('executa o contrato HTTP completo sem expor preços decimais ou tokens', async () => {
-    const f = cartSetup();
-    const linked = await connectAndConfirm(f.env, ORG_A), linkId = linked.status.linkId!;
+  it('preserva leituras sanitizadas da F7 e bloqueia todas as rotas legadas de escrita', async () => {
+    const f = await ready(), linkId = f.linkId;
     const catalogResponse = await f.call('POST', '/api/bot/cart/catalog', { linkId, addressId: ADDRESS_ID, query: 'lanche' });
     expect(catalogResponse.status).toBe(200);
     const catalog = await catalogResponse.json();
@@ -237,23 +237,24 @@ describe('contrato HTTP e preparação F7.3', () => {
     expect(catalog.items[0].optionGroups[0].options[0]).not.toHaveProperty('additionalPrice');
     const item = chosenItem(catalog.items[0].itemRef);
     const created = await f.call('POST', '/api/bot/cart', { linkId, requestId: randomUUID(), items: [item] });
-    expect(created.status).toBe(201);
-    const cart = await created.json(), base = `/api/bot/cart/${cart.cartRef}`;
+    expect(created.status).toBe(409);
+    const cart = f.cart, base = `/api/bot/cart/${cart.cartRef}`;
     expect((await f.call('GET', `${base}?linkId=${linkId}`)).status).toBe(200);
-    expect((await f.call('POST', `${base}/items`, { linkId, requestId: randomUUID(), item })).status).toBe(200);
-    expect((await f.call('PUT', `${base}/items/${cart.items[0].cartItemId}`, { linkId, requestId: randomUUID(), item: { ...item, quantity: 2 } })).status).toBe(200);
+    expect((await f.call('POST', `${base}/items`, { linkId, requestId: randomUUID(), item })).status).toBe(409);
+    expect((await f.call('PUT', `${base}/items/${cart.items[0]!.cartItemId}`, { linkId, requestId: randomUUID(), item: { ...item, quantity: 2 } })).status).toBe(409);
     for (const kind of ['delivery', 'payment', 'voucher']) {
       const response = await f.call('GET', `${base}/${kind}?linkId=${linkId}`);
       expect(response.status).toBe(200);
       const listing = await response.json();
       expect(JSON.stringify(listing)).not.toContain(CARD_TOKEN);
-      expect((await f.call('PUT', `${base}/${kind}`, { linkId, requestId: randomUUID(), choiceRef: listing.choices[0].choiceRef })).status).toBe(200);
+      expect((await f.call('PUT', `${base}/${kind}`, { linkId, requestId: randomUUID(), choiceRef: listing.choices[0].choiceRef })).status).toBe(409);
     }
-    expect((await f.call('DELETE', `${base}/voucher`, { linkId, requestId: randomUUID() })).status).toBe(200);
+    expect((await f.call('DELETE', `${base}/voucher`, { linkId, requestId: randomUUID() })).status).toBe(409);
+    await complete(f); // somente fake histórico em memória; nenhum gateway real aceita esse caminho
     const reviewed = await f.call('POST', `${base}/review`, { linkId });
     expect(reviewed.status).toBe(200);
     expect((await reviewed.json()).approvalEnabled).toBe(false);
-    expect((await f.call('DELETE', `${base}/items/${cart.items[0].cartItemId}`, { linkId, requestId: randomUUID() })).status).toBe(200);
+    expect((await f.call('DELETE', `${base}/items/${cart.items[0]!.cartItemId}`, { linkId, requestId: randomUUID() })).status).toBe(409);
   });
   it('não repete mutação confirmada se a leitura subsequente falhar', async () => {
     const f = await ready();
@@ -270,11 +271,11 @@ describe('contrato HTTP e preparação F7.3', () => {
     expect((await f.call('POST', '/api/bot/cart', f.intent, ORG_A, 'inválido')).status).toBe(401);
     for (const extra of [{ organizerId: ORG_B }, { merchantId: randomUUID() }, { totalCents: 1 }, { userConsent: true }]) {
       const r = await f.call('POST', '/api/bot/cart', { ...f.intent, ...extra });
-      expect(r.status).toBe(400);
+      expect(r.status).toBe(409);
     }
     for (const quantity of [0, -1, 1.5, 21]) expect((await f.call('POST', '/api/bot/cart', { ...f.intent,
-      items: [{ ...f.item, quantity }] })).status).toBe(400);
-    expect((await f.call('POST', '/api/bot/cart', { ...f.intent, items: [{ ...f.item, variantId: randomUUID() }] })).status).toBe(400);
+      items: [{ ...f.item, quantity }] })).status).toBe(409);
+    expect((await f.call('POST', '/api/bot/cart', { ...f.intent, items: [{ ...f.item, variantId: randomUUID() }] })).status).toBe(409);
   });
   it('contrato HTTP oferece revisão, mas bloqueia aprovação e envio sem chamar tool de pedido', async () => {
     const f = await ready();
@@ -283,7 +284,7 @@ describe('contrato HTTP e preparação F7.3', () => {
     for (const action of ['approve', 'submit']) {
       const r = await f.call('POST', `/api/bot/cart/${f.cart.cartRef}/${action}`, { linkId: f.linkId, reviewId: review.review!.reviewId });
       expect(r.status).toBe(409);
-      expect((await r.json()).error.kind).toBe('CHECKOUT_DISABLED');
+      expect((await r.json()).error.kind).toBe('CART_CONFIRMATION_REQUIRED');
     }
     expect(f.fake.call.mock.calls).toHaveLength(calls);
     const mockSubmitOrder = vi.fn();
@@ -294,7 +295,7 @@ describe('contrato HTTP e preparação F7.3', () => {
   it('gateway recusa submitOrder mesmo se forçado em runtime, sem obter cliente', async () => {
     const client = vi.fn();
     // eslint-disable-next-line no-restricted-syntax
-    await expect(cartGateway(client).call('submitOrder' as never, {})).rejects.toThrow(/fora do escopo/);
+    await expect(cartGateway(client).call('submitOrder' as never, {})).rejects.toThrow(/proibida/);
     expect(client).not.toHaveBeenCalled();
   });
 });

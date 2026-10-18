@@ -1,0 +1,21 @@
+{
+  "tool": "listAddresses",
+  "observedAt": "2026-10-18T12:23:52.803Z",
+  "classification": "OBSERVED_AUTHENTICATED",
+  "args": {},
+  "response": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"results\":[],\"agentHints\":{\"noResultsGuidance\":\"No saved addresses found. Ask the user for their delivery address as a free-form string (e.g., 'Avenida Paulista, 100, São Paulo, SP'), then save it on the user's account.\"}}"
+      }
+    ],
+    "structuredContent": {
+      "results": [],
+      "agentHints": {
+        "noResultsGuidance": "No saved addresses found. Ask the user for their delivery address as a free-form string (e.g., 'Avenida Paulista, 100, São Paulo, SP'), then save it on the user's account."
+      }
+    },
+    "isError": false
+  }
+}

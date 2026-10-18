@@ -1,0 +1,27 @@
+{
+  "results": [
+    {
+      "addressId": "af508ea4-434b-48ba-aa03-ee21bf533423",
+      "formattedAddress": "Rua Doutor Carlos de Camargo Salles, 400, Cidade Universitária, São Carlos, SP",
+      "location": {
+        "street": "Rua Doutor Carlos de Camargo Salles",
+        "number": "400",
+        "neighborhood": "Cidade Universitária",
+        "city": "São Carlos",
+        "state": "SP"
+      },
+      "postalCode": "13560550",
+      "coordinates": {
+        "latitude": -22.00607,
+        "longitude": -47.89528
+      },
+      "isLastUsedAddress": false,
+      "isMostUsedAddress30d": false
+    }
+  ],
+  "agentHints": {
+    "suggestedNextAction": "Single saved address — use it as the delivery address without waiting for confirmation. Inform the user which address is being used (prefer the alias when available). Let them know they can provide a new address if it is not correct. Do not ask the user to choose among options.",
+    "nextStepWhenUserPicksAddress": "Use the coordinates (latitude/longitude) from this address immediately to find nearby restaurants and items. Inform the user which address is being used (prefer the alias). Tell them they can provide a new address if it is not correct.",
+    "addressCount": 1
+  }
+}
