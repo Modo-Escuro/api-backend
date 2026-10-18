@@ -1,3 +1,5 @@
+**Atualização autorizada em 18/10/2026:** o retorno OAuth no navegador conclui o vínculo sem segundo clique Telegram. Ver [retorno natural](docs/login-retorno-natural.md). Os trechos abaixo sobre confirmação Telegram obrigatória são históricos; compra continua sem autorização pelo login.
+
 # CLAUDE.md — Compra com Contexto (SEMCOMP × iFood)
 
 ## CART-01 — integração de 18/10/2026

@@ -1,3 +1,5 @@
+**Atualização autorizada em 18/10/2026:** o retorno OAuth no navegador conclui o vínculo sem segundo clique Telegram. Ver [retorno natural](login-retorno-natural.md). Os trechos abaixo sobre confirmação Telegram obrigatória são históricos; compra continua sem autorização pelo login.
+
 # Contrato bot Telegram → api-backend (F3.5 — login iFood do organizador)
 
 **Atualização de contexto — 18/10/2026:** este arquivo descreve o contrato existente. [Plano de execução](plano-conversacional.md) e [contrato proposto de conversa](https://github.com/Modo-Escuro/telegram-bot/blob/codex/plano-conversacional/docs/contrato-conversa-proposto.md) especificam o trabalho futuro. Login online foi ensaiado com PUBLIC_BASE_URL HTTPS e callback /callback; referências localhost nos exemplos são de desenvolvimento, não obrigação para o usuário do serviço online. Bot usa BACKEND_BASE_URL e BACKEND_API_TOKEN; API usa BOT_API_TOKEN. Não há aprovação de compra neste contrato.
