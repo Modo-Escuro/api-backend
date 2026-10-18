@@ -9,6 +9,14 @@
 //  - o total é a média ponderada SOMENTE dos critérios avaliados (o peso do critério NO_DATA é
 //    redistribuído entre os demais) e a limitação é registrada em `dataLimitations`;
 //  - sem nenhum critério avaliado ⇒ `score: null` (últimos na ordem, ordem da busca).
+// Evidência de preferência (issue #9): só a configuração EFETIVAMENTE avaliada pontua.
+//  - fontes: nome/descrição do item-base + opções de `evaluation.selection` (as mesmas que compõem
+//    o preço avaliado); nome do estabelecimento e adicionais disponíveis NÃO selecionados nunca
+//    contam como ingrediente presente;
+//  - negações explícitas ("sem bacon", "zero açúcar", "livre de lactose") não são presença;
+//  - ausência de termo não prova ausência: para ingrediente evitado sem evidência ⇒ `NO_DATA`
+//    (+ `dataLimitations`), nunca nota máxima; `NO_DATA` não é nota zero;
+//  - preço e sinais de preferência referem-se SEMPRE à mesma configuração avaliada.
 // Normalização:
 //  - preço/entrega/avaliação: min–max entre os candidatos ELEGIBLE desta consulta (0–1);
 //  - preferências e contexto: valores absolutos 0–1 já derivados dos dados (não dependem do conjunto);
@@ -16,8 +24,11 @@
 // Determinismo: funções puras — sem fetch, sem relógio, sem aleatoriedade. Empates: score desc →
 // ordem da busca (índice do candidato) → itemId.
 
-import type { EligibilityResult, Issue } from './eligibility.js';
-import { normalizeText } from './constraints.js';
+import type { EligibilityResult, Issue, UserConstraints } from './eligibility.js';
+import { checkCap } from './eligibility.js';
+import { blockedOptions, findTermMention, normalizeText, preferenceAvoidedOptions, type TriState } from './constraints.js';
+import { validateSelection, type ConfigValidation, type OptionSelection } from './configuration.js';
+import { computePrice, type PriceBreakdown } from './pricing.js';
 import { val } from './fields.js';
 import type { NormalizedItemDetail, NormalizedListingItem } from './normalize.js';
 
@@ -130,6 +141,29 @@ export interface CriterionScore {
   dataLimitations: string[];
 }
 
+/**
+ * Configuração alternativa sugerida para atender a uma preferência (issue #9, caso F).
+ * Nunca substitui a configuração avaliada: é uma proposta explícita, revalidada do zero —
+ * seleção com IDs reais do getItem, configuração `VALID`, restrições obrigatórias (opção não
+ * bloqueada) e orçamento reavaliados, preço recalculado. Nada aqui é recomendado como elegível
+ * sem essas verificações.
+ */
+export interface AlternativeConfiguration {
+  /** Termo da preferência que a alternativa atenderia. */
+  forPreference: string;
+  /** Seleção explícita completa: configuração avaliada + opção sugerida (optionIds reais). */
+  selection: OptionSelection[];
+  addedOption: { optionId: string; optionGroupId: string; name: string | null; additionalPrice: number | null };
+  /** Revalidação da seleção proposta (exigido status VALID). */
+  configuration: ConfigValidation;
+  /** Preço recalculado para a seleção proposta. */
+  pricing: PriceBreakdown;
+  /** Tetos de orçamento reavaliados sobre o preço novo (null = sem teto informado). */
+  budget: { itemPrice: TriState | null; orderTotal: TriState | null };
+  /** Explicação (seleção, restrições, orçamento e preço revalidados; nada foi substituído). */
+  reasons: string[];
+}
+
 export interface RankedRecommendation {
   itemId: string;
   merchantId: string;
@@ -139,6 +173,8 @@ export interface RankedRecommendation {
   criteria: CriterionScore[];
   reasons: string[];
   dataLimitations: string[];
+  /** Proposta revalidada ou null. A configuração avaliada (e seu preço) nunca é trocada em silêncio. */
+  alternativeConfiguration: AlternativeConfiguration | null;
 }
 
 export interface RankingResult {
@@ -196,24 +232,61 @@ const noData = (basis: string, dataLimitations: string[] = []): Signal => ({ sco
 
 // ---------------- dados brutos (só o que o pipeline já coletou) ----------------
 
-function textCorpus(c: RankCandidate): string {
-  const d = c.detail;
-  const parts = [d ? val(d.itemName) : undefined, val(c.listing.itemName), d ? val(d.itemDescription) : undefined, val(c.listing.merchant.name)];
-  const texts: string[] = parts.filter((x): x is string => Boolean(x));
-  if (d) for (const g of val(d.optionGroups) ?? []) for (const o of g.options) texts.push(val(o.name) ?? '', val(o.description) ?? '');
-  return normalizeText(texts.join(' '));
+/**
+ * Evidência textual da configuração EFETIVAMENTE avaliada (issue #9):
+ *  - `evaluated`: nome/descrição do item-base (listagem + getItem) + textos das opções que compõem
+ *    `evaluation.selection` — exatamente o que foi escolhido e o que o preço avaliado representa;
+ *  - `unselected`: opções disponíveis FORA da seleção — nunca são presença (só explicam NO_DATA).
+ * O nome do estabelecimento (listagem/getItem) deliberadamente fica fora: loja chamada "Bacon House"
+ * não é evidência de ingrediente do produto.
+ */
+interface ConfigEvidence {
+  evaluated: string;
+  unselected: string;
 }
 
-/** Termo inteiro dentro do corpus normalizado (fronteira de palavra). */
-function mentions(corpus: string, term: string): boolean {
-  const t = normalizeText(term);
-  return t ? ` ${corpus} `.includes(` ${t} `) : false;
+function configEvidence(c: RankCandidate): ConfigEvidence {
+  const d = c.detail;
+  const base = [val(c.listing.itemName), d ? val(d.itemName) : undefined, d ? val(d.itemDescription) : undefined].filter(
+    (x): x is string => Boolean(x),
+  );
+  const chosenIds = new Set((c.evaluation.selection?.options ?? []).map((o) => o.optionId));
+  const chosen: string[] = [];
+  const available: string[] = [];
+  if (d) {
+    for (const g of val(d.optionGroups) ?? []) {
+      for (const o of g.options) {
+        const text = `${val(o.name) ?? ''} ${val(o.description) ?? ''}`.trim();
+        (chosenIds.has(o.optionId) ? chosen : available).push(text);
+      }
+    }
+  }
+  return { evaluated: normalizeText([...base, ...chosen].join(' ')), unselected: normalizeText(available.join(' ')) };
+}
+
+type TextEvidence = /** termo afirmado na configuração avaliada */ 'PRESENT' | /** só em negação ("sem X") */ 'NEGATED' |
+  /** só em opção disponível não selecionada */ 'ONLY_UNSELECTED' | /** nenhuma menção */ 'NONE';
+
+function evidenceFor(ev: ConfigEvidence, term: string): TextEvidence {
+  const inConfig = findTermMention(ev.evaluated, term);
+  if (inConfig.asserted) return 'PRESENT';
+  if (inConfig.mentioned) return 'NEGATED';
+  if (findTermMention(ev.unselected, term).mentioned) return 'ONLY_UNSELECTED';
+  return 'NONE';
 }
 
 /** Preço por unidade: valor único ou ponto médio da faixa (com limitação explícita). */
-function pricePoint(c: RankCandidate): { value: number | null; limitation: string | null; discountPercent: number } {
-  const p = c.evaluation.pricing.selected ?? c.evaluation.pricing.minimumConfigurable;
-  if (!p) return { value: null, limitation: 'preço não calculado para este item', discountPercent: 0 };
+function pricePoint(c: RankCandidate): {
+  value: number | null;
+  limitation: string | null;
+  discountPercent: number;
+  /** Qual configuração o preço representa — a mesma que sustenta os sinais de preferência. */
+  source: 'SELECTED' | 'MINIMUM_CONFIGURABLE' | null;
+} {
+  const selected = c.evaluation.pricing.selected;
+  const p = selected ?? c.evaluation.pricing.minimumConfigurable;
+  if (!p) return { value: null, limitation: 'preço não calculado para este item', discountPercent: 0, source: null };
+  const source = selected ? 'SELECTED' : 'MINIMUM_CONFIGURABLE';
   const { min, max } = p.unitTotalRange;
   const discountPercent = p.unit.discountPercent;
   if (min !== null && max !== null && max > min) {
@@ -221,13 +294,14 @@ function pricePoint(c: RankCandidate): { value: number | null; limitation: strin
       value: round4((min + max) / 2),
       limitation: `preço em faixa ${brl(min)}–${brl(max)}; usado o ponto médio da faixa (só o carrinho confirma)`,
       discountPercent,
+      source,
     };
   }
   // Preço único (min === max): valor fechado, sem limitação.
-  if (min !== null && max !== null) return { value: min, limitation: null, discountPercent };
-  if (min !== null) return { value: min, limitation: 'limite superior do preço desconhecido (opção sem preço informado)', discountPercent };
-  if (max !== null) return { value: max, limitation: 'limite inferior do preço desconhecido', discountPercent };
-  return { value: null, limitation: 'preço indisponível para pontuar', discountPercent };
+  if (min !== null && max !== null) return { value: min, limitation: null, discountPercent, source };
+  if (min !== null) return { value: min, limitation: 'limite superior do preço desconhecido (opção sem preço informado)', discountPercent, source };
+  if (max !== null) return { value: max, limitation: 'limite inferior do preço desconhecido', discountPercent, source };
+  return { value: null, limitation: 'preço indisponível para pontuar', discountPercent, source };
 }
 
 const ratingOf = (c: RankCandidate): number | null => val(c.listing.merchant.rating.value) ?? null;
@@ -252,14 +326,81 @@ const deliveryFeeOf = (c: RankCandidate): number | null => val(c.listing.merchan
 
 // ---------------- critérios ----------------
 
-function preferencesSignal(c: RankCandidate, prefs?: UserPreferences | null): Signal {
+interface PreferenceSignal extends Signal {
+  /** Configuração alternativa revalidada proposta para atender a uma preferência (ou null). */
+  alternative: AlternativeConfiguration | null;
+}
+
+/**
+ * Propõe UMA configuração alternativa que atenderia a `term`: adiciona uma única opção disponível,
+ * fora da seleção avaliada, cujo texto afirma o termo. A proposta é revalidada do zero — seleção com
+ * IDs reais, `validateSelection` (bloqueios de alergia/obrigatórias), `computePrice` e teto de
+ * orçamento (`checkCap`) — e nunca substitui a configuração avaliada: é apresentada como sugestão
+ * explícita. Retorna null quando nenhuma opção segura existe (ex.: alergia bloqueia, grupo sem vaga,
+ * configuração inválida ou preço acima do teto).
+ */
+function proposeAlternative(
+  c: RankCandidate,
+  term: string,
+  ev: ConfigEvidence,
+  constraints: UserConstraints | null | undefined,
+): AlternativeConfiguration | null {
+  const d = c.detail;
+  if (!d || d.optionGroups.state !== 'PRESENT') return null;
+  const chosen = c.evaluation.selection?.options ?? [];
+  const chosenIds = new Set(chosen.map((o) => o.optionId));
+  const blocked = blockedOptions(c.evaluation.restrictions);
+  const avoided = preferenceAvoidedOptions(c.evaluation.restrictions);
+  // Termo só presente em opção não selecionada (ou ausente) é o candidato natural à alternativa.
+  const inEvaluated = findTermMention(ev.evaluated, term);
+  if (inEvaluated.asserted || inEvaluated.mentioned) return null;
+
+  for (const g of d.optionGroups.value) {
+    const max = val(g.maxSelections);
+    const selectedInGroup = chosen.filter((s) => g.options.some((o) => o.optionId === s.optionId)).length;
+    // Grupo com max conhecido e ainda com vaga: única configuração verificável para propor.
+    if (max === undefined || selectedInGroup + 1 > max) continue;
+    for (const o of g.options) {
+      if (chosenIds.has(o.optionId) || blocked.has(o.optionId)) continue;
+      const text = `${val(o.name) ?? ''} ${val(o.description) ?? ''}`.trim();
+      if (!findTermMention(text, term).asserted) continue;
+      const selection: OptionSelection[] = [...chosen, { optionId: o.optionId, quantity: 1 }];
+      const configuration = validateSelection(d, selection, blocked, avoided);
+      if (configuration.status !== 'VALID') continue;
+      const pricing = computePrice({ detail: d, listing: c.listing, selection, quantity: 1, kind: 'SELECTED' });
+      const budget = { itemPrice: null as TriState | null, orderTotal: null as TriState | null };
+      const cap = constraints?.budget;
+      if (cap?.maxItemPrice !== undefined) budget.itemPrice = checkCap(pricing.unitTotalRange, cap.maxItemPrice);
+      if (cap?.maxOrderTotal !== undefined) budget.orderTotal = checkCap(pricing.estimatedTotalRange, cap.maxOrderTotal);
+      if (budget.itemPrice === 'FAIL' || budget.orderTotal === 'FAIL') continue;
+      const total = pricing.unitTotalRange.max ?? pricing.unitTotalRange.min;
+      const reason =
+        `configuração alternativa revalidada (não aplicada — sugestão): adicionar "${val(o.name) ?? o.optionId}" atenderia a "${term}"; ` +
+        `preço recalculado ${total !== null ? brl(total) : 'indisponível'}; a configuração avaliada e o preço permanecem os mesmos`;
+      return {
+        forPreference: term,
+        selection,
+        addedOption: { optionId: o.optionId, optionGroupId: g.optionGroupId, name: val(o.name) ?? null, additionalPrice: val(o.additionalPrice) ?? null },
+        configuration,
+        pricing,
+        budget,
+        reasons: [reason],
+      };
+    }
+  }
+  return null;
+}
+
+function preferencesSignal(c: RankCandidate, prefs: UserPreferences | null | undefined, constraints: UserConstraints | null | undefined): PreferenceSignal {
   const scores: number[] = [];
   const reasons: string[] = [];
   const dataLimitations: string[] = [];
+  let totalSignals = 0;
 
   // Preferências declaradas como PREFERENCE nas restrições (nunca bloqueiam — só pontuam).
   for (const r of c.evaluation.restrictions) {
     if (r.requirement !== 'PREFERENCE') continue;
+    totalSignals++;
     const name = r.restriction.code;
     if (r.status === 'PASS') {
       scores.push(1);
@@ -277,43 +418,89 @@ function preferencesSignal(c: RankCandidate, prefs?: UserPreferences | null): Si
   const avoided = terms(prefs?.avoidedIngredients);
   const occasion = prefs?.occasion && normalizeText(prefs.occasion) ? prefs.occasion : null;
 
-  if (foodTypes.length || liked.length || avoided.length || occasion) {
-    const corpus = textCorpus(c);
-    if (foodTypes.length) {
-      const hit = foodTypes.find((t) => mentions(corpus, t)) ?? null;
-      scores.push(hit ? 1 : 0);
-      if (hit) reasons.push(`combina com o tipo de comida pedido: "${hit}"`);
-    }
-    for (const t of liked) {
-      const m = mentions(corpus, t);
-      scores.push(m ? 1 : 0);
-      if (m) reasons.push(`texto do item menciona "${t}" (ingrediente de que você gosta) — heurística`);
-    }
-    for (const t of avoided) {
-      const m = mentions(corpus, t);
-      scores.push(m ? 0 : 1);
-      if (!m) reasons.push(`texto do item não menciona "${t}" (ingrediente que você quis evitar) — heurística`);
-    }
-    if (occasion) {
-      const m = mentions(corpus, occasion);
-      scores.push(m ? 1 : 0);
-      if (m) reasons.push(`ocasião "${occasion}" aparece no texto do item — heurística`);
-    }
+  const hasTextSignals = Boolean(foodTypes.length || liked.length || avoided.length || occasion);
+  let alternative: AlternativeConfiguration | null = null;
+
+  if (hasTextSignals) {
+    const ev = configEvidence(c);
+    const noDescription = !c.detail || c.detail.itemDescription.state !== 'PRESENT';
+
+    const applyPositive = (term: string, what: string) => {
+      totalSignals++;
+      const e = evidenceFor(ev, term);
+      if (e === 'PRESENT') {
+        scores.push(1);
+        reasons.push(`configuração avaliada menciona "${term}" (${what}) — heurística`);
+        return;
+      }
+      if (e === 'NEGATED') {
+        scores.push(0);
+        reasons.push(`menção negativa de "${term}" na configuração avaliada (ex.: "sem ${term}") — indício de ausência; sem bônus (heurística)`);
+        return;
+      }
+      scores.push(0);
+      dataLimitations.push(
+        e === 'ONLY_UNSELECTED'
+          ? `"${term}" aparece só em adicional disponível fora da configuração avaliada (não selecionado) — sem bônus; texto não prova ausência`
+          : `sem evidência textual de "${term}" na configuração avaliada${noDescription ? ' (item sem descrição no iFood)' : ''} — heurística não comprova presença`,
+      );
+    };
+
+    const applyAvoided = (term: string) => {
+      totalSignals++;
+      const e = evidenceFor(ev, term);
+      if (e === 'PRESENT') {
+        scores.push(0);
+        reasons.push(`configuração avaliada menciona "${term}" — ingrediente evitado presente (heurística)`);
+        return;
+      }
+      if (e === 'NEGATED') {
+        scores.push(1);
+        reasons.push(`menção negativa de "${term}" na configuração avaliada (ex.: "sem ${term}") — indício de ausência do ingrediente evitado (heurística; não é prova)`);
+        dataLimitations.push(`indício de ausência de "${term}" baseado em texto do produto — não é confirmação (confirme com a loja)`);
+        return;
+      }
+      // NO_DATA: ausência de termo não prova ausência — nunca nota máxima (issue #9).
+      dataLimitations.push(
+        e === 'ONLY_UNSELECTED'
+          ? `ingrediente evitado "${term}": presente só em adicional não selecionado — fora da configuração avaliada; sem evidência sobre o item-base (NO_DATA)`
+          : `ingrediente evitado "${term}": sem evidência textual na configuração avaliada${noDescription ? ' (item sem descrição no iFood)' : ''} — NO_DATA (não é nota máxima): ausência do termo não prova ausência`,
+      );
+    };
+
+    for (const t of foodTypes) applyPositive(t, 'tipo de comida pedido');
+    for (const t of liked) applyPositive(t, 'ingrediente de que você gosta');
+    for (const t of avoided) applyAvoided(t);
+    if (occasion) applyPositive(occasion, 'ocasião da refeição');
+
+    // Caso F: se algum ingrediente de que a pessoa gosta não está evidente na configuração avaliada,
+    // propõe (nunca aplica) uma configuração alternativa revalidada que o incluiria.
+    const target = liked.find((t) => {
+      const e = evidenceFor(ev, t);
+      return e === 'ONLY_UNSELECTED' || e === 'NONE';
+    });
+    if (target) alternative = proposeAlternative(c, target, ev, constraints);
+
     dataLimitations.push(
-      'Preferências avaliadas por similaridade de texto (nome/descrição/opções): ausência do termo não prova ausência do ingrediente — usado só para preferência, nunca para segurança',
+      'Preferências por texto usam só a configuração EFETIVAMENTE avaliada (nome/descrição do item-base + opções selecionadas): ' +
+        'nome do estabelecimento e adicionais não selecionados não contam como ingrediente presente; ' +
+        'negações ("sem X") não são presença; ausência do termo não prova ausência — heurística, nunca usada para segurança',
     );
   }
 
+  if (alternative) reasons.push(...alternative.reasons);
+
   if (!scores.length) {
-    const informed = Boolean(foodTypes.length || liked.length || avoided.length || occasion || c.evaluation.restrictions.some((r) => r.requirement === 'PREFERENCE'));
+    const informed = totalSignals > 0;
     dataLimitations.push(informed ? 'preferências informadas, mas nenhuma pôde ser avaliada com os dados disponíveis' : 'nenhuma preferência informada');
-    return noData('Nenhum sinal de preferência disponível.', dataLimitations);
+    return { ...noData('Nenhum sinal de preferência disponível.', dataLimitations), alternative };
   }
   return {
     score: round4(avg(scores)),
-    basis: `Média de ${scores.length} sinal(is) de preferência (restrições marcadas como PREFERENCE + similaridade de texto).`,
+    basis: `Média de ${scores.length} de ${totalSignals} sinal(is) de preferência avaliável(eis) (restrições PREFERENCE + texto da configuração avaliada; sinais sem evidência viram NO_DATA).`,
     reasons,
     dataLimitations,
+    alternative,
   };
 }
 
@@ -374,14 +561,17 @@ function contextSignal(c: RankCandidate, limits?: ContextLimits | null): Signal 
 }
 
 function priceSignal(c: RankCandidate, score: number | null, eligibleCount: number): Signal {
-  const { value, limitation, discountPercent } = pricePoint(c);
+  const { value, limitation, discountPercent, source } = pricePoint(c);
   const dataLimitations = limitation ? [limitation] : [];
   if (value === null) return noData('Preço indisponível para pontuar.', dataLimitations);
-  const reasons = [`preço estimado ${brl(value)} por unidade${discountPercent > 0 ? ` (promoção de ${discountPercent}%)` : ''}`];
+  // O preço é o da MESMA configuração que sustenta os sinais de preferência (seleção do usuário
+  // ou configuração mínima) — nunca se mistura a pontuação de uma configuração com o preço de outra.
+  const config = source === 'SELECTED' ? 'configuração selecionada' : 'configuração mínima (sem adicionais opcionais não escolhidos)';
+  const reasons = [`preço estimado ${brl(value)} por unidade da ${config}${discountPercent > 0 ? ` (promoção de ${discountPercent}%)` : ''}`];
   if (score === 1 && eligibleCount > 1) reasons.push('menor preço entre as opções elegíveis');
   return {
     score,
-    basis: `Preço por unidade normalizado (min–max) entre ${eligibleCount} opção(ões) elegível(eis).`,
+    basis: `Preço por unidade da ${config} normalizado (min–max) entre ${eligibleCount} opção(ões) elegível(eis).`,
     reasons,
     dataLimitations,
   };
@@ -442,7 +632,12 @@ function criterionOf(criterion: Criterion, weight: number, s: Signal): Criterion
  * descartados aqui, mesmo que o chamador os passe). `candidates` deve vir na ordem da busca — é o
  * desempate final. Preferências e limites de contexto nunca alteram elegibilidade, só a pontuação.
  */
-export function rankCandidates(candidates: readonly RankCandidate[], preferences?: UserPreferences | null, context?: ContextLimits | null): RankingResult {
+export function rankCandidates(
+  candidates: readonly RankCandidate[],
+  preferences?: UserPreferences | null,
+  context?: ContextLimits | null,
+  constraints?: UserConstraints | null,
+): RankingResult {
   const priority = preferences?.priority ?? null;
   const weights = weightsFor(priority);
   const eligible = candidates.filter((c) => classifyBlockers(c.evaluation.blockers) === 'ELIGIBLE');
@@ -455,6 +650,7 @@ export function rankCandidates(candidates: readonly RankCandidate[], preferences
       '.',
     'O ranking só recebe candidatos já ELIGIBLE: restrições obrigatórias nunca são compensadas por preço, promoção, avaliação ou preferência.',
     'Critérios sem dado recebem status NO_DATA (score null) e têm o peso redistribuído entre os critérios avaliados — nenhuma nota é inventada.',
+    'Preferências pontuam somente a configuração avaliada (nome/descrição do item-base + opções selecionadas): nome da loja e adicionais não selecionados não contam como ingrediente; ausência do termo não prova ausência.',
   ];
   if (candidates.length !== n) notes.push(`${candidates.length - n} candidato(s) recebido(s) com bloqueio foram descartados do ranking (defesa em profundidade).`);
   if (!n) notes.push('Nenhuma opção pôde ser confirmada como compatível com as restrições obrigatórias: nenhuma recomendação emitida (as restrições nunca são relaxadas para preencher a lista).');
@@ -483,8 +679,9 @@ export function rankCandidates(candidates: readonly RankCandidate[], preferences
   );
 
   const assembled = eligible.map((c, i) => {
+    const prefSignal = preferencesSignal(c, preferences, constraints);
     const criteria: CriterionScore[] = [
-      criterionOf('PREFERENCES', weights.PREFERENCES, preferencesSignal(c, preferences)),
+      criterionOf('PREFERENCES', weights.PREFERENCES, prefSignal),
       criterionOf('CONTEXT', weights.CONTEXT, contextSignal(c, context)),
       criterionOf('PRICE', weights.PRICE, priceSignal(c, priceScores.get(i) ?? null, n)),
       criterionOf('DELIVERY', weights.DELIVERY, deliverySignal(c, etaScores.get(i) ?? null, feeScores.get(i) ?? null, n)),
@@ -519,6 +716,7 @@ export function rankCandidates(candidates: readonly RankCandidate[], preferences
       criteria,
       reasons,
       dataLimitations: [...new Set(dataLimitations)],
+      alternative: prefSignal.alternative,
     };
   });
 
@@ -540,7 +738,11 @@ export function rankCandidates(candidates: readonly RankCandidate[], preferences
     criteria: x.criteria,
     reasons: x.reasons,
     dataLimitations: x.dataLimitations,
+    alternativeConfiguration: x.alternative,
   }));
+
+  const withAlt = recommendations.filter((r) => r.alternativeConfiguration !== null).length;
+  if (withAlt) notes.push(`${withAlt} recomendação(ões) inclui(ram) configuração alternativa revalidada (sugestão explícita — a configuração avaliada não foi substituída).`);
 
   return {
     weights,

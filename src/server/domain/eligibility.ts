@@ -12,6 +12,7 @@ import type { NormalizedItemDetail, NormalizedListingItem } from './normalize.js
 import {
   blockedOptions,
   evaluateRestrictions,
+  preferenceAvoidedOptions,
   type RestrictionCheck,
   type RestrictionKey,
   type TriState,
@@ -134,13 +135,15 @@ export function evaluateCandidate(input: CandidateInput, constraints: UserConstr
   if (constraints.restrictions.length) {
     dataLimitations.push('O iFood não fornece ingredientes nem alérgenos estruturados; verificações textuais são heurísticas e nunca comprovam segurança');
   }
-  // Opções bloqueadas por preferência também são evitadas na configuração mínima.
+  // Proibição vem só de restrições OBRIGATÓRIAS; preferências apenas desempregam opções (issue #8).
   const blocked = blockedOptions(restrictions);
+  const avoided = preferenceAvoidedOptions(restrictions);
 
   // ---- preço mínimo configurável (sempre calculado)
   const quantity = input.quantity ?? 1;
-  const minimum = computeMinimumConfigurablePrice(detail, listing, blocked, quantity);
+  const minimum = computeMinimumConfigurablePrice(detail, listing, blocked, quantity, avoided);
   for (const p of minimum.problems) blockers.push({ code: 'NO_VALID_CONFIGURATION', message: p });
+  for (const g of minimum.preferenceGaps) warnings.push({ code: 'PREFERENCE_NOT_MET', message: g });
 
   // ---- configuração avaliada
   let selection: EligibilityResult['selection'] = null;
@@ -150,7 +153,7 @@ export function evaluateCandidate(input: CandidateInput, constraints: UserConstr
   let configuration: ConfigValidation | null = null;
   let selected: PriceBreakdown | null = null;
   if (selection) {
-    configuration = validateSelection(detail, selection.options, blocked);
+    configuration = validateSelection(detail, selection.options, blocked, avoided);
     const hardCodes = ['UNKNOWN_OPTION', 'INVALID_QUANTITY', 'BELOW_MIN', 'ABOVE_MAX', 'BLOCKED_OPTION'];
     for (const i of configuration.issues) {
       (hardCodes.includes(i.code) ? blockers : warnings).push({ code: `CONFIG_${i.code}`, message: i.message });

@@ -325,12 +325,14 @@ export function computeMinimumConfigurablePrice(
   listing: NormalizedListingItem | null | undefined,
   blocked: ReadonlySet<string> = new Set(),
   quantity = 1,
-): { price: PriceBreakdown | null; selection: OptionSelection[] | null; problems: string[] } {
-  const minimal = cheapestRequiredSelection(detail, blocked);
-  if (!minimal.selection) return { price: null, selection: null, problems: minimal.problems };
+  avoided: ReadonlySet<string> = new Set(),
+): { price: PriceBreakdown | null; selection: OptionSelection[] | null; problems: string[]; preferenceGaps: string[] } {
+  const minimal = cheapestRequiredSelection(detail, blocked, avoided);
+  if (!minimal.selection) return { price: null, selection: null, problems: minimal.problems, preferenceGaps: [] };
   return {
     price: computePrice({ detail, listing, selection: minimal.selection, quantity, kind: 'MINIMUM_CONFIGURABLE' }),
     selection: minimal.selection,
     problems: [],
+    preferenceGaps: minimal.preferenceGaps,
   };
 }

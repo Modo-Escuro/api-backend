@@ -25,6 +25,8 @@ export interface ConfigIssue {
     | 'LIMITS_UNKNOWN'
     | 'OPTIONS_UNKNOWN'
     | 'BLOCKED_OPTION'
+    /** Incompatível só com PREFERENCE: aviso, nunca invalida a configuração. */
+    | 'PREFERENCE_OPTION'
     | 'OPTION_REPEAT_UNVERIFIED'
     | 'LIMIT_SEMANTICS_UNKNOWN';
   message: string;
@@ -54,6 +56,7 @@ export function validateSelection(
   detail: NormalizedItemDetail,
   selection: OptionSelection[],
   blocked: ReadonlySet<string> = new Set(),
+  avoided: ReadonlySet<string> = new Set(),
 ): ConfigValidation {
   const issues: ConfigIssue[] = [];
   let unknown = false;
@@ -91,6 +94,13 @@ export function validateSelection(
       issues.push({
         code: 'BLOCKED_OPTION',
         message: `"${val(entry.option.name) ?? s.optionId}" viola uma restrição informada (heurística)`,
+        optionId: s.optionId,
+        optionGroupId: entry.group.optionGroupId,
+      });
+    } else if (avoided.has(s.optionId)) {
+      issues.push({
+        code: 'PREFERENCE_OPTION',
+        message: `"${val(entry.option.name) ?? s.optionId}" é incompatível com uma preferência informada (não bloqueante — heurística)`,
         optionId: s.optionId,
         optionGroupId: entry.group.optionGroupId,
       });
@@ -139,22 +149,28 @@ export interface MinimalSelectionResult {
   selection: OptionSelection[] | null;
   /** Por que não foi possível montar (grupo obrigatório sem opções compatíveis/precificadas). */
   problems: string[];
+  /** Grupos obrigatórios cuja preferência opcional não pôde ser atendida (aviso; nunca bloqueia). */
+  preferenceGaps: string[];
 }
 
 /**
  * Configuração mínima mais barata: em cada grupo obrigatório escolhe `minSelections` opções distintas,
  * não bloqueadas, de menor additionalPrice (opções sem preço só entram se não houver alternativa).
+ * `avoided` (PREFERENCE) nunca exclui opção: só desemprega — se houver opções compatíveis suficientes,
+ * escolhe-se preferencialmente entre elas; senão mantém-se a configuração válida mais barata e registra-se o gap.
  * Grupos opcionais ficam vazios.
  */
 export function cheapestRequiredSelection(
   detail: NormalizedItemDetail,
   blocked: ReadonlySet<string> = new Set(),
+  avoided: ReadonlySet<string> = new Set(),
 ): MinimalSelectionResult {
   if (detail.optionGroups.state !== 'PRESENT') {
-    return { selection: null, problems: ['optionGroups não informado pelo getItem'] };
+    return { selection: null, problems: ['optionGroups não informado pelo getItem'], preferenceGaps: [] };
   }
   const selection: OptionSelection[] = [];
   const problems: string[] = [];
+  const preferenceGaps: string[] = [];
   for (const g of detail.optionGroups.value) {
     const min = val(g.minSelections);
     const name = val(g.name) ?? g.optionGroupId;
@@ -165,12 +181,22 @@ export function cheapestRequiredSelection(
     if (min < 1) continue;
     const allowed = g.options.filter((o) => !blocked.has(o.optionId));
     const priceKey = (o: NormalizedOption) => val(o.additionalPrice) ?? Number.POSITIVE_INFINITY;
-    const sorted = allowed.map((o, i) => ({ o, i })).sort((a, b) => priceKey(a.o) - priceKey(b.o) || a.i - b.i);
+    // Preferência opcional só desemprega: compatíveis primeiro (mais baratos entre eles), depois os demais.
+    const rank = (o: NormalizedOption) => (avoided.has(o.optionId) ? 1 : 0);
+    const sorted = allowed
+      .map((o, i) => ({ o, i }))
+      .sort((a, b) => rank(a.o) - rank(b.o) || priceKey(a.o) - priceKey(b.o) || a.i - b.i);
     if (sorted.length < min) {
       problems.push(`grupo obrigatório "${name}": ${sorted.length} opção(ões) compatível(is), mínimo ${min}`);
       continue;
     }
-    for (const { o } of sorted.slice(0, min)) selection.push({ optionId: o.optionId, quantity: 1 });
+    const chosen = sorted.slice(0, min);
+    if (chosen.some(({ o }) => avoided.has(o.optionId))) {
+      preferenceGaps.push(
+        `grupo obrigatório "${name}": nenhuma opção compatível com a preferência — mantida a configuração obrigatoriamente válida mais barata`,
+      );
+    }
+    for (const { o } of chosen) selection.push({ optionId: o.optionId, quantity: 1 });
   }
-  return { selection: problems.length ? null : selection, problems };
+  return { selection: problems.length ? null : selection, problems, preferenceGaps: problems.length ? [] : preferenceGaps };
 }

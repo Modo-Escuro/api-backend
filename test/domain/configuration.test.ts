@@ -100,6 +100,6 @@ describe('cheapestRequiredSelection', () => {
   });
 
   it('item sem grupos ⇒ seleção vazia válida', () => {
-    expect(cheapestRequiredSelection(item('Veggie Burger'))).toEqual({ selection: [], problems: [] });
+    expect(cheapestRequiredSelection(item('Veggie Burger'))).toEqual({ selection: [], problems: [], preferenceGaps: [] });
   });
 });

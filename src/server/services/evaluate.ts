@@ -320,7 +320,7 @@ export async function runEvaluation(req: EvaluateRequest, deps: EvaluateDeps, ca
   const rankable = candidates
     .filter((c) => c.category === 'ELIGIBLE')
     .map((c) => ({ evaluation: c.evaluation, listing: c.listing, detail: c.detail.status === 'DETAILED' ? c.detail.detail : null }));
-  const ranking = rankCandidates(rankable, req.preferences, req.refinements);
+  const ranking = rankCandidates(rankable, req.preferences, req.refinements, constraints);
 
   const count = (s: DetailOutcome['status']) => outcomes.filter((o) => o.status === s).length;
   return {
