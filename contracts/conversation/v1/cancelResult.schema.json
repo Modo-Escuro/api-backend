@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "contractVersion": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "eventId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,128}$"
+    },
+    "conversationId": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]{0,19}$"
+    },
+    "targetOperationId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{16,64}$"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "REQUESTED",
+        "CANCELLED",
+        "ALREADY_TERMINAL"
+      ]
+    },
+    "remoteCancellation": {
+      "type": "string",
+      "const": "NOT_REQUESTED"
+    }
+  },
+  "required": [
+    "contractVersion",
+    "eventId",
+    "conversationId",
+    "targetOperationId",
+    "status",
+    "remoteCancellation"
+  ],
+  "additionalProperties": false
+}

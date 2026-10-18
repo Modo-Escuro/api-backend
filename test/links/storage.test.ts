@@ -8,7 +8,14 @@ import { IfoodLinkService } from '../../src/server/links/service';
 import { LinkStore, type LinkRecord } from '../../src/server/links/store';
 import { ORG_A, authorize, connectAndConfirm, setup } from '../helpers/fakes';
 
-const mode = (p: string) => statSync(p).mode & 0o777;
+// fs.chmod no Windows só representa o bit de escrita; mode não comprova isolamento por ACL.
+// As asserções completas 700/600 permanecem obrigatórias em plataformas POSIX.
+// https://nodejs.org/api/fs.html#file-modes
+function expectPlatformMode(path: string, expected: number) {
+  const actual = statSync(path).mode;
+  if (process.platform === 'win32') expect(actual & 0o200).toBe(expected & 0o200);
+  else expect(actual & 0o777).toBe(expected);
+}
 const tokenFiles = (dir: string) => (existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.tokens.json')) : []);
 afterEach(() => vi.restoreAllMocks());
 
@@ -17,30 +24,30 @@ function freshDir() {
 }
 
 describe('diretório de vínculos ausente (bug: ENOENT no confirm)', () => {
-  it('confirm cria o diretório (700) e grava tokens (600) e links.json (600)', async () => {
+  it('confirm cria diretório e arquivos, com os modos privados suportados pela plataforma', async () => {
     const dir = freshDir();
     const env = setup({ linksDir: dir });
     expect(existsSync(dir)).toBe(false);
     const r = await connectAndConfirm(env, ORG_A);
     expect(r.status).toMatchObject({ state: 'CONNECTED', operational: true });
-    expect(mode(dir)).toBe(0o700);
+    expectPlatformMode(dir, 0o700);
     const [tok] = tokenFiles(dir);
-    expect(mode(join(dir, tok!))).toBe(0o600);
-    expect(mode(join(dir, 'links.json'))).toBe(0o600);
+    expectPlatformMode(join(dir, tok!), 0o600);
+    expectPlatformMode(join(dir, 'links.json'), 0o600);
   });
 
-  it('diretório existente com permissão frouxa é corrigido para 700; arquivo de token frouxo volta a 600', async () => {
+  it('corrige os modos suportados ao reutilizar diretório e regravar tokens', async () => {
     const dir = freshDir();
     mkdirSync(dir, { recursive: true, mode: 0o755 });
     chmodSync(dir, 0o755);
     const env = setup({ linksDir: dir });
     const r = await connectAndConfirm(env, ORG_A);
-    expect(mode(dir)).toBe(0o700);
+    expectPlatformMode(dir, 0o700);
     const file = join(dir, `${r.status.linkId}.tokens.json`);
     chmodSync(file, 0o644);
     env.clock.advance(2 * 3600_000); // força refresh ⇒ regrava o arquivo
     await env.links.verify(ORG_A);
-    expect(mode(file)).toBe(0o600);
+    expectPlatformMode(file, 0o600);
   });
 });
 

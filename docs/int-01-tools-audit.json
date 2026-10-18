@@ -1,0 +1,348 @@
+{
+  "evidence": "PREEXISTING_TOOLS_LIST_NOT_A_NEW_PROVIDER_RUN",
+  "source": "fixtures/tools-list.json",
+  "hashEncoding": "UTF8_WITH_LF_LINE_ENDINGS",
+  "sha256": "828aebe14ce81e824634dff0936bbd08ae4d021cfd784bf4d9e1d6454de824d8",
+  "capturedToolCount": 23,
+  "liveOutputsCaptured": false,
+  "checkoutEnabled": false,
+  "tools": [
+    {
+      "name": "addItemToCart",
+      "inputRequired": [
+        "cartId",
+        "itemId",
+        "quantity"
+      ],
+      "inputProperties": [
+        "cartId",
+        "itemId",
+        "quantity",
+        "customerNote",
+        "options"
+      ],
+      "outputSchemaPresent": false,
+      "annotations": {
+        "title": "",
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "idempotencyInputFields": [],
+      "f7GatewayAllowed": true,
+      "outputEvidence": "NOT_CAPTURED"
+    },
+    {
+      "name": "createCart",
+      "inputRequired": [],
+      "inputProperties": [
+        "orderId",
+        "addressId",
+        "merchantId",
+        "items",
+        "deliveryMethod",
+        "paymentMethod"
+      ],
+      "outputSchemaPresent": false,
+      "annotations": {
+        "title": "",
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "idempotencyInputFields": [],
+      "f7GatewayAllowed": true,
+      "outputEvidence": "NOT_CAPTURED"
+    },
+    {
+      "name": "getCart",
+      "inputRequired": [
+        "cartId"
+      ],
+      "inputProperties": [
+        "cartId"
+      ],
+      "outputSchemaPresent": false,
+      "annotations": {
+        "title": "",
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "idempotencyInputFields": [],
+      "f7GatewayAllowed": true,
+      "outputEvidence": "NOT_CAPTURED"
+    },
+    {
+      "name": "getCartDeliveryMethods",
+      "inputRequired": [
+        "cartId"
+      ],
+      "inputProperties": [
+        "cartId"
+      ],
+      "outputSchemaPresent": false,
+      "annotations": {
+        "title": "",
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "idempotencyInputFields": [],
+      "f7GatewayAllowed": true,
+      "outputEvidence": "NOT_CAPTURED"
+    },
+    {
+      "name": "listPaymentMethods",
+      "inputRequired": [
+        "merchantId"
+      ],
+      "inputProperties": [
+        "merchantId"
+      ],
+      "outputSchemaPresent": false,
+      "annotations": {
+        "title": "",
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "idempotencyInputFields": [],
+      "f7GatewayAllowed": true,
+      "outputEvidence": "NOT_CAPTURED"
+    },
+    {
+      "name": "listVouchers",
+      "inputRequired": [
+        "cartId"
+      ],
+      "inputProperties": [
+        "cartId"
+      ],
+      "outputSchemaPresent": false,
+      "annotations": {
+        "title": "",
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "idempotencyInputFields": [],
+      "f7GatewayAllowed": true,
+      "outputEvidence": "NOT_CAPTURED"
+    },
+    {
+      "name": "removeItemFromCart",
+      "inputRequired": [
+        "cartId",
+        "cartItemId"
+      ],
+      "inputProperties": [
+        "cartId",
+        "cartItemId"
+      ],
+      "outputSchemaPresent": false,
+      "annotations": {
+        "title": "",
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "idempotencyInputFields": [],
+      "f7GatewayAllowed": true,
+      "outputEvidence": "NOT_CAPTURED"
+    },
+    {
+      "name": "removeVoucher",
+      "inputRequired": [
+        "cartId"
+      ],
+      "inputProperties": [
+        "cartId"
+      ],
+      "outputSchemaPresent": false,
+      "annotations": {
+        "title": "",
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "idempotencyInputFields": [],
+      "f7GatewayAllowed": true,
+      "outputEvidence": "NOT_CAPTURED"
+    },
+    {
+      "name": "setCartDelivery",
+      "inputRequired": [
+        "cartId",
+        "deliveryMethodId"
+      ],
+      "inputProperties": [
+        "cartId",
+        "deliveryMethodId",
+        "selectedTimeSlotId"
+      ],
+      "outputSchemaPresent": false,
+      "annotations": {
+        "title": "",
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "idempotencyInputFields": [],
+      "f7GatewayAllowed": true,
+      "outputEvidence": "NOT_CAPTURED"
+    },
+    {
+      "name": "setCartPayment",
+      "inputRequired": [
+        "cartId",
+        "paymentMethodId"
+      ],
+      "inputProperties": [
+        "cartId",
+        "cardTokenId",
+        "paymentMethodId"
+      ],
+      "outputSchemaPresent": false,
+      "annotations": {
+        "title": "",
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "idempotencyInputFields": [],
+      "f7GatewayAllowed": true,
+      "outputEvidence": "NOT_CAPTURED"
+    },
+    {
+      "name": "setVoucher",
+      "inputRequired": [
+        "cartId",
+        "code",
+        "campaignId"
+      ],
+      "inputProperties": [
+        "cartId",
+        "code",
+        "campaignId"
+      ],
+      "outputSchemaPresent": false,
+      "annotations": {
+        "title": "",
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "idempotencyInputFields": [],
+      "f7GatewayAllowed": true,
+      "outputEvidence": "NOT_CAPTURED"
+    },
+    {
+      "name": "submitOrder",
+      "inputRequired": [
+        "cartId"
+      ],
+      "inputProperties": [
+        "cartId",
+        "userConsent",
+        "document"
+      ],
+      "outputSchemaPresent": false,
+      "annotations": {
+        "title": "",
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "idempotencyInputFields": [],
+      "f7GatewayAllowed": false,
+      "outputEvidence": "NOT_CAPTURED"
+    },
+    {
+      "name": "updateCartItem",
+      "inputRequired": [
+        "cartId",
+        "cartItemId",
+        "itemId",
+        "quantity"
+      ],
+      "inputProperties": [
+        "cartId",
+        "cartItemId",
+        "itemId",
+        "quantity",
+        "customerNote",
+        "options"
+      ],
+      "outputSchemaPresent": false,
+      "annotations": {
+        "title": "",
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "idempotencyInputFields": [],
+      "f7GatewayAllowed": true,
+      "outputEvidence": "NOT_CAPTURED"
+    },
+    {
+      "name": "getOrder",
+      "inputRequired": [
+        "orderId"
+      ],
+      "inputProperties": [
+        "orderId"
+      ],
+      "outputSchemaPresent": false,
+      "annotations": {
+        "title": "",
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "idempotencyInputFields": [],
+      "f7GatewayAllowed": false,
+      "outputEvidence": "NOT_CAPTURED"
+    },
+    {
+      "name": "trackOrder",
+      "inputRequired": [
+        "orderId"
+      ],
+      "inputProperties": [
+        "orderId",
+        "nextPageToken"
+      ],
+      "outputSchemaPresent": false,
+      "annotations": {
+        "title": "",
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "idempotencyInputFields": [],
+      "f7GatewayAllowed": false,
+      "outputEvidence": "NOT_CAPTURED"
+    }
+  ],
+  "reconciliation": {
+    "orderLookupWithoutOrderId": false,
+    "cartLookupWithoutCartId": false,
+    "guarantee": "NOT_ESTABLISHED_BY_THIS_CAPTURE"
+  }
+}

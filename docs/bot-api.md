@@ -1,8 +1,12 @@
 # Contrato bot Telegram → api-backend (F3.5 — login iFood do organizador)
 
+**Atualização de contexto — 18/10/2026:** este arquivo descreve o contrato existente. [Plano de execução](plano-conversacional.md) e [contrato proposto de conversa](https://github.com/Modo-Escuro/telegram-bot/blob/codex/plano-conversacional/docs/contrato-conversa-proposto.md) especificam o trabalho futuro. Login online foi ensaiado com PUBLIC_BASE_URL HTTPS e callback /callback; referências localhost nos exemplos são de desenvolvimento, não obrigação para o usuário do serviço online. Bot usa BACKEND_BASE_URL e BACKEND_API_TOKEN; API usa BOT_API_TOKEN. Não há aprovação de compra neste contrato.
+
 Status: **implementado no api-backend** (2026-10-17). Decisões aceitas: confirmação por **botão** (sem código digitado),
 `BOT_API_TOKEN` + `X-Telegram-User-Id`, dinheiro em **centavos inteiros** no contrato do bot, demo com um organizador.
-Base: `telegram-bot/docs/login-ifood.md`. Login **não** aprova compra; não há operação de compra no backend.
+Base: `telegram-bot/docs/login-ifood.md`. Login **não** aprova compra; não há envio de pedidos no backend. Carrinho F7 opcional e desabilitado por padrão: seção 10.
+
+Contrato de conversa versionado: [API-01 v1.0](conversation-api-v1.md), com schemas e testes offline. A [RUN-01](runtime-turnos.md) registra as rotas e infraestrutura opt-in; ainda exige integração de domínio/IA antes de aceitar novos turnos no processo padrão. As rotas de vínculo deste documento permanecem independentes.
 
 ## 1. Autenticação bot → API
 
@@ -17,6 +21,8 @@ Toda chamada do bot leva:
 - O backend confere o ID contra `ALLOWED_ORGANIZER_IDS`. Identidade no corpo/query/texto do usuário ou do LLM é ignorada
   ou rejeitada (corpos são `strict`).
 - Erros: `401 BOT_AUTH_REQUIRED`, `400 ORGANIZER_REQUIRED`, `403 ORGANIZER_NOT_ALLOWED`, `503 BOT_API_NOT_CONFIGURED` (fail closed).
+- Qualquer rota de vínculo: `503 LINK_STORAGE_UNAVAILABLE` quando o armazenamento de vínculos não pode ser lido (arquivo
+  corrompido/ilegível); nada é alterado e a chamada seguinte tenta de novo. Ver [ops-01-persistencia](ops-01-persistencia.md).
 - Formato de erro: `{ "error": { "kind": "<CÓDIGO>", "message": "...", "state": <estado|null>, "reason": <motivo|null> } }`.
 
 ## 2. Estados
@@ -70,8 +76,8 @@ Corpo de status (todas as rotas de vínculo devolvem este objeto; nunca há toke
 | Método e rota | Corpo | Sucesso | Erros |
 |---|---|---|---|
 | `GET /api/bot/ifood/status` | — | 200 status (sem chamada ao iFood) | — |
-| `POST /api/bot/ifood/connect` | — | 201 status + `authorizationUrl`, `attemptExpiresAt` | 503 `IFOOD_CLIENT_NOT_CONFIGURED` |
-| `POST /api/bot/ifood/confirm` | `{ "confirmationId": "<de attempt.confirmationId>" }` | 200 status + `previousLinkId` | 400 `VALIDATION`; 404 `CONFIRMATION_NOT_FOUND` (inexistente **ou de outro organizador**); 410 `CONFIRMATION_EXPIRED`, `ALREADY_CONFIRMED` (traz `state`), `CONFIRMATION_INVALID` (tentativa substituída/cancelada) |
+| `POST /api/bot/ifood/connect` | — | 201 status + `authorizationUrl`, `attemptExpiresAt` | 503 `IFOOD_CLIENT_NOT_CONFIGURED`; 503 `LINK_STORAGE_NOT_DURABLE` (backend sem disco persistente) |
+| `POST /api/bot/ifood/confirm` | `{ "confirmationId": "<de attempt.confirmationId>" }` | 200 status + `previousLinkId` | 400 `VALIDATION`; 404 `CONFIRMATION_NOT_FOUND` (inexistente **ou de outro organizador**); 410 `CONFIRMATION_EXPIRED`, `ALREADY_CONFIRMED` (traz `state`), `CONFIRMATION_INVALID` (tentativa substituída/cancelada); 503 `LINK_STORAGE_FAILED` (gravação falhou; mesmo `confirmationId` continua válido), `LINK_STORAGE_NOT_DURABLE` |
 | `POST /api/bot/ifood/verify` | — | 200 status (leitura autenticada real; renova token se preciso) | 409 `IFOOD_LINK_REQUIRED` |
 | `POST /api/bot/ifood/cancel` | — | 200 status + `cancelled: true\|false` — cancela **só** a tentativa pendente (link/confirmação); vínculo confirmado continua; idempotente | — |
 | `DELETE /api/bot/ifood/link` | — | 200 status + `removed: true\|false`, `providerRevocation: "NOT_ATTEMPTED"` — remove **só** o vínculo confirmado (tokens, sessão, cache); tentativa pendente continua; idempotente | — |
@@ -92,7 +98,7 @@ Operações de conta (mesma autenticação; exigem vínculo confirmado **e** ope
 ```
 1. /start ou "Conectar":   POST /connect  → 201 { authorizationUrl, attempt.expiresAt }
    Mensagem com botão-URL "Abrir login do iFood" (authorizationUrl) + aviso:
-   "Abra no navegador DESTE computador (o mesmo do backend). O link vale 10 min."
+   "Abra o link no navegador e volte ao Telegram. O link vale 10 min. Em desenvolvimento localhost, use o computador do backend."
 2. Usuário faz login no navegador. A página final diz "volte ao Telegram e toque em Confirmar conexão".
 3. Bot consulta GET /status (botão "Verificar" ou polling curto, ex.: a cada 5 s por até 10 min):
    - AWAITING_AUTHORIZATION → continuar aguardando ("ainda não concluído" — um "já entrei" não comprova nada)
@@ -228,17 +234,19 @@ Exemplo real (fixtures de teste, `query: "lanche vegano"`, `priority: "ECONOMY"`
 }
 ```
 
-## 9. Callback localhost
+## 9. Callback por ambiente
 
-Redirect registrado: **`http://localhost:8000`** (exato). Para a demo: Telegram Desktop e navegador **no computador do backend**.
-Abrir pelo celular não funciona (e é bloqueado). Para uso pelo celular seria preciso outro redirect cadastrado no iFood e
-`PUBLIC_BASE_URL` público — e então a proteção "mesma máquina" deixa de existir (restam navegador vinculado + confirmação).
+No desenvolvimento, `http://localhost:8000` exige cadastro exato e navegador no computador do backend.
+No serviço online, o ensaio usou `https://api-backend-production-9c4c.up.railway.app/callback`, com cadastro aprovado segundo o usuário e conexão operacional observada. PUBLIC_BASE_URL e IFOOD_REDIRECT_URI devem coincidir com o ambiente/cadastro; não substituir o HTTPS por defaults locais.
+Com origem pública, a proteção de loopback não se aplica; permanecem navegador vinculado por cookie e confirmação humana do organizador. Consulte o estado observado no bot; esta documentação não verifica continuamente o deploy.
 
 ## 10. Recorte da demo (não é isolamento multiusuário completo)
 
 - Um organizador em `ALLOWED_ORGANIZER_IDS`, uma conta iFood dedicada de teste.
 - Sem banco de dados, sem criptografia dos tokens em repouso (arquivos modo 600 em `IFOOD_LINKS_DIR`, fora do Git), sem rate
   limiting, sem auditoria, sem revogação no provedor, um único processo (tentativas pendentes ficam em memória).
+- Vínculos confirmados sobrevivem a reinício e redeploy **somente** se `IFOOD_LINKS_DIR` estiver num volume persistente
+  (OPS-01, [ops-01-persistencia](ops-01-persistencia.md)). Tentativas pendentes continuam voláteis.
 - Sessão global antiga (`/api/auth/*`) desligada por padrão e nunca importada como vínculo.
 
 ## 11. Configuração
@@ -248,10 +256,18 @@ Abrir pelo celular não funciona (e é bloqueado). Para uso pelo celular seria p
 BOT_API_TOKEN=<segredo ≥ 32 chars>       # node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 ALLOWED_ORGANIZER_IDS=<ID numérico do organizador>
 PUBLIC_BASE_URL=http://localhost:8000
-IFOOD_LINKS_DIR=.ifood-links
+IFOOD_LINKS_DIR=.ifood-links             # deploy: dentro do volume persistente (ex.: /data/ifood-links)
 
 # telegram-bot (sugestão de nomes; decisão do bot)
-BACKEND_URL=http://localhost:8000
-BOT_API_TOKEN=<o mesmo segredo>
+BACKEND_BASE_URL=http://localhost:8000
+BACKEND_API_TOKEN=<o mesmo segredo BOT_API_TOKEN da API>
 TELEGRAM_ALLOWED_USER_ID=<mesmo ID de ALLOWED_ORGANIZER_IDS>   # enviado como X-Telegram-User-Id
 ```
+
+## 10. F7 — Contrato do carrinho e revisão
+
+Contrato legado, fora da demo [DEC-01 D8](decisoes-conversacionais.md): manter `IFOOD_CART_ENABLED=false`. A sacola da demo é simulada; esta seção não autoriza criar carrinho real nem usar `/purchase-approvals` para aprovação fictícia. Auditoria e limites: [INT-01](int-01-audit.md).
+
+Rotas em `/api/bot/cart` usam a mesma autenticação de adaptador deste documento, JSON estrito, centavos inteiros e vínculo operacional. O contrato completo de endpoints, corpos, respostas, estados e retries está em [f7-cart-checkout.md](f7-cart-checkout.md#endpoints-do-telegram).
+
+Fluxo: consultar `/catalog` com endereço da conta → escolher itemRef/opções → criar carrinho → consultar e selecionar entrega/pagamento/cupom → ler getCart → revisão informativa. O bot gera requestId por intenção e preserva em retries. Não inventar referências nem obter IDs da LLM. A revisão não oferece compra: approve/submit retornam CHECKOUT_DISABLED. RESULT_UNKNOWN exige reconciliação, nunca um novo requestId automático. Cartões não expõem tokens e a configuração real ainda depende da validação das saídas MCP; as correções #2/#3 já estão incorporadas. O catálogo devolve resultados parciais e erros sanitizados por candidato; tentativas de releitura com o mesmo requestId não repetem escritas confirmadas.

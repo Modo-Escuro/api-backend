@@ -1,0 +1,276 @@
+{
+  "provenance": {
+    "kind": "USER_SHARED_RAILWAY_CONSOLE_OUTPUT",
+    "commandCommit": "c817be8031b7ae5673a6c97d95015633faf2dfbe",
+    "independentServerVerification": false,
+    "scope": "Projeção sanitizada de tools/list compartilhada pelo usuário; não contém schemas completos nem respostas de tools/call."
+  },
+  "result": {
+    "audit": "INT-01",
+    "status": "OBSERVED_METADATA",
+    "observedAt": "2026-10-18T05:41:22.487Z",
+    "operation": "tools/list",
+    "pages": 1,
+    "tools": [
+      {
+        "name": "addItemToCart",
+        "inputProperties": [
+          "cartId",
+          "itemId",
+          "quantity",
+          "customerNote",
+          "options"
+        ],
+        "inputRequired": [
+          "cartId",
+          "itemId",
+          "quantity"
+        ],
+        "outputSchemaPresent": false,
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false
+        }
+      },
+      {
+        "name": "createCart",
+        "inputProperties": [
+          "orderId",
+          "addressId",
+          "merchantId",
+          "items",
+          "deliveryMethod",
+          "paymentMethod"
+        ],
+        "inputRequired": [],
+        "outputSchemaPresent": false,
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false
+        }
+      },
+      {
+        "name": "getCart",
+        "inputProperties": [
+          "cartId"
+        ],
+        "inputRequired": [
+          "cartId"
+        ],
+        "outputSchemaPresent": false,
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false
+        }
+      },
+      {
+        "name": "getCartDeliveryMethods",
+        "inputProperties": [
+          "cartId"
+        ],
+        "inputRequired": [
+          "cartId"
+        ],
+        "outputSchemaPresent": false,
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false
+        }
+      },
+      {
+        "name": "listPaymentMethods",
+        "inputProperties": [
+          "merchantId"
+        ],
+        "inputRequired": [
+          "merchantId"
+        ],
+        "outputSchemaPresent": false,
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false
+        }
+      },
+      {
+        "name": "listVouchers",
+        "inputProperties": [
+          "cartId"
+        ],
+        "inputRequired": [
+          "cartId"
+        ],
+        "outputSchemaPresent": false,
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false
+        }
+      },
+      {
+        "name": "removeItemFromCart",
+        "inputProperties": [
+          "cartId",
+          "cartItemId"
+        ],
+        "inputRequired": [
+          "cartId",
+          "cartItemId"
+        ],
+        "outputSchemaPresent": false,
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false
+        }
+      },
+      {
+        "name": "removeVoucher",
+        "inputProperties": [
+          "cartId"
+        ],
+        "inputRequired": [
+          "cartId"
+        ],
+        "outputSchemaPresent": false,
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false
+        }
+      },
+      {
+        "name": "setCartDelivery",
+        "inputProperties": [
+          "cartId",
+          "deliveryMethodId",
+          "selectedTimeSlotId"
+        ],
+        "inputRequired": [
+          "cartId",
+          "deliveryMethodId"
+        ],
+        "outputSchemaPresent": false,
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false
+        }
+      },
+      {
+        "name": "setCartPayment",
+        "inputProperties": [
+          "cartId",
+          "cardTokenId",
+          "paymentMethodId"
+        ],
+        "inputRequired": [
+          "cartId",
+          "paymentMethodId"
+        ],
+        "outputSchemaPresent": false,
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false
+        }
+      },
+      {
+        "name": "setVoucher",
+        "inputProperties": [
+          "cartId",
+          "code",
+          "campaignId"
+        ],
+        "inputRequired": [
+          "cartId",
+          "code",
+          "campaignId"
+        ],
+        "outputSchemaPresent": false,
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false
+        }
+      },
+      {
+        "name": "submitOrder",
+        "inputProperties": [
+          "cartId",
+          "userConsent",
+          "document"
+        ],
+        "inputRequired": [
+          "cartId"
+        ],
+        "outputSchemaPresent": false,
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false
+        }
+      },
+      {
+        "name": "updateCartItem",
+        "inputProperties": [
+          "cartId",
+          "cartItemId",
+          "itemId",
+          "quantity",
+          "customerNote",
+          "options"
+        ],
+        "inputRequired": [
+          "cartId",
+          "cartItemId",
+          "itemId",
+          "quantity"
+        ],
+        "outputSchemaPresent": false,
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false
+        }
+      },
+      {
+        "name": "getOrder",
+        "inputProperties": [
+          "orderId"
+        ],
+        "inputRequired": [
+          "orderId"
+        ],
+        "outputSchemaPresent": false,
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false
+        }
+      },
+      {
+        "name": "trackOrder",
+        "inputProperties": [
+          "orderId",
+          "nextPageToken"
+        ],
+        "inputRequired": [
+          "orderId"
+        ],
+        "outputSchemaPresent": false,
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false
+        }
+      }
+    ],
+    "businessToolsCalled": false,
+    "outputResponsesCaptured": false
+  }
+}
