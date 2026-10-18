@@ -4,6 +4,10 @@ Em 18/10/2026 o usuário solicitou acesso compartilhado à demo com senha, ampli
 organizador. A senha fica no ambiente secreto do bot, não nesta API. Cada pessoa tem seu próprio organizador,
 vínculo, conversa, restrições e orçamento. DEC-01 permanece: sacola simulada, MCP somente leitura, sem envio real.
 
+O consumo do iFood continua exigindo uma conta de teste autorizada do evento, OAuth e confirmação humana do
+vínculo por `/conectar`. A senha compartilhada da demo não substitui nenhuma dessas credenciais. O acesso ao
+modelo também usa sua própria credencial do provedor, somente no backend.
+
 `BOT_PASSWORD_ACCESS_ENABLED=false` por padrão conserva a allowlist. Quando `true`, o middleware permite um
 ID Telegram novo somente com token de serviço válido **e** `X-Telegram-Access: PASSWORD`, marcador reservado
 ao adaptador que verificou a sessão. Não há autenticação anônima, wildcard público nem senha em corpo/query.
