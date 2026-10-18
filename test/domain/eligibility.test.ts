@@ -71,25 +71,26 @@ describe('alergias', () => {
     expect(codes(e.blockers)).toEqual(['ALLERGY_UNVERIFIED']);
   });
 
-  it('GLUTEN_FREE do iFood em item sem opções ⇒ elegível, com aviso de contaminação cruzada', () => {
+  it('GLUTEN_FREE do iFood em item sem opções ⇒ NÃO elegível (alergia nunca é aprovada pelo catálogo)', () => {
     const d = item('Veggie Burger');
     const e = evaluateCandidate({ listing: listingFor(d.itemId), detail: d, serverFilters: ['GLUTEN_FREE'] }, { restrictions: [{ kind: 'ALLERGY', code: 'GLUTEN' }] });
-    expect(e.eligible).toBe(true);
-    expect(e.warnings.map((w) => w.message).join()).toMatch(/contaminação cruzada/);
+    expect(e.eligible).toBe(false);
+    expect(codes(e.blockers)).toEqual(['ALLERGY_UNVERIFIED']);
+    expect(e.restrictions[0]).toMatchObject({ status: 'UNKNOWN', source: 'SERVER_FILTER_INSUFFICIENT' });
   });
 
-  it('GLUTEN_FREE + descrição com "pão" ⇒ conflito ⇒ bloqueia', () => {
+  it('GLUTEN_FREE + descrição com "pão" ⇒ UNKNOWN ⇒ bloqueia', () => {
     const d = item('Vegano Brooks');
     const e = evaluateCandidate({ listing: listingFor(d.itemId), detail: d, serverFilters: ['GLUTEN_FREE'] }, { restrictions: [{ kind: 'ALLERGY', code: 'GLUTEN' }] });
-    expect(codes(e.blockers)).toContain('ALLERGY_UNVERIFIED');
+    expect(codes(e.blockers)).toEqual(['ALLERGY_UNVERIFIED']);
   });
 
-  it('GLUTEN_FREE cobre o item-base, não opções ⇒ configuração com opções obrigatórias bloqueia', () => {
+  it('item com opções obrigatórias e GLUTEN_FREE ⇒ continua bloqueado', () => {
     const a = item('Açai Artesanal');
     const e = evaluateCandidate({ listing: listingFor(a.itemId), detail: a, serverFilters: ['GLUTEN_FREE'] }, { restrictions: [{ kind: 'ALLERGY', code: 'GLUTEN' }] });
-    expect(a.itemDescription.state).toBe('PRESENT');
-    expect(e.restrictions[0]!.status).toBe('PASS');
-    expect(codes(e.blockers)).toEqual(['ALLERGY_OPTIONS_UNVERIFIED']);
+    expect(e.eligible).toBe(false);
+    expect(e.restrictions[0]!.status).toBe('UNKNOWN');
+    expect(codes(e.blockers)).toContain('ALLERGY_UNVERIFIED');
   });
 });
 

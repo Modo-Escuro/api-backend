@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../../src/server/app';
 import { IfoodAuth } from '../../src/server/auth';
-import { ADDRESS, BOT_TOKEN, ORG_A, ORG_B, authorize, connectAndConfirm, setup } from '../helpers/fakes';
+import { ADDRESS, BOT_TOKEN, ORG_A, ORG_B, authorize, connectAndConfirm, fx, setup } from '../helpers/fakes';
 
 function mk(over: Parameters<typeof setup>[0] = {}) {
   const env = setup(over);
@@ -257,6 +257,70 @@ describe('/api/evaluate em centavos (contrato do bot)', () => {
     JSON.parse(json, (k, v) => (k.endsWith('Cents') && typeof v === 'number' && nums.push(v), v));
     expect(nums.length).toBeGreaterThan(10);
     expect(nums.every(Number.isInteger)).toBe(true);
+  });
+});
+
+describe('cancelar tentativa × desconectar vínculo (rotas separadas)', () => {
+  it('cancel encerra só a tentativa; vínculo confirmado continua', async () => {
+    const { call, env } = mk();
+    const first = await connectAndConfirm(env, ORG_A);
+    await authorize(env, ORG_A); // reconexão pendente
+    const r = await call('POST', '/api/bot/ifood/cancel');
+    expect(r.status).toBe(200);
+    const j = await r.json();
+    expect(j).toMatchObject({ cancelled: true, state: 'CONNECTED', linkId: first.status.linkId, attempt: null });
+    expect((await call('GET', '/api/addresses')).status).toBe(200);
+    expect(await (await call('POST', '/api/bot/ifood/cancel')).json()).toMatchObject({ cancelled: false }); // idempotente
+  });
+
+  it('DELETE /link remove só o vínculo; tentativa pendente continua confirmável', async () => {
+    const { call, env } = mk();
+    await connectAndConfirm(env, ORG_A);
+    const pending = await authorize(env, ORG_A);
+    const d = await (await call('DELETE', '/api/bot/ifood/link')).json();
+    expect(d).toMatchObject({ removed: true, state: 'AWAITING_CONFIRMATION', linkId: null, providerRevocation: 'NOT_ATTEMPTED' });
+    expect((await call('GET', '/api/addresses')).status).toBe(409);
+    const conf = await call('POST', '/api/bot/ifood/confirm', { body: { confirmationId: pending.confirmationId } });
+    expect((await conf.json()).state).toBe('CONNECTED');
+    const again = await (await call('DELETE', '/api/bot/ifood/link')).json();
+    expect(again).toMatchObject({ removed: true, state: 'DISCONNECTED' });
+    expect(await (await call('DELETE', '/api/bot/ifood/link')).json()).toMatchObject({ removed: false }); // idempotente
+  });
+
+  it('cancel sem nada pendente e sem vínculo ⇒ 200 cancelled=false', async () => {
+    const { call } = mk();
+    expect(await (await call('POST', '/api/bot/ifood/cancel')).json()).toMatchObject({ cancelled: false, state: 'DISCONNECTED' });
+  });
+});
+
+describe('regressão de alergia em /api/evaluate (issue #3)', () => {
+  it('ALLERGY:GLUTEN: filtro GLUTEN_FREE enviado ao iFood, mas nenhum candidato elegível', async () => {
+    const { call, env } = mk();
+    await connectAndConfirm(env, ORG_A);
+    env.mcp.searchPages = [{ ...fx('searchOffers-lanche-glutenfree.json'), hasMore: false }];
+    const r = await call('POST', '/api/evaluate', { body: { query: 'lanche', restrictions: [{ kind: 'ALLERGY', code: 'GLUTEN' }] } });
+    expect(r.status).toBe(200);
+    const body = await r.json();
+    expect(env.mcp.searchArgs.at(-1)!.refinements).toMatchObject({ itemRestrictions: ['GLUTEN_FREE'] });
+    expect(body.serverFilters).toEqual(['GLUTEN_FREE']);
+    expect(body.summary).toMatchObject({ candidates: 1, eligible: 0, blocked: 1 });
+    const c = body.blocked[0];
+    expect(c.item.name).toBe('Veggie Burger');
+    expect(c.detail.status).toBe('DETAILED');
+    expect(c.eligible).toBe(false);
+    expect(c.restrictions[0]).toMatchObject({ status: 'UNKNOWN', source: 'SERVER_FILTER_INSUFFICIENT', blocking: true });
+    expect(c.blockers.map((b: { code: string }) => b.code)).toEqual(['ALLERGY_UNVERIFIED']);
+    expect(body.summary.blockerCounts).toEqual({ ALLERGY_UNVERIFIED: 1 });
+    // Preço continua sendo informado em centavos para transparência, mesmo bloqueado
+    expect(c.pricing.minimumConfigurable.unitTotalCents).toBe(5980);
+  });
+
+  it('restrição alimentar GLUTEN_FREE (preferência de dieta) com o mesmo item continua elegível', async () => {
+    const { call, env } = mk();
+    await connectAndConfirm(env, ORG_A);
+    env.mcp.searchPages = [{ ...fx('searchOffers-lanche-glutenfree.json'), hasMore: false }];
+    const body = await (await call('POST', '/api/evaluate', { body: { query: 'lanche', restrictions: [{ kind: 'DIETARY', code: 'GLUTEN_FREE' }] } })).json();
+    expect(body.summary).toMatchObject({ eligible: 1 });
   });
 });
 

@@ -6,7 +6,8 @@
 // Falha de rede/provedor é PROVIDER_UNREACHABLE/PROVIDER_ERROR — nunca equivale a logout.
 
 import { createHash, randomBytes } from 'node:crypto';
-import { readFile, writeFile, rm } from 'node:fs/promises';
+import { chmod, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
+import { dirname } from 'node:path';
 import { config as defaultConfig, type AppConfig } from './config.js';
 
 export interface StoredTokens {
@@ -94,8 +95,15 @@ export class IfoodAuth {
   }
 
   private async save(t: StoredTokens): Promise<void> {
+    // Memória primeiro: num refresh o AS já rotacionou o refresh_token; perder o novo por falha de disco
+    // derrubaria a sessão. Falha de gravação ainda é propagada ao chamador.
     this.tokens = t;
-    if (this.tokenFile) await writeFile(this.tokenFile, JSON.stringify(t, null, 2), { mode: 0o600 });
+    if (this.tokenFile) {
+      // Diretório ausente é criado (700); permissão de diretório existente é responsabilidade do dono (LinkStore.ensureDir).
+      await mkdir(dirname(this.tokenFile), { recursive: true, mode: 0o700 });
+      await writeFile(this.tokenFile, JSON.stringify(t, null, 2), { mode: 0o600 });
+      await chmod(this.tokenFile, 0o600); // arquivo pré-existente mantém a permissão antiga sem isto
+    }
   }
 
   /** Define tokens já obtidos (ex.: após troca de código numa tentativa de vínculo). */

@@ -7,3 +7,8 @@ dist/
 *.log
 *.html
 .ifood-links/
+# arquivos temporários de editor (podem conter segredos do .env)
+*.kate-swp
+*.swp
+*.swo
+*~
