@@ -20,6 +20,7 @@ import { scopeKey } from '../turns/store.js';
 import { AgentProposalSchema, type ConversationModel } from './model.js';
 import { buildModelInput, missingQuestions, planActions } from './policy.js';
 import { renderSnapshot, SNAPSHOT_BUDGET_BYTES } from './render.js';
+import { AddressError } from '../services/delivery-addresses.js';
 
 export interface AgentOptions {
   model: ConversationModel;
@@ -33,7 +34,7 @@ export interface AgentOptions {
    * GRP-01: composição de propostas por leitura MCP (ex.: `linkedProposalProvider`). Ausente ⇒ sugestões
    * indisponíveis (pendência), sem afetar o resto do turno.
    */
-  proposals?(organizerId: string, state: PurchaseState, query: string, signal: AbortSignal): Promise<GroupResult & { linkId?: string }>;
+  proposals?(organizerId: string, state: PurchaseState, query: string, signal: AbortSignal): Promise<GroupResult & { linkId?: string; addressId?: string }>;
   /** Prazo da busca de propostas (padrão 30 s). */
   proposalsTimeoutMs?: number;
   /** OPS-02: orçamento por conversa/global. Estouro ⇒ LIMIT_EXCEEDED antes de chamar o modelo. */
@@ -161,13 +162,16 @@ export function createAgentProcessor(opts: AgentOptions): TurnProcessor {
           const proposalSignal = AbortSignal.any([ctx.signal, AbortSignal.timeout(opts.proposalsTimeoutMs ?? 30_000)]);
           const result = await withDeadline(proposalSignal, ctx.signal, (s) => opts.proposals!(ctx.principal.organizerId, state, plan.suggest!, s));
           if (result.linkId !== undefined && result.linkId !== linkId) throw new StaleLinkError();
+          const addressOps = result.addressId ? [{ op: 'SET_ADDRESS' as const, addressId: result.addressId }] : [];
           const op = { op: 'SET_PROPOSALS' as const, proposals: result.proposals.map((p) => p.proposal) };
-          plan.state = ctx.previewDomain({ ops: [...plan.ops, op], ...(linkId ? { linkId } : {}) });
-          plan.ops.push(op);
+          plan.state = ctx.previewDomain({ ops: [...plan.ops, ...addressOps, op], ...(linkId ? { linkId } : {}) });
+          plan.ops.push(...addressOps, op);
           plan.applied.push(result.proposals.length ? `Encontrei ${result.proposals.length} proposta(s) para "${plan.suggest}".` : `Nenhuma proposta válida para "${plan.suggest}".`);
           extraNotes.push(...result.explanation);
         } catch (e) {
-          extraNotes.push(proposalFailureText(e));
+          extraNotes.push(e instanceof AddressError && e.code === 'ADDRESS_REQUIRED'
+            ? 'Confirme seu endereço pelo botão Endereços iFood antes das sugestões. Podemos continuar organizando participantes, restrições e orçamento.'
+            : proposalFailureText(e));
           log('error', 'agent.proposals_unavailable', { component: 'agent', code: reason(e, 'PROPOSALS') });
           metrics.inc('agent_proposals_total', { outcome: reason(e, 'PROPOSALS') });
         }

@@ -8,6 +8,7 @@ import type { SpendBudget } from './ops/budget.js';
 import { linkedProposalProvider } from './services/group.js';
 import { TurnRuntime } from './turns/runtime.js';
 import { TurnStore } from './turns/store.js';
+import { DeliveryAddresses } from './services/delivery-addresses.js';
 
 /** Folga do turno além do prazo do modelo, para a consulta local do vínculo não consumir o tempo do modelo. */
 const LINK_LOOKUP_MARGIN_MS = 2_000;
@@ -15,6 +16,8 @@ const LINK_LOOKUP_MARGIN_MS = 2_000;
 export function createConversationRuntime(cfg: AppConfig, links: Pick<IfoodLinkService, 'status' | 'withOperational'>, transport?: typeof fetch,
   budget?: SpendBudget) {
   if (!cfg.conversationRuntime) return undefined;
+  const store = new TurnStore(cfg.conversationRuntime.dbFile);
+  const addresses = new DeliveryAddresses(store, links);
   const model = cfg.conversationModel;
   const processor = model ? createAgentProcessor({
     model: createGeminiModel({ apiKey: model.apiKey, maxRequests: model.maxRequests, maxRequestsPerConversation: model.maxRequestsPerConversation,
@@ -25,9 +28,11 @@ export function createConversationRuntime(cfg: AppConfig, links: Pick<IfoodLinkS
     // (state UNAVAILABLE) não bloqueia o turno. Só falha de armazenamento lança (exceção de status()).
     // Operações que dependem do MCP (sugestões) passam por withOperational, que exige vínculo operacional.
     linkOf: async (organizerId) => (await links.status(organizerId)).linkId,
-    proposals: linkedProposalProvider(links),
+    proposals: linkedProposalProvider(links, { addressFor: (organizerId, ctx) => addresses.forSuggestions({
+      botId: cfg.conversationRuntime!.botId, organizerId, conversationId: organizerId,
+    }, ctx) }),
     // OPS-02: reserva antes do Gemini e ajuste pelos tokens reportados (reportUsage); LIMIT_EXCEEDED antes da chamada.
     ...(budget ? { budget } : {}),
   }) : undefined;
-  return new TurnRuntime(new TurnStore(cfg.conversationRuntime.dbFile), { processor });
+  return new TurnRuntime(store, { processor });
 }

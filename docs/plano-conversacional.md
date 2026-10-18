@@ -1,5 +1,7 @@
 # Plano de execução da API
 
+Continuação de código: [continuidade e endereço iFood](continuidade-enderecos.md), desenvolvida separadamente dos drafts de cart. O retrato histórico abaixo não representa a publicação/ativação dessa continuação.
+
 Revisão de 18/10/2026 sobre [`main@f3b8b55`](https://github.com/Modo-Escuro/api-backend/tree/f3b8b5561acc0c0ae5e9efe12b52acc2f29bf218). [Estado remoto/local](estado-remoto-local.md) · [DEC-01 vigente](decisoes-conversacionais.md) · [Épico](https://github.com/Modo-Escuro/telegram-bot/issues/6). O [planejamento anterior](https://github.com/Modo-Escuro/api-backend/blob/f3b8b5561acc0c0ae5e9efe12b52acc2f29bf218/docs/plano-conversacional.md) conserva o histórico.
 
 ## Código remoto integrado e trabalho local
