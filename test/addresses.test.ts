@@ -2,9 +2,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../src/server/app';
 import { loadConfig } from '../src/server/config';
-import { contentHash, type AdapterPrincipal } from '../src/server/contracts/guards';
+import type { AdapterPrincipal } from '../src/server/contracts/guards';
 import { DeliveryAddresses } from '../src/server/services/delivery-addresses';
-import { linkedProposalProvider } from '../src/server/services/group';
+import { AssistantTools } from '../src/server/assistant/tools';
 import { applyPatch } from '../src/server/domain/purchase';
 import { TurnRuntime } from '../src/server/turns/runtime';
 import { TurnStore } from '../src/server/turns/store';
@@ -35,7 +35,7 @@ function setup() {
   const runtime = new TurnRuntime(store);
   const cfg = loadConfig({ BOT_API_TOKEN: token, ALLOWED_ORGANIZER_IDS: p.organizerId,
     CONVERSATION_RUNTIME_ENABLED: 'true', CONVERSATION_DB_FILE: './data/synthetic-address-test.db', BOT_TELEGRAM_ID: p.botId });
-  const app = createApp(undefined, { config: cfg, conversations: runtime, links: links as IfoodLinkService });
+  const app = createApp({ config: cfg, conversations: runtime, links: links as IfoodLinkService });
   const headers = { authorization: `Bearer ${token}`, 'x-telegram-user-id': p.organizerId, 'x-telegram-chat-id': p.conversationId, 'content-type': 'application/json' };
   const path = `/api/bot/v1/conversations/${p.conversationId}/addresses`;
   return { store, addresses, service, links, list, search, ctx, app, headers, path,
@@ -143,12 +143,11 @@ describe('endereços: leitura autenticada, confirmação e revalidação', () =>
     const failed = await f.app.request(f.path, { headers: f.headers });
     expect(failed.status).toBe(503); expect(await failed.text()).not.toContain('segredo-sintético');
   });
-  it('provedor de sugestões não usa fallback automático antes de endereço confirmado', async () => {
+  it('executor do assistente não busca ofertas antes de endereço confirmado', async () => {
     const f = setup();
-    const provider = linkedProposalProvider(f.links as never, { addressFor: (_org, ctx) => f.service.forSuggestions(p, ctx) });
-    const state = applyPatch(null, [{ op: 'ADD_PARTICIPANT', displayName: 'Pessoa sintética' }], { seed: 'test', eventId: 'e1' }).state;
-    await expect(provider(p.organizerId, state, 'comida')).rejects.toMatchObject({ code: 'ADDRESS_REQUIRED' });
-    expect(f.list).not.toHaveBeenCalled(); expect(f.search).not.toHaveBeenCalled();
-    expect(contentHash('synthetic-link-a')).toHaveLength(64);
+    const tools = new AssistantTools({ links: f.links, organizerId: p.organizerId, linkId: f.ctx.linkId,
+      signal: new AbortController().signal, selectedAddress: linkId => f.service.selected(p, linkId) });
+    expect(await tools.execute({ name: 'searchOffers', arguments: { query: 'comida' } })).toMatchObject({ error: { code: 'ADDRESS_REQUIRED' } });
+    expect(f.list).toHaveBeenCalledOnce(); expect(f.search).not.toHaveBeenCalled();
   });
 });

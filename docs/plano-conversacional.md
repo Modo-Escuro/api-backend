@@ -1,10 +1,16 @@
 # Plano de execução da API
 
-**Continuação local de 18/10:** [conclusão offline CART-01](cart-01-conclusao-offline.md) integra #47/#46 com a main que contém a preparação INT-02 #48, apresentação final do bot e parte da instrumentação OPS-02. O retrato abaixo é histórico; esta continuação não foi publicada/ativada e não conclui a evidência externa da #40.
+## Nova direção solicitada pelo usuário
 
-Continuação de código: [continuidade e endereço iFood](continuidade-enderecos.md), desenvolvida separadamente dos drafts de cart. O retrato histórico abaixo não representa a publicação/ativação dessa continuação.
+**Estado local em 20/10/2026:** descoberta, memória seletiva e seleção digitada de propostas DATA-01 implementadas. A etapa seguinte escolhida pelo usuário, [retirada do legado](retirada-legado.md), removeu o processador structured, F7, painel React e sessão global da árvore local. A montagem única é o assistente opt-in; os quadros de SHAs abaixo continuam históricos e não declaram publicação desta alteração. A conexão do novo fluxo de sacola às revisões/callbacks CART-01 do bot ainda precisa de verificação própria.
 
-Continuação GRP-01: [busca progressiva e ausência de propostas](grp-01-busca-progressiva.md), em PR complementar sobre a main que já integra #47/#48, sem merge/deploy automático. Amplia somente leituras; alergia UNKNOWN continua bloqueada, total desconhecido não valida orçamento e a confirmação humana de carrinho permanece obrigatória.
+Memória seletiva implementada; reconciliação com main `f6ef20e` usa **v6** para unificar variantes v5. Novos fatos usam commit e restrição nova de consumidor invalida a sacola; não há transferência por nome/e-mail. [Alcance](assistente-conversacional.md#identidade-e-persistência-alcance-real), [migração](armazenamento-v6.md) e [sincronização GitHub](sincronizacao-github.md).
+
+A [proposta de assistente conversacional](assistente-conversacional.md) substitui o formulário como entrada principal: a IA recebe intenção/ocasião, conhece as ferramentas de consulta e solicita leituras executadas pela API. A descoberta com prévia progressiva está em implementação local opt-in. O objetivo de produto agora inclui **concluir o pedido no Telegram após um botão humano de confirmação final**; esse fechamento pertence à continuação BUY-01/BUY-02 e ainda não está implementado/ativado. Os retratos abaixo preservam o incremento anterior e não comprovam entrega do novo fluxo.
+
+**Continuação de 18/10:** a [conclusão offline CART-01](cart-01-conclusao-offline.md) registra a publicação no draft API #46 (`11a05ce87ed61c1d9ab013fd98aa65ec89ea7d54`) e no draft bot #17 (`b0d208932b058812e9316db42188b9659ff9c45a`). A integração reúne #47/#46, preparação INT-02 #48, apresentação final do bot e parte da instrumentação OPS-02. Publicação em draft não significa merge na main, deploy ou ativação; esses passos não foram executados no incremento registrado, e a evidência externa da #40 continua pendente. O retrato abaixo preserva a base histórica anterior à publicação, sem verificar o estado remoto em tempo real.
+
+Continuação de código: [continuidade e endereço iFood](continuidade-enderecos.md), desenvolvida inicialmente em separado e incorporada à integração offline registrada acima. O retrato histórico abaixo não representa o estado dos drafts posteriores.
 
 Revisão de 18/10/2026 sobre [`main@f3b8b55`](https://github.com/Modo-Escuro/api-backend/tree/f3b8b5561acc0c0ae5e9efe12b52acc2f29bf218). [Estado remoto/local](estado-remoto-local.md) · [DEC-01 vigente](decisoes-conversacionais.md) · [Épico](https://github.com/Modo-Escuro/telegram-bot/issues/6). O [planejamento anterior](https://github.com/Modo-Escuro/api-backend/blob/f3b8b5561acc0c0ae5e9efe12b52acc2f29bf218/docs/plano-conversacional.md) conserva o histórico.
 
@@ -61,17 +67,17 @@ Esta revisão é documental e não transporta código/testes da CART-01 local pa
 
 Os commits identificam código integrado, não implantação ou validação externa. A auditoria anterior em `dc448f9` permanece histórica; #38 e #41 já estão na main conferida.
 
-## Ordem de execução restante
+## Ordem de execução restante — árvore local em 20/10
 
-1. Avançar INT-02 e integração CART-01; nenhuma escrita operacional sem contrato e confirmação humana específica. Não alterar produção.
-2. BOT-03 pode apresentar grupo/propostas desde já. O callback PREPARE_CART exige contrato de carrinho integrado; a futura aprovação SUBMIT_ORDER é outra entrega e permanece indisponível.
+1. Verificar a ligação da escolha digitada/sacola do assistente com as revisões e o callback PREPARE_CART do bot, mantendo os gates desligados. Memória, progresso e retirada do legado já estão implementados localmente; documentação não os publica.
+2. Avançar INT-02 e o ensaio CART-01/BOT-03 autorizado; nenhuma escrita operacional sem outputs/contrato e confirmação humana específica. A futura SUBMIT_ORDER é outra entrega e permanece indisponível. Não alterar produção por esta revisão.
 3. Revalidar vínculo, endereço, loja, produtos/opções/quantidades e restrições por pessoa antes de escrever. Reler composição, preços, taxas e disponibilidade observável; divergência exige nova confirmação.
 4. Persistir intenção antes da rede e conservar bloqueio após timeout. Sem fonte confiável para reconciliar, não repetir com outro requestId, reconexão ou reinício.
 5. Executar QA-01 por marcos: conversa integrada; carrinho real observado; fechamento externo ainda pendente. O aceite exige resultado externo comprovado, sem substituir preparação real por composição local.
 
 ## Módulos e fronteiras
 
-`routes/` e `botAuth.ts` validam o adaptador; `turns/` mantém fila/SQLite; `agent/` propõe ações estruturadas; `domain/` preserva regras; `services/group.ts` compõe propostas; `conversation-runtime.ts` monta o processador opt-in. A CART-01 deve reutilizar DATA-01/GRP-01/DOM-01. Não duplicar carrinho, rateio ou restrições.
+`routes/` e `botAuth.ts` validam o adaptador; `turns/` mantém fila/SQLite; `assistant/` roteia destinatários e planeja consultas; `ai/` contém o transporte; `domain/group.ts` compõe propostas; `conversation-runtime.ts` monta o assistente opt-in. A CART-01 reutiliza DATA-01/GRP-01/DOM-01. Não duplicar sacola, rateio ou restrições.
 
 PREPARE_CART confirma somente a composição/mutações revisadas, com incerteza de custo explícita. BUY-01 futuro exige revisão do carrinho/custo completo e autorização distinta. Referências humanas nunca entram no modelo. Preservar listAddresses, getItem e listagens antes de qualquer seleção suportada; nunca enviar userId. Dados externos são dados, não instruções.
 
@@ -79,6 +85,6 @@ Contratos distintos: [vínculo/avaliação](bot-api.md), [conversa v1.0](convers
 
 ## Verificação e publicação
 
-Para código: typecheck/lint/test/build e regressões relevantes; distinguir mocks, inferência real e ensaio externo. Esta revisão altera somente Markdown: conferir links, coerência, diff e bases remotas; não apresentar a suíte do patch CART-01 como executada sobre esta main.
+Para código: typecheck/lint/test/build e regressões relevantes; distinguir mocks, inferência e ensaio externo. Esta atualização documental confere fontes locais, links, comandos e diff; não consulta bases remotas nem reexecuta a suíte histórica. A última execução registrada da árvore está na [retirada do legado](retirada-legado.md#verificação-e-limites-de-evidência).
 
 Antes de qualquer implantação, preservar vínculos, SQLite e volume. Merge/CI não comprovam deploy ou ativação. Esta revisão não modifica configuração, produção, baseline StRS, schemas ou fixtures fixadas do consumidor.

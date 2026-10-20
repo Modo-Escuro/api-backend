@@ -1,6 +1,6 @@
 # Contrato de conversa HTTP/JSON v1.0 — API-01
 
-Especificação e conformidade offline em 18/10/2026. Os schemas, validadores e mocks estão implementados. A [RUN-01](runtime-turnos.md) acrescenta as rotas e a infraestrutura durável em SQLite, com ativação explícita; **o processo padrão ainda não instala o processador DATA/IA e rejeita novos eventos com UNAVAILABLE**. Estado/patches são DATA-01, ações de carrinho são CART-01 e autorização/envio são BUY-01/02. Este contrato permite preparar AI-01 sem escolher políticas de DEC-01. A rota de aprovação permanece indisponível para execução de compra.
+Contrato conferido na reconciliação local de 20/10. HTTP continua v1.0, com schemas/pins preservados; o banco é [SQLite v6](armazenamento-v6.md). `conversation-runtime.ts` monta só o assistente, por opt-ins de runtime/modelo; sem processador, eventos novos recebem UNAVAILABLE. Estado/patches são DATA-01 e preparação usa CART-01/PREPARE_CART próprios. Envio/pagamento e `/purchase-approvals` continuam indisponíveis.
 
 Issue: [API-01 #12](https://github.com/Modo-Escuro/api-backend/issues/12). Base de implementação: `main@686300d`. A [proposta v0 do bot](https://github.com/Modo-Escuro/telegram-bot/blob/codex/plano-conversacional/docs/contrato-conversa-proposto.md) é a origem; este documento fixa nomes e formatos para a v1.0. O [contrato de vínculo existente](bot-api.md) continua válido e independente. Nenhum OAuth novo foi criado.
 
@@ -11,31 +11,53 @@ Issue: [API-01 #12](https://github.com/Modo-Escuro/api-backend/issues/12). Base 
 - Mensagens de erro fixas e status HTTP: [errors.ts](../src/server/contracts/errors.ts).
 - [Schemas JSON Draft 2020-12](../contracts/conversation/v1/) e [exemplos sintéticos positivos/negativos](../contracts/conversation/v1/examples.json), compartilhados com Python.
 
-O JSON Schema valida estrutura; as regras semânticas são parte obrigatória do contrato. Os futuros handlers devem executar ambas, conferir domínio/provedor e persistir atomicamente. Um objeto que passa no schema não é autorização para executar uma ação. Os guards não consultam o iFood, não consomem autorização e não substituem BUY-01.
+O JSON Schema valida estrutura; as regras semânticas são parte obrigatória do contrato. Os handlers executam ambas, conferem escopo e persistem atomicamente pelo runtime; futuras integrações de compra também devem validar domínio/provedor. Um objeto que passa no schema não é autorização para executar uma ação. Os guards não consultam o iFood, não consomem autorização e não substituem BUY-01.
 
 ## Identidade e escopo
 
 Reutilizar `Authorization: Bearer <BOT_API_TOKEN>` e `X-Telegram-User-Id` do [bot-api](bot-api.md). Para as novas rotas, acrescentar `X-Telegram-Chat-Id`, derivado pelo adaptador do update/callback autenticado. O adaptador confere conversa privada, `from.id`, `chat.id`, bot destinatário e allowlist; a API exige chat privado correspondente ao organizador no recorte atual. Esse header não vem de texto ou do modelo.
 
-`AdapterPrincipal` é contexto confiável do middleware: organizador autenticado, bot cadastrado para aquela credencial e conversa privada validada. `source.botId` é conferido contra esse cadastro, nunca usado para escolher a própria identidade. A configuração de cadastro do bot deverá ser adicionada na implementação das rotas; este incremento não cria variável ou altera configuração implantada.
+`AdapterPrincipal` é contexto confiável do middleware: organizador autenticado, bot cadastrado por `BOT_TELEGRAM_ID` e conversa privada validada. `source.botId` é conferido contra esse cadastro, nunca usado para escolher a própria identidade. O rollout `CONVERSATION_ORGANIZER_IDS` restringe os usuários já admitidos pela autenticação; não amplia acesso.
 
 `conversationId` é o ID da conversa privada do Telegram como string decimal. Não é um `userId` do iFood e não é enviado ao MCP. O estado lógico da conversa pode conter compras sucessivas; identidade de compra/intenção será persistida por DATA-01, sem deduplicar compras pelo valor. Número de compras ativas continua decisão de DEC-01.
 
 IDs de eventos e origem são metadados, não autorização. Operações, referências e snapshots só são acessíveis no escopo `(canal, bot, organizador, conversa)`. Outro organizador/conversa/recurso retorna 404 sem revelar existência; origem de outro bot/chat dentro da requisição autenticada retorna 400 `INVALID_SOURCE`. Referências de conta também são vinculadas ao `linkId` atual.
 
+### Sessão do vínculo atual
+
+`GET /conversations/{conversationId}/account-context` retorna `{enabled:true,sessionRef}` quando o runtime tem `sessionOf`, ou `{enabled:false}` caso contrário. Não usa o envelope de snapshot nem anuncia identidade estável iFood. `sessionRef` é uma referência hexadecimal de 64 caracteres derivada do bot/organizador/vínculo atual, inclusive do estado sem vínculo; muda quando esse vínculo muda.
+
+O cliente captura a referência para cada evento novo e envia `X-Conversation-Session` em POST de evento/cancelamento e GET de operação/progresso/snapshot. Deve persistir a referência junto do comando, sem trocar pela sessão atual durante replay. Referência diferente da atual, operação associada a outra sessão ou replay incompatível retorna `409 LINK_CHANGED`. Sem associação correspondente, a consulta de snapshot retorna documento neutro na versão corrente. O runtime também revalida a sessão do trabalho associado antes/depois do processamento.
+
+O cabeçalho é opcional por compatibilidade: ausente/vazio não associa o evento. API anterior pode devolver 404 em account-context, tratado pelo bot como extensão ausente. Não atribuir a garantia a eventos antigos nem interpretar a referência como consentimento ou identidade estável entre reconexões. [Migração v6](armazenamento-v6.md).
+
 ## Rotas v1 e disponibilidade
 
 Prefixo `/api/bot/v1`. Todas exigem o canal autenticado e `Cache-Control: no-store`. Corpos JSON são estritos; não aceitar `organizerId`, `userId`, `userConsent`, preços ou autorização do modelo. Usar `Content-Type: application/json`. Erros de autenticação já existentes conservam o envelope de `bot-api.md`; depois da autenticação, os erros usam `error.schema.json`.
 
-| Método e rota proposta | Entrada / saída | Semântica |
+| Método e rota | Entrada / saída | Semântica |
 | --- | --- | --- |
 | `POST /conversations/{conversationId}/events` | `event.schema.json` → `operation.schema.json` | 202 somente após aceitação persistida; replay idêntico retorna 200 com a operação original e seu estado atual |
 | `GET /conversations/{conversationId}/operations/{operationId}` | sem corpo → `operation.schema.json` | 200, sem efeitos; operação inexistente/de outro escopo → 404 |
 | `GET /conversations/{conversationId}` | sem corpo → `snapshot.schema.json` | 200 com versão corrente e ações revalidadas; inexistente → 404 |
+| `GET /conversations/{conversationId}/account-context` | sem corpo → `{enabled,sessionRef?}` | Referência atual da sessão; não cria evento nem autoriza compra |
+| `GET /conversations/{conversationId}/memory` | sem corpo → diretório descrito abaixo | Personas salvas do vínculo atual, sem fatos |
+| `GET /conversations/{conversationId}/operations/{operationId}/progress` | sem corpo → prévia descrita abaixo | Somente RAM da operação ativa; mesmos controles de escopo/sessão da consulta da operação |
+| `GET /conversations/{conversationId}/addresses` | sem corpo → EMPTY/CHOICE_REQUIRED e opções opacas | Leitura autenticada, sem selecionar automaticamente o único endereço |
+| `POST /conversations/{conversationId}/addresses/select` | `{source:"TELEGRAM_CALLBACK",choiceRef}` → SELECTED | Seleção humana revalidada e persistida; não escreve no MCP |
 | `POST /conversations/{conversationId}/operations/{operationId}/cancel` | `cancel.schema.json` → `cancelResult.schema.json` | 202 `REQUESTED`; 200 `CANCELLED`/`ALREADY_TERMINAL`; replay recupera o resultado do mesmo comando; não garante cancelamento remoto |
 | `POST /conversations/{conversationId}/purchase-approvals` | `approval.schema.json` → `operation.schema.json` | caminho humano dedicado; 202 após autorização/intenção durável; replay idêntico → 200; permanece indisponível até BUY-01/02 |
 
-IDs no path e no corpo devem coincidir. A primeira aceitação cria a conversa com versão inicial 0 em transação, somente após autenticação/escopo. O bot não escolhe outro organizador ao criar conversa. GET não cria recurso. Não há `/chat` ou `/approve` implementado.
+IDs no path e no corpo devem coincidir. A primeira aceitação cria a conversa com versão inicial 0 em transação, somente após autenticação/escopo. O bot não escolhe outro organizador ao criar conversa. Consultas não criam evento de conversa. Não há `/chat` ou `/approve` implementado. Novos eventos ACTION continuam `ACTION_UNAVAILABLE`; callbacks de administração são convertidos pelo bot nos textos fixos descritos no [assistente](assistente-conversacional.md#confirmações-digitadas-e-diretório-de-memória). Não presumir suporte a ações do intérprete retirado.
+
+### Extensões implementadas do cliente
+
+Estas respostas são validadas explicitamente no cliente atual; não foram acrescentadas retroativamente aos nove schemas JSON fixados do contrato base.
+
+- **Memória:** `{contractVersion:"1.0",revision,recipients,enabled}`. `recipients` contém destinatários explicitamente salvos (`ref`, `kind:"RECIPIENT"`, `label`); o titular SELF não aparece nessa lista. Sem `linkId`, retorna `enabled:false`, revisão zero e lista vazia. `enabled:true` não atesta sessão operacional; a rota usa o vínculo conhecido, sem consultar catálogo. `revision` é inteiro não negativo. 404 numa API anterior habilita o fallback do bot para nomes do GROUP; lista vazia com extensão ativa não usa fallback. O caminho completo inclui o prefixo da conversa, não é `/memory` na raiz.
+- **Progresso:** `{contractVersion:"1.0",enabled:true,operationId,eventId,text}`. `text` é `null` ou prévia de até 600 caracteres. É transitória: não fica em SQLite/logs e desaparece ao terminar/cancelar/reiniciar. O cliente verifica IDs e edita a mesma mensagem com o resultado final; 404 em API anterior desliga somente a extensão opcional. A prévia não comprova preço, carrinho ou pedido.
+- **Endereços:** referências e expiração em [continuidade e endereços](continuidade-enderecos.md). Exigem vínculo operacional e não transportam `sessionRef` como autorização de seleção; têm validação própria de vínculo/lista/referência.
+- **CART-01:** prefixo dedicado `/conversations/{conversationId}/cart-writes`; [revisão, confirmação e consultas](cart-01-escrita-confirmada.md#contrato-humano-e-fronteira-com-buy-01). Não usa `/purchase-approvals` nem os antigos endpoints F7.
 
 ## Evento, chave e origem
 
@@ -60,7 +82,7 @@ Exemplo sintético de alteração textual:
 
 O adaptador deriva `eventId` do `update_id` e o conserva antes do primeiro envio. Retry após timeout/restart reutiliza **o mesmo corpo**, incluindo `expectedVersion` e origem; não gerar outro ID ou atualizar a versão daquele evento. Edição de mensagem entregue em outro update é outro evento. Mensagens com texto/valor igual e IDs diferentes são legítimas. A persistência da outbox do bot é BOT-01, não o mock Python deste incremento.
 
-Para botão: `source.kind = CALLBACK`, `messageId` da mensagem do teclado, `callbackQueryId` da ação autenticada. `input = { kind: ACTION, action: REQUEST_REVIEW | SELECT_PROPOSAL | EDIT_CONTEXT, actionRef }`. O adaptador conserva a associação entre referência do servidor e mensagem do teclado no seu armazenamento; o modelo não fornece essa associação. `REQUEST_REVIEW` só abre revisão. Nenhuma ação geral aprova compra. Callback não identificado/autorizado deve ser rejeitado pelo adaptador, antes de chamar a API.
+**Formato reservado do contrato base para botão:** `source.kind = CALLBACK`, `messageId` da mensagem do teclado, `callbackQueryId` autenticado e `input = { kind: ACTION, action: REQUEST_REVIEW | SELECT_PROPOSAL | EDIT_CONTEXT, actionRef }`. O schema descreve esse formato, mas a montagem atual recusa novos ACTION; não implementar a seleção atual com esse exemplo. Administração usa texto fixo e CART-01 tem rota de confirmação própria. Se um consumidor compatível usar ações em outro incremento, deve conservar referência↔mensagem autenticada; nenhuma ação geral aprova compra nem pode receber associação do modelo.
 
 Cancelar e aprovar usam o mesmo envelope (`eventId`, `conversationId`, `expectedVersion`, `source`), porém com schemas e finalidades separados. Cancelar contém `operationId`; aprovar contém `reviewRef` e `approvalRef`. A chave de evento é compartilhada entre todas as rotas mutantes, não por endpoint: reutilizá-la para outra finalidade/conteúdo conflita.
 
@@ -120,7 +142,7 @@ Dinheiro é BRL em centavos inteiros seguros: `UNKNOWN` não contém valor, `EST
 
 Conta conectada/confirmada é o contrato OAuth existente. Revisão é apresentação de carrinho, custos e bloqueios. Aprovação é callback humano específico em `/purchase-approvals`, com schema próprio, e só pode existir para revisão apta na fase `AWAITING_APPROVAL`, cobertura completa, total confirmado, sem bloqueios e dentro da validade. Aprovação não pode vencer depois da cotação.
 
-`humanApproval` é reservado ao adaptador humano, nunca ao contexto do LLM. `toModelContext` faz projeção explícita por allowlist para `modelContext.schema.json`; não encaminhar snapshots/operações inteiras, referências de ação/aprovação, status de login, cabeçalhos, credenciais ou dados de pagamento ao modelo. Os textos de pendências desse DTO precisam ser mensagens seguras do servidor, sem transcrição de erros externos ou segredos. A futura AI-02 acrescentará dados declarativos estritamente necessários com schema próprio; este DTO mínimo não substitui o estado de domínio.
+`humanApproval` é reservado ao adaptador humano, nunca ao contexto do LLM. `toModelContext` continua como projeção do contrato base; não encaminhar snapshots/operações inteiras, referências de ação/aprovação, status de login, cabeçalhos, credenciais ou dados de pagamento ao modelo. O assistente atual usa seu protocolo próprio: roteador sem fatos, recuperação por pessoa/finalidade e contexto sanitizado de compras. `modelContext.schema.json` não é o prompt atual nem substitui o domínio. Ver [assistente](assistente-conversacional.md).
 
 BUY-01 precisa conferir revisão, conta/link, fingerprint, total, versão, validade, callback e organizador atuais; reler o carrinho e consumir referência junto com intenção durável em transação. Dois cliques simultâneos não geram duas intenções. Texto “sim”, “pode pedir” ou booleano do modelo não autoriza. Mudança relevante exige nova revisão. Compra não é habilitada pela disponibilidade de schemas ou pela pré-validação `assertApproval`.
 

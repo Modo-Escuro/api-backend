@@ -4,7 +4,7 @@
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import { auth as defaultAuth, type IfoodAuth } from '../auth.js';
+import type { IfoodAuth } from '../auth.js';
 import { config } from '../config.js';
 
 export const MCP_TIMEOUT_MS = 15_000;
@@ -59,17 +59,4 @@ export class McpSession {
     this.client = null;
     await c?.close().catch(() => undefined);
   }
-}
-
-// ---- sessão global (somente login de desenvolvimento / scripts; nunca usada pelas rotas do bot)
-const globalSession = new McpSession(defaultAuth);
-
-export async function getMcpClient(auth: IfoodAuth = defaultAuth): Promise<Client> {
-  if (auth === defaultAuth) return globalSession.getClient();
-  // Chamadas legadas com outro auth: sessão descartável própria.
-  return new McpSession(auth).getClient();
-}
-
-export async function resetMcpClient(): Promise<void> {
-  await globalSession.close();
 }

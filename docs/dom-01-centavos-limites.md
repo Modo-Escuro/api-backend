@@ -8,7 +8,7 @@ Issue: [#10](https://github.com/Modo-Escuro/api-backend/issues/10). Base: `main@
 - `money.ts` converte BRL do MCP uma única vez, por representação decimal e intermediários `BigInt`, antes dos cálculos. A conversão aceita `32.9 → 3290`, `0.29 → 29` e `1e-2 → 1`. **Não há arredondamento silencioso:** negativo, NaN/infinito, subcentavo (`1.005`, `0.001`) e overflow são rejeitados. Isso substitui a antiga política de arredondar o domínio a duas casas.
 - Campos inválidos na normalização ficam `INVALID`; não viram zero ou preço de fallback. Ausente e `null` continuam estados distintos. Soma, quantidade, desconto e rateio operam sobre inteiros; overflow bloqueia o candidato, sem aprovar um valor arredondado.
 - O corpo e a resposta de `/api/evaluate` continuam usando `*Cents`. O adaptador de resposta só renomeia/valida centavos, **não multiplica por 100 novamente**. Filtros monetários do `searchOffers` são convertidos para BRL exclusivamente na chamada MCP.
-- No adaptador legado F7, o parser de totais também converte BRL na entrada, antes da conferência dos componentes. Seus outputs continuam provisórios/sintéticos. F7 permanece desativada; a alteração não habilita escrita.
+- O parser compartilhado `cart/contracts.ts` converte totais BRL na entrada, antes de conferir componentes. Ele permanece na CART-01, embora o serviço/rotas F7 tenham sido retirados. Outputs sintéticos não comprovam contrato externo; conversão monetária não habilita escrita.
 
 Percentuais, minutos, quilômetros e notas não são dinheiro. Nota arredondada é só apresentação: o limite usa o valor observado sem arredondamento. Distância não é arredondada antes da comparação.
 
@@ -61,7 +61,7 @@ O catálogo continua produzindo estimativas/faixas, nunca cotação CONFIRMED. O
 
 Esse helper recebe preços de item de valor único e componentes explícitos; não aceita uma faixa como se fosse um valor. Faixas permanecem no domínio de preço e seus limites são verificados por `checkCap`; eventual rateio dos extremos exige duas entradas de custo distintas, sem promover qualquer extremo a cotação única/aprovação. Integração com propostas, evidência alimentar por consumidor e revisão/confirmação PREPARE_CART pertence à CART-01; o helper não implementa esse contrato nem realiza escritas.
 
-O campo `budgetsSatisfied` só resume as condições financeiras informadas: não é autorização nem prova de elegibilidade alimentar, validade de revisão ou clique humano. Não conectar JSON bruto do modelo a esse helper sem a validação de DATA-01/AI-02.
+O campo `budgetsSatisfied` só resume as condições financeiras informadas: não é autorização nem prova de elegibilidade alimentar, validade de revisão ou clique humano. Não conectar JSON bruto do modelo a esse helper sem validação de domínio/servidor; o assistente atual usa protocolo próprio, sem repassar operações arbitrárias.
 
 ## Validação
 

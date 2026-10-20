@@ -1,5 +1,7 @@
 # Revisão da branchBruna e integração ao plano conversacional
 
+> Revisão histórica do SHA abaixo. Pendências/arquivos descrevem aquela base; a árvore reconciliada tem [assistente](../assistente-conversacional.md), [v6](../armazenamento-v6.md) e [legado retirado](../retirada-legado.md). Este parecer não verifica o serviço atual; seus achados/resultados mantêm a proveniência original.
+
 ## Referência e alcance
 
 Repositório: `Modo-Escuro/api-backend`. Head revisado: `8393615d4c140f9d06501033cba9069fcbd3a19f`; base `main`: `686300d1a10c12bb6c3bd899e40fbd3a68c648f5`. A comparação mostrou um commit à frente, zero atrás e 13 arquivos alterados. Referências são um retrato desta revisão, não acompanhamento contínuo.

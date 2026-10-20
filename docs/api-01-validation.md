@@ -1,5 +1,7 @@
 # Evidência de validação — API-01
 
+> **Relatório histórico dos schemas base.** Pins/contagens de origem são preservados. O [contrato de conversa atual](conversation-api-v1.md) inclui extensões de sessão/memória/progresso/endereços, validadas separadamente no cliente; este relatório não comprova execução nova nem implantação dessas extensões.
+
 Conferência em 18/10/2026, Windows, Node 24.19.0 e Python 3.12. Base: `main@686300d`. Escopo: contrato executável e conformidade offline, sem registrar rotas no aplicativo. [Especificação e reprodução](conversation-api-v1.md).
 
 | Verificação executada | Resultado |

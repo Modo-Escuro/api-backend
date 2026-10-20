@@ -1,5 +1,7 @@
 # Conversa guiada — incremento local de 18/10/2026
 
+> Histórico do intérprete guiado e da variante v5 publicada. A reconciliação atual usa assistente único e [v6](armazenamento-v6.md); ações/guias do corpo não são contrato da experiência TEXT atual. A continuidade do orçamento #56 foi adaptada e testada no assistente; os dados antigos de grupo são preservados sem reativar seu CRUD. [Estado da sincronização](sincronizacao-github.md).
+
 Base: continuação dos PRs API #49 e bot #20 já integrados. Esta alteração está na branch local `codex/conversation-guidance`; não comprova deploy nem comportamento no Telegram em execução.
 
 ## Implementado

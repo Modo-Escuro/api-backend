@@ -1,13 +1,12 @@
 // Contrato HTTP bot→API (docs/bot-api.md) com AS e MCP falsos.
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../../src/server/app';
-import { IfoodAuth } from '../../src/server/auth';
 import { IfoodLinkService } from '../../src/server/links/service';
 import { ADDRESS, BOT_TOKEN, ORG_A, ORG_B, authorize, connectAndConfirm, fx, setup } from '../helpers/fakes';
 
 function mk(over: Parameters<typeof setup>[0] = {}) {
   const env = setup(over);
-  const app = createApp(new IfoodAuth(env.cfg, env.as.fetch, { tokenFile: null }), { config: env.cfg, links: env.links });
+  const app = createApp({ config: env.cfg, links: env.links });
   const call = (method: string, path: string, opts: { org?: string | null; token?: string | null; body?: unknown } = {}) => {
     const headers: Record<string, string> = { 'content-type': 'application/json' };
     if (opts.token !== null) headers.authorization = `Bearer ${opts.token ?? BOT_TOKEN}`;
@@ -317,7 +316,7 @@ describe('cancelar tentativa × desconectar vínculo (rotas separadas)', () => {
 });
 
 describe('regressão de alergia em /api/evaluate (issue #3)', () => {
-  it('ALLERGY:GLUTEN: filtro GLUTEN_FREE enviado ao iFood; candidato elegível com aviso, nunca PASS', async () => {
+  it('ALLERGY:GLUTEN: filtro GLUTEN_FREE enviado ao iFood, mas nenhum candidato elegível', async () => {
     const { call, env } = mk();
     await connectAndConfirm(env, ORG_A);
     env.mcp.searchPages = [{ ...fx('searchOffers-lanche-glutenfree.json'), hasMore: false }];
@@ -326,16 +325,15 @@ describe('regressão de alergia em /api/evaluate (issue #3)', () => {
     const body = await r.json();
     expect(env.mcp.searchArgs.at(-1)!.refinements).toMatchObject({ itemRestrictions: ['GLUTEN_FREE'] });
     expect(body.serverFilters).toEqual(['GLUTEN_FREE']);
-    expect(body.summary).toMatchObject({ candidates: 1, eligible: 1, blocked: 0, needsVerification: 0 });
-    const c = body.eligible[0];
+    expect(body.summary).toMatchObject({ candidates: 1, eligible: 0, blocked: 0, needsVerification: 1 });
+    const c = body.needsVerification[0];
     expect(c.item.name).toBe('Veggie Burger');
     expect(c.detail.status).toBe('DETAILED');
-    expect(c.eligible).toBe(true);
-    // Alergia nunca é aprovada pelo catálogo: continua UNKNOWN; decisão 18/10/2026 só troca bloqueio por aviso.
-    expect(c.restrictions[0]).toMatchObject({ status: 'UNKNOWN', source: 'SERVER_FILTER_INSUFFICIENT' });
-    expect(c.blockers).toEqual([]);
-    expect(c.warnings.map((w: { code: string }) => w.code)).toContain('ALLERGY_UNVERIFIED');
-    expect(body.summary.blockerCounts.ALLERGY_UNVERIFIED).toBeUndefined();
+    expect(c.eligible).toBe(false);
+    expect(c.restrictions[0]).toMatchObject({ status: 'UNKNOWN', source: 'SERVER_FILTER_INSUFFICIENT', blocking: true });
+    expect(c.blockers.map((b: { code: string }) => b.code)).toEqual(['ALLERGY_UNVERIFIED']);
+    expect(body.summary.blockerCounts).toEqual({ ALLERGY_UNVERIFIED: 1 });
+    // Preço continua sendo informado em centavos para transparência, mesmo bloqueado
     expect(c.pricing.minimumConfigurable.unitTotalCents).toBe(5980);
   });
 

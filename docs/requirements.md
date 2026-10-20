@@ -1,5 +1,7 @@
 # Requisitos — Compra com Contexto (SEMCOMP × iFood)
 
+**Nova direção de produto solicitada:** conversa por intenção/ocasião, com IA planejando consultas e opções informativas sem formulário prévio; destino de fechamento no Telegram por botão humano de confirmação. Ver [contrato e alcance da implementação local](assistente-conversacional.md). O restante deste documento preserva o recorte anterior; descoberta local não comprova envio/pagamento ou integração externa.
+
 ## Estado deste documento
 
 Este é o recorte histórico de recomendação da API, não a StRS nem uma lista de capacidades implantadas. O [plano vigente](plano-conversacional.md) registra as implementações e integrações confirmadas pelo Git e a preparação real confirmada definida na DEC-01. Preservam-se os IDs FR e os trechos históricos para rastreabilidade.
@@ -38,10 +40,12 @@ Regras de contrato:
 ## 3. Requisitos funcionais
 
 ### FR-1 — Entrada de contexto
+> Atualização local: entrada principal por intenção natural no Telegram, sem formulário obrigatório; o item abaixo preserva a formulação original.
 - Formulário: restrições alimentares (ex.: vegano, vegetariano, sem lactose, sem glúten, sem carne suína), orçamento máximo (item e/ou pedido), preferências/cravings (texto), ordenação desejada (mais barato / mais rápido / melhor avaliado).
 - Restrições são **declarações do usuário**, não diagnóstico.
 
 ### FR-2 — Endereço
+> Regra atual: confirmação humana mesmo com um único endereço. Zero orienta cadastro no app iFood; não há criação de endereço pelo projeto. O uso automático descrito abaixo é histórico do avaliador, não do assistente montado.
 - Chamar `listAddresses` antes de qualquer fluxo.
 - 0 endereços ⇒ pedir endereço ao usuário (criação de endereço é opcional e manual).
 - 1 endereço ⇒ usar direto, exibir na UI.
@@ -119,6 +123,6 @@ Checkout, carrinho automático, pagamentos, vouchers, rastreio de pedidos, cadas
 
 O único escopo de carrinho é real, com confirmação humana específica PREPARE_CART. A composição local da GRP-01 deve alimentar a CART-01; não é resultado remoto nem alternativa de aceite. Reutilizar DATA-01, GRP-01 e DOM-01 sem duplicar carrinho, restrições ou rateio.
 
-A F7 legada do PR #4 (`cbb546c`) continua desligada: não possui as garantias completas da CART-01. Sua flag não habilita o novo fluxo. A implementação CART-01 auditada permanece local; não foi publicada por esta revisão documental. INT-02 #40 exige outputs reais, unidades, erros e reconciliação por operação antes da ativação. Preservar intenção PENDING/SUCCEEDED/FAILED/RESULT_UNKNOWN e bloquear repetição após resultado desconhecido.
+A F7 legada do PR #4 (`cbb546c`) foi retirada da árvore local em 20/10/2026; sua flag não habilita o novo fluxo. A implementação CART-01 auditada permanece local; não foi publicada por esta revisão. INT-02 #40 exige outputs reais, unidades, erros e reconciliação por operação antes da ativação. Preservar intenção PENDING/SUCCEEDED/FAILED/RESULT_UNKNOWN e bloquear repetição após resultado desconhecido.
 
 Confirmar conta/vínculo, endereço, loja, produtos/opções/quantidades, evidência alimentar por consumidor, versão/hash e validade antes de cada escrita. Mudança relevante exige nova revisão/confirmação. Não enviar pedido (`submitOrder`), selecionar/processar pagamento (`setCartPayment`) nem alterar produção neste incremento. Login, senha e texto da IA não confirmam preparação.

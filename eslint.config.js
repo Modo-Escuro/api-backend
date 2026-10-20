@@ -3,7 +3,7 @@ import tseslint from 'typescript-eslint';
 import globals from 'globals';
 
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules', '.npm-cache', '.venv-contract', '.venv-bot', '.work', '*.html'] },
+  { ignores: ['dist', 'node_modules', '.npm-cache', '.venv-contract', '.venv-bot', '.work', '*.html', '.assistant-synthetic-test.ts'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -15,7 +15,7 @@ export default tseslint.config(
         'error',
         {
           selector: "Literal[value=/^(submitOrder|createAddress)$/]",
-          message: 'Envio de pedidos e criação de endereços continuam proibidos em F7.',
+          message: 'Envio de pedidos e criação de endereços estão fora do escopo atual.',
         },
       ],
     },

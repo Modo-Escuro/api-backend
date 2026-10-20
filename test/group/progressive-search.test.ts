@@ -3,13 +3,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { generateProposals } from '../../src/server/services/group';
 import { applyPatch, type DomainOp, type PurchaseState } from '../../src/server/domain/purchase';
 import { composeProposals } from '../../src/server/domain/group';
-import { renderSnapshot } from '../../src/server/agent/render';
-import { SnapshotSchema, type Snapshot } from '../../src/server/contracts/conversation';
 import type { EvaluateDeps } from '../../src/server/services/evaluate';
 import type { GetItemResult, SearchItemResult, SearchOffersArgs } from '../../src/server/mcp/types';
 import { candidate, M1, M2 } from './catalog';
 
-const BASE: Snapshot = { contractVersion: '1.0', conversationId: '1', version: 0, phase: 'COLLECTING', blocks: [], pending: [], allowedActions: [], humanApproval: null };
 const context = { seed: 'grp-progressive', eventId: 'event-synthetic' };
 function group(scenario = false) {
   let state = applyPatch(null, [{ op: 'ADD_PARTICIPANT', displayName: 'Eu' },
@@ -39,31 +36,23 @@ function catalog(count: number, price = 20) {
   };
   return { entries, deps };
 }
-/** Conflito INFORMADO no nome (heurística): só ele exclui; sem dado alimentar a pessoa é atendida com aviso. */
+/** Conflito informado é incompatibilidade; dado insuficiente continua sem atendimento verificado. */
 function named(f: ReturnType<typeof catalog>, word: string) {
   f.entries.forEach((e, i) => { e.listing.itemName = `Arroz com ${word} ${i + 1}`; e.detail.itemName = e.listing.itemName; });
 }
 const run = (state: PurchaseState, deps: EvaluateDeps, evaluateLimits = {}) => generateProposals(state, { query: 'comida' }, deps, { seed: 's', evaluateLimits });
 
 describe('GRP-01: seis itens, duas lojas, sem lactose e alergia a frutos do mar', () => {
-  it('sem dado alimentar: atende com aviso, preserva R$100 e nunca declara segurança', async () => {
+  it('sem dado alimentar: bloqueia composição, preserva R$100 e nunca declara segurança', async () => {
     const state = group(true), before = structuredClone(state), f = catalog(6);
     f.deps.searchOffers.mockImplementation(async (a) => ({ results: a.refinements?.itemRestrictions ? [] : f.entries.map((e) => e.listing), hasMore: false }));
     const { result } = await run(state, f.deps);
-    const [eu, namorada] = state.participants;
-    expect(result.proposals.length).toBeGreaterThan(0);
-    expect(result.proposals[0]!.coverage.every((c) => c.status === 'COVERED')).toBe(true);
-    expect(result.matrix.filter((c) => c.participantId === eu!.participantId && c.status === 'COMPATIBLE').every((c) => c.warnings?.includes('RESTRICTION_UNVERIFIED'))).toBe(true);
-    expect(result.matrix.filter((c) => c.participantId === namorada!.participantId && c.status === 'COMPATIBLE').every((c) => c.warnings?.includes('ALLERGY_UNVERIFIED'))).toBe(true);
-    expect(result.diagnosis.issues).not.toContain('FOOD_EVIDENCE');
-    expect(result.explanation).toContain('Atenção: o iFood não informa ingredientes nem alérgenos. As restrições de Eu, Namorada não puderam ser verificadas nos itens sugeridos; confirme com o restaurante antes de pedir.');
+    expect(result.proposals).toHaveLength(0);
+    expect(result.matrix.every(c => c.status === 'NEEDS_VERIFICATION')).toBe(true);
+    expect(result.diagnosis.issues).toContain('FOOD_EVIDENCE');
     expect(result.explanation.join(' ')).not.toMatch(/seguro|segurança garantida/i);
-    expect(result.proposals[0]!.approvalBlockers).toContain('TOTAL_UNKNOWN');
     expect(f.deps.listAddresses).toHaveBeenCalledTimes(1);
     expect(state).toEqual(before); // R$100 e restrições preservados
-    const snapshot = renderSnapshot(BASE, state, [], result.explanation);
-    expect(SnapshotSchema.safeParse(snapshot).success).toBe(true);
-    expect(snapshot.humanApproval).toBeNull();
   });
 
   it('filtro LAC_FREE pode atender a dieta; nunca libera alergia nem impõe a dieta à outra pessoa', async () => {
@@ -73,8 +62,7 @@ describe('GRP-01: seis itens, duas lojas, sem lactose e alergia a frutos do mar'
     const [eu, namorada] = state.participants;
     expect(result.matrix.some((c) => c.participantId === eu!.participantId && c.status === 'COMPATIBLE')).toBe(true);
     expect(result.matrix.find((c) => c.participantId === namorada!.participantId && c.itemId === f.entries[0]!.detail.itemId)!.status).toBe('INCOMPATIBLE');
-    // Sem dado: atendida com aviso; com conflito informado (camarão): nunca recebe o item.
-    expect(result.matrix.filter((c) => c.participantId === namorada!.participantId && c.status === 'COMPATIBLE').every((c) => c.warnings?.includes('ALLERGY_UNVERIFIED'))).toBe(true);
+    expect(result.matrix.filter(c => c.participantId === namorada!.participantId).every(c => c.status !== 'COMPATIBLE')).toBe(true);
     expect(result.proposals.every((p) => p.proposal.lines.every((l) => !(l.consumerIds.includes(namorada!.participantId) && l.itemId === f.entries[0]!.detail.itemId)))).toBe(true);
     const filters = f.deps.searchOffers.mock.calls.flatMap(([a]) => a.refinements?.itemRestrictions ?? []);
     expect(filters.every((x) => x === 'LAC_FREE')).toBe(true); // a dieta de uma pessoa nunca vira filtro da outra

@@ -1,15 +1,15 @@
 // Um processo da API: executor limitado, abort cooperativo e fencing persistido.
 import { randomBytes } from 'node:crypto';
+import type { MemoryCommit, MemoryReader } from '../assistant/memory.js';
 import { ContractError, type AdapterPrincipal } from '../contracts/guards.js';
 import type { ConversationEvent, Operation, Snapshot } from '../contracts/conversation.js';
 import { nextPurchase, type DomainChange, type PurchaseState } from '../domain/purchase.js';
 import { log } from '../ops/log.js';
 import { metrics } from '../ops/metrics.js';
-import { scopeKey, sessionRef, TurnStore, type AccountContext, type CancelCommand, type Job } from './store.js';
+import { scopeKey, TurnStore, type CancelCommand, type Job } from './store.js';
+import type { AccountSession } from './account-session.js';
 
 export interface TurnResult {
-  clearGroup?: boolean;
-  conversationActions?: boolean;
   snapshot: Snapshot;
   completeness: 'PARTIAL' | 'COMPLETE';
   paths: Operation['changes'][number]['paths'];
@@ -19,6 +19,7 @@ export interface TurnResult {
    * na mesma transação do snapshot; um estado pronto nunca é aceito.
    */
   domain?: DomainChange;
+  memory?: MemoryCommit;
 }
 export interface TurnContext {
   event: ConversationEvent;
@@ -32,28 +33,22 @@ export interface TurnContext {
   signal: AbortSignal;
   /** DEC-01 D8: demo somente leitura; esta barreira sempre rejeita escrita. */
   beforeExternalWrite(): void;
+  /** Prévia social transitória; não é snapshot, mutação de domínio ou confirmação externa. */
+  publishProgress?(text: string): void;
+  memory?: MemoryReader;
+  accountSession?: AccountSession;
 }
 export type TurnProcessor = (context: TurnContext) => Promise<TurnResult>;
 export interface RuntimeOptions {
-  accountScope?: <T>(organizerId: string, fn: (account: AccountContext) => Promise<T>) => Promise<T>;
   processor?: TurnProcessor;
   concurrency?: number;
   intervalMs?: number;
+  sessionOf?(p: AdapterPrincipal): Promise<AccountSession>;
 }
 
 export class TurnRuntime {
-  get accountGroupsEnabled() { return Boolean(this.options.accountScope); }
-  async withAccount<T>(p: AdapterPrincipal, expectedSession: string | undefined, fn: (session?: string) => T | Promise<T>, initial = false): Promise<T> {
-    if (!this.options.accountScope) return fn();
-    return this.options.accountScope(p.organizerId, async account => {
-      const session = sessionRef(account.linkId);
-      if (!initial && expectedSession !== session) throw new ContractError('LINK_CHANGED');
-      this.store.activateAccount(p, account);
-      return fn(session);
-    });
-  }
   private readonly owner = randomBytes(24).toString('base64url');
-  private readonly active = new Map<string, { job: Job; controller: AbortController; abortedAt?: number }>();
+  private readonly active = new Map<string, { job: Job; controller: AbortController; abortedAt?: number; progress?: string }>();
   private timer?: ReturnType<typeof setInterval>;
   private stopped = false;
   private readonly concurrency: number;
@@ -64,16 +59,28 @@ export class TurnRuntime {
   static readonly PURGE_INTERVAL_MS = 60_000;
 
   constructor(readonly store: TurnStore, private readonly options: RuntimeOptions = {}) {
-    store.accountGroupsEnabled = Boolean(options.accountScope);
     this.concurrency = options.concurrency ?? 2;
     this.intervalMs = options.intervalMs ?? 500;
     if (!Number.isSafeInteger(this.concurrency) || this.concurrency < 1 || this.concurrency > 4 ||
         !Number.isSafeInteger(this.intervalMs) || this.intervalMs < 10 ||
         this.intervalMs * 3 >= store.limits.leaseMs) throw new Error('Configuração de worker inválida.');
   }
-  accept(p: AdapterPrincipal, event: ConversationEvent) {
+  accept(p: AdapterPrincipal, event: ConversationEvent, session?: AccountSession) {
     if (this.stopped || !this.healthy) throw new ContractError('UNAVAILABLE');
-    return this.store.accept(p, event, Boolean(this.options.processor));
+    return this.store.accept(p, event, Boolean(this.options.processor), session);
+  }
+  async authorizeSession(p: AdapterPrincipal, supplied?: string): Promise<AccountSession | undefined> {
+    // Sem cabeçalho: compatibilidade com carteiro antigo, sem vínculo gravado por este aceite.
+    // Com cabeçalho e runtime sem vínculos → fail closed (contradiz o anúncio de vínculo).
+    if (!supplied) return undefined;
+    if (!this.options.sessionOf) throw new ContractError('LINK_CHANGED');
+    const current = await this.options.sessionOf(p);
+    if (supplied !== current.ref) throw new ContractError('LINK_CHANGED');
+    return current;
+  }
+  async accountContext(p: AdapterPrincipal) {
+    if (!this.options.sessionOf) return { enabled: false };
+    return { enabled: true, sessionRef: (await this.options.sessionOf(p)).ref };
   }
   cancel(p: AdapterPrincipal, command: CancelCommand) {
     const result = this.store.cancel(p, command);
@@ -131,12 +138,14 @@ export class TurnRuntime {
     metrics.observe('turn_queue_wait_ms', {}, started - Date.parse(job.operation.createdAt));
     let outcome = 'SUCCEEDED';
     try {
-      if (job.accountSession && !this.accountGroupsEnabled) throw new ContractError('LINK_CHANGED');
-      await this.withAccount(job.principal, job.accountSession, async () => {
+      if (this.options.sessionOf && job.accountSession &&
+        (await this.options.sessionOf(job.principal)).ref !== job.accountSession.ref) throw new ContractError('LINK_CHANGED');
       const result = await this.options.processor!({
         event: structuredClone(job.event), snapshot: structuredClone(job.snapshot), signal: controller.signal,
         principal: { ...job.principal },
         purchase: structuredClone(job.purchase),
+        memory: this.store.memory(job.principal),
+        accountSession: job.accountSession,
         previewDomain: (change) => {
           const next = nextPurchase(job.purchase, change, {
             seed: scopeKey(job.principal), eventId: job.operation.eventId, maxParticipants: this.store.limits.maxParticipants,
@@ -148,9 +157,13 @@ export class TurnRuntime {
           // D8 não permite habilitar escrita nem por flag nem por aprovação fictícia.
           throw new ContractError('ACTION_UNAVAILABLE');
         },
+        publishProgress: text => {
+          const slot = this.active.get(job.operation.operationId);
+          if (!this.stopped && slot?.job.token === job.token && !controller.signal.aborted && typeof text === 'string' && [...text].length <= 600) slot.progress = text;
+        },
       });
+      if (this.options.sessionOf && job.accountSession && (await this.options.sessionOf(job.principal)).ref !== job.accountSession?.ref) throw new ContractError('LINK_CHANGED');
       if (!this.stopped && !this.store.finish(job, result)) outcome = 'NOT_COMMITTED';
-      });
     } catch (error) {
       outcome = error instanceof ContractError ? error.code : 'INTERNAL';
       if (!this.stopped) {
@@ -181,6 +194,13 @@ export class TurnRuntime {
       storage: this.stopped ? 'CLOSED' as const : stats ? 'OK' as const : 'UNAVAILABLE' as const,
       ...(stats ?? {}),
     };
+  }
+  progress(principal: AdapterPrincipal, operationId: string) {
+    // A leitura persistida valida escopo e existência antes de consultar a prévia em RAM.
+    const op = this.store.operation(principal, operationId);
+    const slot = this.active.get(operationId);
+    return { contractVersion: '1.0', enabled: true, operationId, eventId: op.eventId,
+      text: op.status === 'RUNNING' && slot && !slot.controller.signal.aborted ? slot.progress ?? null : null };
   }
   /** Não espera indefinidamente processador não cooperativo; lease permitirá recuperação. */
   stop() {

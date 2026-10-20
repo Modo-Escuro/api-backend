@@ -103,15 +103,13 @@ function identityHtml(i: AccountIdentity): string {
   return `<p class="acc">Conta iFood autorizada: <strong>${parts.join(' · ')}</strong></p>`;
 }
 
-/** Trata o callback de vínculo. Retorna null se o state pertence ao login de desenvolvimento. */
+/** Trata exclusivamente o callback OAuth do vínculo iniciado pelo Telegram. */
 export async function handleLinkCallback(
   c: Context,
   links: IfoodLinkService,
-  isLegacyState: (state: string) => boolean,
   opts: { requireLoopback: boolean },
 ) {
   const { state, code, error } = c.req.query();
-  if (state && isLegacyState(state)) return null;
   if (opts.requireLoopback && !isLoopbackRequest(c)) return notLocal(c);
   const attemptId = links.attemptIdForState(state);
   const browserSecret = attemptId ? (getCookie(c, cookieName(attemptId)) ?? null) : null;

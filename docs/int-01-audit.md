@@ -1,5 +1,7 @@
 # INT-01 — Auditoria F7 e contrato externo
 
+> A auditoria abaixo é histórica. Na árvore local após a [retirada do legado](retirada-legado.md), F7 e sessão global não existem. Metadados, contratos e evidências CART-01/INT-02 são preservados separadamente; esta retirada não valida saídas externas nem habilita escrita.
+
 Conferência em **18/10/2026**. Base original auditada: `feat/f7-cart-checkout@b08957d`, PR [#4](https://github.com/Modo-Escuro/api-backend/pull/4). O PR [#24](https://github.com/Modo-Escuro/api-backend/pull/24) incorpora `main@30a650d`, incluindo F7, API-01, DEC-01, OPS-01 e a infraestrutura RUN-01, preservando os commits da auditoria e a atualização concorrente de metadados `484b428`. O PR de auditoria foi integrado à main; esse fato não comprova implantação nem validação de negócio. A correção preserva o bloqueio de respostas desconhecidas e não habilita carrinho, aprovação ou envio reais.
 
 **Estado: auditoria offline e metadados autenticados entregues; contrato de saídas de carrinho/pedido e reconciliação externa continuam sem validação.** A consulta `tools/list` compartilhada pelo usuário foi bem-sucedida em `2026-10-18T05:41:22.487Z`. Isso não valida `tools/call`, escopos de negócio ou respostas dos parsers.

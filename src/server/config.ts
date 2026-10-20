@@ -1,5 +1,5 @@
 // Configuração lida exclusivamente do ambiente. Nunca logar segredos.
-import { GEMINI_BOUNDS, GEMINI_MODEL } from './agent/gemini-model.js';
+import { GEMINI_BOUNDS, GEMINI_MODEL } from './ai/gemini.js';
 
 /** Configuração do modelo conversacional (AI-01). A chave só existe aqui; nunca é logada nem enviada ao modelo. */
 export interface ConversationModelConfig {
@@ -21,9 +21,7 @@ export interface AppConfig {
   clientSecret: string | undefined;
   redirectUri: string;
   scope: string | undefined;
-  webOrigin: string;
   port: number;
-  tokenFile: string;
   /** Issuer usado para OIDC discovery (verificado em /.well-known/openid-configuration). */
   authServer: string;
   /** Segredo compartilhado bot→API (Authorization: Bearer). Vazio = rotas do bot desativadas (fail closed). */
@@ -38,14 +36,8 @@ export interface AppConfig {
   linksStorage: LinksStorageConfig;
   /** Base pública do backend para o link de início do login (precisa abrir no navegador da máquina do backend). */
   publicBaseUrl: string;
-  /** Habilita a sessão global antiga (/api/auth/*, diagnóstico com MCP). Só desenvolvimento; nunca vira vínculo. */
-  devGlobalSession: boolean;
-  /** F7 legada: manter false na demo DEC-01; saída validada não autoriza mudar o escopo. Nunca habilita checkout. */
-  cartEnabled: boolean;
   /** Opt-in da infraestrutura RUN-01; o modelo tem opt-in separado. */
   conversationRuntime?: { dbFile: string; botId: string };
-  /** Grupos por identidade estável UserInfo; habilitar somente com integração autenticada validada. */
-  accountGroups?: boolean;
   /**
    * OPS-02: liberação gradual da conversa. Lista vazia = todos os organizadores autorizados (ALLOWED_ORGANIZER_IDS).
    * Só restringe; nunca autoriza alguém fora de ALLOWED_ORGANIZER_IDS.
@@ -130,8 +122,13 @@ export function parseRollout(raw: string | undefined): string[] {
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
-  if (env.CONVERSATION_ACCOUNT_GROUPS_ENABLED && !['true', 'false'].includes(env.CONVERSATION_ACCOUNT_GROUPS_ENABLED)) throw new Error('CONVERSATION_ACCOUNT_GROUPS_ENABLED deve ser true ou false.');
-  if (env.CONVERSATION_ACCOUNT_GROUPS_ENABLED === 'true' && env.CONVERSATION_RUNTIME_ENABLED !== 'true') throw new Error('Grupos por conta exigem runtime de conversa.');
+  if (env.CONVERSATION_ACCOUNT_GROUPS_ENABLED === 'true')
+    throw new Error('CONVERSATION_ACCOUNT_GROUPS_ENABLED foi retirado do assistente; grupos antigos são preservados, sem associação automática entre reconexões.');
+  // Aceita o valor assistant de instalações anteriores, mas não existe mais seleção de processador.
+  if (env.CONVERSATION_AGENT_MODE !== undefined && env.CONVERSATION_AGENT_MODE !== 'assistant')
+    throw new Error('CONVERSATION_AGENT_MODE foi retirado; remova a variável. O único processador é o assistente.');
+  if (env.IFOOD_CART_ENABLED === 'true' || env.DEV_GLOBAL_SESSION === 'true')
+    throw new Error('F7 e sessão global foram retiradas; remova IFOOD_CART_ENABLED e DEV_GLOBAL_SESSION.');
   if (env.BOT_PASSWORD_ACCESS_ENABLED && !['true', 'false'].includes(env.BOT_PASSWORD_ACCESS_ENABLED)) {
     throw new Error('BOT_PASSWORD_ACCESS_ENABLED deve ser true ou false.');
   }
@@ -164,7 +161,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     if (env.CONVERSATION_MODEL_PROVIDER !== 'google' || env.CONVERSATION_MODEL !== GEMINI_MODEL || !apiKey.trim() || /\s/.test(apiKey)) {
       throw new Error(`AI-01 exige CONVERSATION_MODEL_PROVIDER=google, CONVERSATION_MODEL=${GEMINI_MODEL} e GEMINI_API_KEY válida.`);
     }
-    if (env.IFOOD_CART_ENABLED === 'true' || env.DEV_GLOBAL_SESSION === 'true') throw new Error('AI-01 exige DEC-01: F7 e sessão global desligadas.');
     const integer = (key: string, fallback: string, b: { min: number; max: number }) => {
       const raw = env[key] ?? fallback;
       const value = Number(raw);
@@ -196,9 +192,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     // Igual ao redirect registrado no client OAuth (sem barra final, sem /callback).
     redirectUri: env.IFOOD_REDIRECT_URI || 'http://localhost:8000',
     scope: env.IFOOD_SCOPE || undefined,
-    webOrigin: env.WEB_ORIGIN || 'http://localhost:5173',
     port: Number(env.PORT || 8000),
-    tokenFile: fromRoot(env.IFOOD_TOKEN_FILE || '.tokens.json'),
     authServer: env.IFOOD_AUTH_SERVER || 'https://id.ifood.com.br',
     botApiToken: env.BOT_API_TOKEN && env.BOT_API_TOKEN.length >= 32 ? env.BOT_API_TOKEN : undefined,
     allowedOrganizerIds: (env.ALLOWED_ORGANIZER_IDS || '')
@@ -209,10 +203,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     linksDir: links.dir,
     linksStorage: links.storage,
     publicBaseUrl: (env.PUBLIC_BASE_URL || `http://localhost:${Number(env.PORT || 8000)}`).replace(/\/$/, ''),
-    devGlobalSession: env.DEV_GLOBAL_SESSION === 'true',
-    cartEnabled: env.IFOOD_CART_ENABLED === 'true',
     conversationRuntime,
-    accountGroups: env.CONVERSATION_ACCOUNT_GROUPS_ENABLED === 'true',
     conversationOrganizerIds: parseRollout(env.CONVERSATION_ORGANIZER_IDS),
     submitFlagIgnored: env.IFOOD_SUBMIT_ENABLED !== undefined,
     conversationModel,

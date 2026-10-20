@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../../src/server/app';
-import { IfoodAuth } from '../../src/server/auth';
 import { loadConfig } from '../../src/server/config';
 import { IfoodLinkService } from '../../src/server/links/service';
 import { BOT_TOKEN, ORG_A, ORG_B, connectAndConfirm, setup } from '../helpers/fakes';
@@ -8,7 +7,7 @@ import { BOT_TOKEN, ORG_A, ORG_B, connectAndConfirm, setup } from '../helpers/fa
 describe('usuários da demo autenticados por senha no adaptador', () => {
   function env(publicAccess = true) {
     const e = setup({ allowedOrganizerIds: [], botPasswordAccess: publicAccess });
-    const app = createApp(new IfoodAuth(e.cfg, e.as.fetch, { tokenFile: null }), { config: e.cfg, links: e.links });
+    const app = createApp({ config: e.cfg, links: e.links });
     return { ...e, app };
   }
   const headers = (id: string) => ({ authorization: `Bearer ${BOT_TOKEN}`, 'x-telegram-user-id': id, 'x-telegram-access': 'PASSWORD' });
@@ -25,7 +24,7 @@ describe('usuários da demo autenticados por senha no adaptador', () => {
     const e = env(false);
     expect((await e.app.request('/api/bot/ifood/status', { headers: headers(ORG_A) })).status).toBe(503);
     const configured = setup({ allowedOrganizerIds: [ORG_A], botPasswordAccess: false });
-    const app = createApp(new IfoodAuth(configured.cfg, configured.as.fetch, { tokenFile: null }), { config: configured.cfg, links: configured.links });
+    const app = createApp({ config: configured.cfg, links: configured.links });
     expect((await app.request('/api/bot/ifood/status', { headers: headers(ORG_B) })).status).toBe(403);
     expect((await app.request('/api/bot/ifood/status', { headers: headers(ORG_A) })).status).toBe(200);
   });

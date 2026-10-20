@@ -1,5 +1,7 @@
 # AI-01 — Gemini escolhido para a demo
 
+> Relatório histórico do provedor/modelo. Após a [retirada local](retirada-legado.md), transporte em `ai/gemini.ts` e processador em `assistant/`; o corpus e os scripts citados abaixo não estão mais na árvore atual. Resultados preservados não equivalem a novo ensaio online.
+
 Em 18/10/2026, após o usuário solicitar um ensaio curto adequado ao hackathon, foi escolhido **Gemini 3.8 Flash (`gemini-3.8-flash`)**. A escolha usa resultados no contrato de ações da AI-02; não é garantia de segurança geral nem comparação controlada de qualidade contra Claude/Groq, que não concluíram esse mesmo ensaio.
 
 | Medida | Resultado da rodada curta |

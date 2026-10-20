@@ -1,14 +1,16 @@
 # CART-01 — Entrega local e auditoria
 
+> Histórico da auditoria de origem. A árvore reconciliada usa [SQLite v6](armazenamento-v6.md) e assistente único. [CART-01 vigente](cart-01-escrita-confirmada.md); resultados antigos não são execução nova nem GO externo.
+
 **Registro histórico da implementação original.** A continuação sobre a main com Gemini/OPS-02, os novos checks e o estado de publicação estão em [integração CART-01](cart-01-integracao.md). Os SHAs e resultados abaixo não são evidência da integração posterior.
 
 Data: 18/10/2026. Base: `api-backend@8191a0f427ac07a361d389a0b03f530ad8eaec83`. Branch local isolada: `codex/cart-01-confirmed-writes`. Sem commit, push, merge, PR ou deploy. AI-01/OPS-02 não foram modificadas. O usuário confirmou que ainda não existe branch CART-01 de Maylon; seu trabalho não publicado foi preservado.
 
 ## Entrega e rastreabilidade
 
-- Incoerências de escopo registradas na auditoria original (arquivo auxiliar ausente nesta árvore); [fluxo/contrato CART-01](cart-01-escrita-confirmada.md) disponível. D8/D10 revisadas para permitir somente escrita de itens confirmada pelo organizador.
+- Incoerências de escopo registradas na auditoria original (o arquivo auxiliar não está presente nesta árvore); [fluxo/contrato CART-01](cart-01-escrita-confirmada.md) disponível. D8/D10 revisadas para permitir somente escrita de itens confirmada pelo organizador.
 - [INT-02 #40](https://github.com/Modo-Escuro/api-backend/issues/40) criada para outputs reais/reconciliação pendentes. [CART-01 #18](https://github.com/Modo-Escuro/api-backend/issues/18) atualizada e aberta. INT-01 #7 e BUY-01 #19/BUY-02 #20 ganharam notas de escopo e dependências.
-- DATA-01/GRP-01 permanecem fonte única de pessoas, restrições e carrinho; DOM-01 calcula custos. CART-01 registra apenas confirmação, intenção, plano técnico e projeção do carrinho remoto.
+- DATA-01/GRP-01 permanecem fonte única de pessoas, restrições e sacola; DOM-01 calcula custos. CART-01 registra apenas confirmação, intenção, plano técnico e projeção do carrinho remoto.
 - Referência humana de uso único vinculada à finalidade PREPARE_CART, identidade, vínculo, compra, versão/hash, composição, catálogo, estado remoto e expiração. Nenhuma referência foi acrescentada ao vocabulário/modelContext da IA.
 - Criação, inclusão, atualização e remoção de itens com consulta/reconciliação conservadora. Confirmação/intenção e reconhecimento/cartId são atômicos no SQLite; a rede fica fora da transação.
 - Gateway e rotas legados não podem escrever na sessão real. Pagamento e envio continuam proibidos. Alteração de entrega/cupom e interface de callback Telegram não foram implementadas neste incremento.

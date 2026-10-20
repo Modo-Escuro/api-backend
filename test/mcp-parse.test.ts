@@ -76,6 +76,6 @@ describe('allowlist de tools', () => {
   });
   it('callReadTool recusa tool fora da allowlist antes de qualquer rede', async () => {
     // eslint-disable-next-line no-restricted-syntax
-    await expect(callReadTool('submitOrder', {})).rejects.toThrow(/não permitida/);
+    await expect(callReadTool('submitOrder', {}, {} as never)).rejects.toThrow(/não permitida/);
   });
 });

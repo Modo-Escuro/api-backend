@@ -1,5 +1,7 @@
 # F7 — Carrinho e preparação para checkout
 
+> Histórico: implementação e rotas F7 foram [retiradas localmente](retirada-legado.md) em 20/10/2026. `/api/bot/cart/*` retorna 404 após autenticação. O caminho atual de preparação é a [CART-01](cart-01-escrita-confirmada.md), com opt-in/evidência/confirmação próprios. As rotas e flags abaixo não são instruções operacionais atuais.
+
 Implementação do carrinho com gateway MCP por vínculo e testes offline. **Envio de pedido e aprovação de compra
 permanecem desabilitados**, inclusive quando o carrinho é habilitado. Login não autoriza compra.
 

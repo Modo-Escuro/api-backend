@@ -1,5 +1,7 @@
 # Auditoria de preço — semântica de `additionalPrice` (2026-10-17)
 
+> **Evidência histórica de catálogo.** Valores BRL, quantidade de amostras e proibição do MVP abaixo pertencem à coleta de 17/10; não são cotação atual. O domínio atual calcula em centavos e preserva a ambiguidade como faixa/estimativa. A DEC-01 posterior permite apenas preparação CART-01 confirmada e com gate externo, sem autorizar chamadas para completar esta auditoria. [Preço/limites atuais](dom-01-centavos-limites.md).
+
 ## Pergunta
 A "Promoção pizza grande" saía por **R$ 143** pela regra documentada
 (`promotionalUnitPrice` 65 + 2 sabores obrigatórios × `additionalPrice` 39). O valor está correto?

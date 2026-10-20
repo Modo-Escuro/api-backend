@@ -231,7 +231,8 @@ export interface PatchContext {
   maxParticipants?: number;
 }
 
-const derive = (ctx: PatchContext, kind: string, index: number) =>
+/** ID derivado de (tipo de identidade, escopo, evento, posição da operação): o membro do patch pré-visualiza exatamente o estado que o armazenamento vai gravar. */
+export const deriveServerId = (ctx: PatchContext, kind: string, index: number) =>
   createHash('sha256').update(JSON.stringify(['DATA-01', kind, ctx.seed, ctx.eventId, index])).digest('base64url').slice(0, 24);
 
 const sameKey = (a: RestrictionKey, b: RestrictionKey) => a.kind === b.kind && a.code === b.code;
@@ -240,7 +241,7 @@ const isMandatory = (k: RestrictionKey) => k.kind === 'ALLERGY' || (k.requiremen
 export function emptyPurchase(ctx: PatchContext): PurchaseState {
   return {
     schemaVersion: 1,
-    purchaseId: derive(ctx, 'purchase', 0),
+    purchaseId: deriveServerId(ctx, 'purchase', 0),
     status: 'ACTIVE',
     version: 0,
     linkId: null,
@@ -313,13 +314,13 @@ export function applyPatch(current: PurchaseState | null, rawOps: unknown, ctx: 
       s.clarifications = s.clarifications.filter((c) => !(c.target === tgt && c.field === field));
     };
     const currentRestrictions = (p: Participant) => (p.restrictions.state === 'DECLARED' ? p.restrictions.value : []);
-    const newRestriction = (key: RestrictionKey, n: number): Restriction => ({ restrictionId: derive(ctx, 'restriction', i * 100 + n), key, origin });
+    const newRestriction = (key: RestrictionKey, n: number): Restriction => ({ restrictionId: deriveServerId(ctx, 'restriction', i * 100 + n), key, origin });
 
     switch (op.op) {
       case 'ADD_PARTICIPANT': {
         if (s.participants.length >= max) throw new DomainError('PARTICIPANT_LIMIT', i);
         s.participants.push({
-          participantId: derive(ctx, 'participant', i), displayName: op.displayName,
+          participantId: deriveServerId(ctx, 'participant', i), displayName: op.displayName,
           restrictions: { state: 'NOT_ASKED' }, limit: { state: 'NOT_ASKED' }, origin,
         });
         paths.add('PARTICIPANTS');
@@ -413,7 +414,7 @@ export function applyPatch(current: PurchaseState | null, rawOps: unknown, ctx: 
         break;
       }
       case 'MARK_UNCLEAR': {
-        const id = derive(ctx, 'clarification', i);
+        const id = deriveServerId(ctx, 'clarification', i);
         const markers = { state: 'UNCLEAR' as const, clarificationId: id, origin };
         // Valor já declarado continua valendo (teto rígido, restrições, loja...); só "não perguntado"/"nenhum" viram ambíguo.
         const mark = <T>(d: Declared<T>): Declared<T> => (d.state === 'DECLARED' ? d : markers);

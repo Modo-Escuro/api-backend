@@ -101,7 +101,7 @@ function setup() {
   const command = (reference: string) => ({ confirmationRef: reference, requestId: randomUUID(), callbackId: randomUUID() });
   const cfg = loadConfig({ BOT_API_TOKEN: token, ALLOWED_ORGANIZER_IDS: principal.organizerId,
     CONVERSATION_RUNTIME_ENABLED: 'true', CONVERSATION_DB_FILE: path, BOT_TELEGRAM_ID: principal.botId });
-  const app = createApp(undefined, { config: cfg, links: links as IfoodLinkService, cartWrites: service });
+  const app = createApp({ config: cfg, links: links as IfoodLinkService, cartWrites: service });
   const call = (path: string, body: unknown, extra: Record<string,string> = {}) => app.request(`/api/bot/v1/conversations/${principal.conversationId}/cart-writes/${path}`, {
     method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json',
       'x-telegram-user-id': principal.organizerId, 'x-telegram-chat-id': principal.conversationId, ...extra }, body: JSON.stringify(body) });
@@ -119,7 +119,7 @@ describe('CART-01: confirmação humana, persistência e reconciliação (MCP mo
     await f.service.confirm(principal, cmd);
     expect(metrics.counter('cart_write_attempts_total', { tool: 'createCart', outcome: 'RESULT_UNKNOWN' })).toBe(before + 1);
     expect(cartIntentSummary(f.turns.db)).toEqual({ PENDING: 0, SUCCEEDED: 0, FAILED: 0, RESULT_UNKNOWN: 1 });
-    const app = createApp(undefined, { config: f.cfg, links: f.links as IfoodLinkService, conversations: new TurnRuntime(f.turns) });
+    const app = createApp({ config: f.cfg, links: f.links as IfoodLinkService, conversations: new TurnRuntime(f.turns) });
     const response = await app.request('/api/ops/status', { headers: { authorization: `Bearer ${token}`, 'x-telegram-user-id': principal.organizerId } });
     expect(await response.json()).toMatchObject({ purchase: { cartPreparation: 'DISABLED', cartIntents: { RESULT_UNKNOWN: 1 } } });
   });
@@ -292,11 +292,11 @@ describe('CART-01: confirmação humana, persistência e reconciliação (MCP mo
       CONVERSATION_MODEL_ENABLED: 'true', CONVERSATION_MODEL_PROVIDER: 'google', CONVERSATION_MODEL: 'gemini-3.8-flash',
       GEMINI_API_KEY: 'synthetic-key', CONVERSATION_MODEL_MAX_REQUESTS: '1',
       IFOOD_CONFIRMED_CART_WRITES_ENABLED: String(enabled), IFOOD_CART_CONTRACT_EVIDENCE_FILE: 'synthetic-proof.json' });
-    const env = setupLinks({ cartEnabled: config.cartEnabled, confirmedCartWrites: config.confirmedCartWrites,
+    const env = setupLinks({ confirmedCartWrites: config.confirmedCartWrites,
       conversationRuntime: config.conversationRuntime, conversationModel: config.conversationModel });
     env.as.scope += ' mcp.cart.read mcp.cart.write mcp.cart.payment';
     await connectAndConfirm(env, ORG_A);
-    expect(env.cfg.cartEnabled).toBe(false);
+    expect(env.cfg).not.toHaveProperty('cartEnabled');
     expect(env.cfg.conversationModel?.provider).toBe('google');
     const status = await env.links.status(ORG_A);
     expect(status.scopeEvidence).toBe('TOKEN_SCOPES');
@@ -313,7 +313,7 @@ describe('CART-01: confirmação humana, persistência e reconciliação (MCP mo
     old.exec('DROP TABLE cart_write_reviews; DROP TABLE cart_write_intents; DROP TABLE cart_write_heads; PRAGMA user_version=2;');
     old.close();
     const migrated = new TurnStore(f.path, {}, f.now); stores.push(migrated);
-    expect(migrated.db.prepare('PRAGMA user_version').get()!['user_version']).toBe(5);
+    expect(migrated.db.prepare('PRAGMA user_version').get()!['user_version']).toBe(6);
     expect(new CartWriteStore(migrated).purchase(principal)).toEqual(before);
     expect(migrated.accept(principal, turnEvent(88, before.version)).operation.operationId).toBe(accepted.operation.operationId);
     const service = new ConfirmedCartService(new CartWriteStore(migrated), f.links, f.gate);
@@ -323,7 +323,7 @@ describe('CART-01: confirmação humana, persistência e reconciliação (MCP mo
   });
   it('rollout OPS-02 restringe revisão, confirmação e consulta, sem ampliar autorização', async () => {
     const f = setup(), review = await f.service.prepare(principal), command = f.command(review.confirmationRef);
-    const app = createApp(undefined, { config: { ...f.cfg, conversationOrganizerIds: ['222222222'] }, links: f.links as IfoodLinkService, cartWrites: f.service });
+    const app = createApp({ config: { ...f.cfg, conversationOrganizerIds: ['222222222'] }, links: f.links as IfoodLinkService, cartWrites: f.service });
     const base = `/api/bot/v1/conversations/${principal.conversationId}/cart-writes`;
     const headers = { authorization: `Bearer ${token}`, 'content-type': 'application/json',
       'x-telegram-user-id': principal.organizerId, 'x-telegram-chat-id': principal.conversationId };
@@ -468,13 +468,11 @@ describe('CART-01: confirmação humana, persistência e reconciliação (MCP mo
     await expect(f.service.prepare(principal)).rejects.toMatchObject({ code: 'CART_REVIEW_CHANGED' });
     expect(f.write).not.toHaveBeenCalled();
   });
-  it('reavalia alergia por pessoa: sem dado do iFood a preparação segue com a restrição na revisão (aviso, não bloqueio)', async () => {
+  it('reavalia alergia por pessoa: dado insuficiente bloqueia preparação, mesmo com cobertura antiga', async () => {
     const f = setup(), s = f.state(), person = s.participants[0]!;
     person.restrictions = { state: 'DECLARED', value: [{ restrictionId: 'restriction00000001', key: { kind: 'ALLERGY', code: 'MILK' }, origin: { eventId: 'fake' } }], origin: { eventId: 'fake' } };
     s.bag!.coverage![0]!.restrictionsSig = restrictionsSig(s,person); f.save(s);
-    const review = await f.service.prepare(principal);
-    expect(review).toMatchObject({ purpose: 'PREPARE_CART', purchaseAuthorized: false });
-    expect(review.coverage).toEqual(expect.arrayContaining([expect.objectContaining({ participantId: person.participantId, status: 'COVERED' })]));
+    await expect(f.service.prepare(principal)).rejects.toMatchObject({ code: 'CART_ITEM_BLOCKED' });
     expect(f.write).not.toHaveBeenCalled();
   });
   it('reavalia alergia por pessoa mesmo se cobertura persistida disser COVERED: conflito informado bloqueia', async () => {
@@ -518,7 +516,7 @@ describe('CART-01: confirmação humana, persistência e reconciliação (MCP mo
   });
   it('regressão da auditoria: feature desligada responde 503 na consulta', async () => {
     const cfg=loadConfig({BOT_API_TOKEN:token,ALLOWED_ORGANIZER_IDS:principal.organizerId});
-    const app=createApp(undefined,{config:cfg});
+    const app=createApp({config:cfg});
     const response=await app.request(`/api/bot/v1/conversations/${principal.conversationId}/cart-writes/current`,{
       headers:{authorization:`Bearer ${token}`,'x-telegram-user-id':principal.organizerId,'x-telegram-chat-id':principal.conversationId}});
     expect(response.status).toBe(503); expect((await response.json()).error.kind).toBe('CART_FEATURE_DISABLED');
@@ -655,11 +653,11 @@ describe('CART-01: confirmação humana, persistência e reconciliação (MCP mo
     expect((await f.call('confirm',{...c,purpose:'PREPARE_CART',source:'TELEGRAM_CALLBACK'})).status).toBe(200);
     expect(f.write).toHaveBeenCalledTimes(1);
   });
-  it('endpoints legados não escrevem, mesmo com flag antiga ativa', async () => {
+  it('endpoints legados retirados retornam 404 sem escrita', async () => {
     const f=setup();
     for(const suffix of ['', '/fake/items','/fake/payment','/fake/approve','/fake/submit']) {
       const response=await f.app.request(`/api/bot/cart${suffix}`,{method:'POST',headers:{authorization:`Bearer ${token}`,'x-telegram-user-id':principal.organizerId}});
-      expect(response.status).toBe(409);
+      expect(response.status).toBe(404);
     }
     expect(f.write).not.toHaveBeenCalled();
   });

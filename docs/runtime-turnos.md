@@ -1,5 +1,7 @@
 # RUN-01 — processamento durável de turnos
 
+> Montagem reconciliada de 20/10: assistente opt-in, transporte `ai/` e [SQLite v6](armazenamento-v6.md), unificando as variantes v5. Ensaios datados abaixo são históricos e não comprovam implantação atual.
+
 [Issue #14](https://github.com/Modo-Escuro/api-backend/issues/14) · [Contrato v1.0](conversation-api-v1.md) · [Vínculo Telegram](bot-api.md)
 
 ## Entrega e disponibilidade
@@ -7,12 +9,11 @@
 Implementada a infraestrutura de aceite, fila, execução limitada, consulta, cancelamento local e recuperação em SQLite real. As rotas v1 estão registradas no aplicativo. A ativação é explícita e permanece **desligada por padrão**. Nenhum schema da API-01 foi alterado.
 
 Sem opt-in separado do modelo, novos eventos continuam retornando **503 UNAVAILABLE**, mesmo com a infraestrutura ativa.
-A [montagem AI-01](ai-01-montagem-ensaio.md) conecta o Gemini 3.8 Flash ao processador da AI-02 (com as sugestões
-da GRP-01) somente com configuração explícita; ensaio operacional e D10 permanecem pendentes.
+A [montagem atual do assistente](assistente-conversacional.md#configuração) conecta o Gemini 3.8 Flash ao roteador e ao planejador somente com configuração explícita; ensaio operacional e D10 permanecem pendentes.
 O domínio da DATA-01 já está integrado ao armazenamento ([data-01-compra](data-01-compra.md)). Replays e consultas
 de operações existentes continuam possíveis. Não há executor de compra instalado.
 
-DATA-01 representa participantes/restrições/origem, valida patches e conserva o acordo da compra no mesmo banco (schema v2), gravando domínio e snapshot na mesma transação. OPS-01 permanece responsável pelo volume e preservação dos vínculos existentes. O armazenamento de snapshots da RUN-01 não substitui esse domínio nem comprova que a migração operacional foi feita. Outbox/acompanhamento BOT-01 já estão integrados ao bot remoto; o ensaio operacional é uma evidência separada.
+DATA-01 grava domínio/snapshot/operação na mesma transação. v6 instala memória/sessão faltantes em ambas as variantes v5, preservando CART-01 e dados anteriores. Runtime aberto migra mesmo com modelo/escrita desligados; isso não comprova migração de volume online. OPS-01 responde por vínculos/volume, e o bot mantém seu próprio banco.
 
 A main remota conferida em [estado remoto/local](estado-remoto-local.md) já inclui montagem AI-01 e testes finais RUN-01 #41. A [DEC-01 vigente](decisoes-conversacionais.md) permite preparação real confirmada, mas CART-01 nova ainda é local; o runtime publicado não ganha escrita por documentação. PREPARE_CART é distinto de aprovação de pedido; RUN-01 não reutiliza `/purchase-approvals` para preparar carrinho.
 
@@ -23,6 +24,7 @@ A main remota conferida em [estado remoto/local](estado-remoto-local.md) já inc
 | `src/server/turns/store.ts` | Transações, unicidade, snapshots/resultados, compare-and-swap, leases, marcador de efeito externo e recuperação |
 | `src/server/turns/runtime.ts` | Worker no processo da API, concorrência limitada, heartbeat, abort e encerramento |
 | `src/server/routes/conversation.ts` | Validação HTTP/identidade, limites de corpo, rotas e erros fixos |
+| `src/server/turns/account-session.ts` | Referência técnica da sessão do vínculo atual, sem identidade iFood inventada |
 | `test/turns/` | SQLite em disco, falhas transacionais, morte de processo, worker e rotas reais com processadores sintéticos |
 
 1. O middleware autentica o adaptador e o organizador. A rota confere chat privado correspondente, path e bot cadastrado por configuração; identidade não vem do texto/modelo.
@@ -33,6 +35,12 @@ A main remota conferida em [estado remoto/local](estado-remoto-local.md) já inc
 6. GET/replay devolvem o resultado persistido, sem executar novamente. O payload textual temporário da fila é removido logicamente ao terminar; evento/hash/origem e resultado permanecem.
 
 As transições são serializadas pelo SQLite; trabalhos de leitura podem executar concorrentemente. Dois eventos aceitos na mesma versão podem competir: o primeiro commit válido avança a revisão, e o outro termina `FAILED/STALE_VERSION`. Esse erro exige consultar o estado corrente e uma nova correção explícita; não alterar silenciosamente o corpo de um evento aceito. Este mecanismo não interpreta nem concilia restrições por conta própria.
+
+### Sessão e extensões HTTP
+
+Account-context anuncia sessionRef; cabeçalho associa aceite/replay/consulta ao vínculo capturado. Referência antiga falha com LINK_CHANGED; snapshot de sessão não associada é neutro. Runtime revalida antes/depois do processador. Sem cabeçalho não há associação; não recapturar outra conta para pendência. [Contrato](conversation-api-v1.md#sessão-do-vínculo-atual) e [persistência v6](armazenamento-v6.md).
+
+`/memory` publica só destinatários salvos e revisão, nunca fatos; `/operations/:operationId/progress` publica prévia em RAM, até 600 caracteres e `null` após o término. Endereços e CART-01 têm validações próprias; consulta de contexto/progresso não cria autorização de compra.
 
 Um `TurnProcessor` é código interno confiável, não uma ferramenta exposta ao modelo. Recebe `purchase` e `previewDomain()` no `TurnContext`, propõe só operações tipadas em `TurnResult.domain` (o armazenamento recalcula o estado a partir do persistido) e produz `TurnResult` com snapshot validado, versão base + 1, completude e campos afetados. Não instalar um repasse do JSON do LLM como processador. O commit cria a referência de alteração ligada ao evento e à mensagem de origem. Processamento somente leitura não pode publicar `OUTCOME`, `SUBMITTING` ou `CONFIRMED` de compra, mesmo com referência aparentemente válida. Neste incremento, referências de ação/aprovação não são emitidas; eventos gerais de ação e a rota de aprovação retornam `ACTION_UNAVAILABLE` até suas integrações específicas.
 
@@ -52,7 +60,7 @@ Um `TurnProcessor` é código interno confiável, não uma ferramenta exposta ao
 
 O cancelamento tem evento e registro próprios no mesmo namespace de deduplicação. Não altera a origem da operação alvo. Sua resposta sempre contém `remoteCancellation: NOT_REQUESTED`. Replay do cancelamento recupera o resultado daquele comando; consultar a operação alvo para seu estado posterior.
 
-Na main remota conferida, `beforeExternalWrite()` é uma barreira interna que **sempre rejeita escrita**. Nenhuma flag ou texto de aprovação a libera. O armazenamento possui primitivas defensivas para marcador anterior ao efeito e resultado desconhecido, exercitadas somente em testes sintéticos. Não há executor de carrinho confirmado instalado. A decisão de permitir PREPARE_CART já foi tomada na DEC-01; falta integrar a CART-01 local, com confirmação/intenção consumidas atomicamente antes da rede e reconciliação verificada na INT-02. Não basta instalar um hook.
+`beforeExternalWrite()` continua sendo uma barreira interna que **sempre rejeita escrita** pelo processador de turnos. Nenhuma flag ou texto de aprovação a libera. A implementação local da CART-01 usa serviço e rotas dedicados, com confirmação PREPARE_CART e intenção consumidas atomicamente antes da rede; não passa pelo vocabulário do modelo nem por `/purchase-approvals`. Sua montagem exige opt-in, runtime e manifesto de evidência; validação externa INT-02 e callback humano BOT-03 permanecem gates de ativação. Ver [escrita confirmada](cart-01-escrita-confirmada.md). Não há executor de envio de pedido.
 
 Depois do marcador, uma falha é conservadoramente desconhecida mesmo se o processo caiu antes de alcançar o provedor. Operação desconhecida bloqueia outra barreira de escrita na conversa e não expira automaticamente. Resultado conhecido exige bloco estruturado com referência de evidência; texto do modelo não resolve incerteza. A main conferida não oferece endpoint de reconciliação: o contrato externo pertence à INT-02, a preparação à CART-01 e eventual envio futuro à BUY-02. Não prometer execução única no provedor.
 
@@ -92,7 +100,7 @@ Com a flag ligada, caminho e ID são obrigatórios. A classificação da OPS-01 
 
 Usar **uma instância/processo** da API e diretório dedicado no volume persistente. SQLite usa WAL e `synchronous=FULL`. Diretório/arquivo são configurados para 700/600 em POSIX; no Windows, conferir ACL do diretório, pois bits POSIX não representam a proteção NTFS. Banco inválido ou versão não suportada falha fechado e não é substituído por banco vazio.
 
-Com CART-01, o banco migra de v2 para v3; com a [conversa guiada](conversa-guiada.md), avança para **v5**, que aceita a intenção de busca persistida. As migrações são aditivas/transacionais, mesmo com a escrita desligada. Confirmações/intenção usam o mesmo SQLite; o ciclo `recover()` trata intenções vencidas sem repetir rede. Possível efeito mantém RESULT_UNKNOWN e bloqueia alterações/expurgo. Rollback por flag preserva os dados; binários anteriores recusam versões mais novas. Não rebaixar `user_version` nem restaurar banco antigo para contornar essa proteção. Ver [CART-01](cart-01-escrita-confirmada.md).
+O banco migra transacionalmente até **v6**; variantes v5 são tratadas por capacidade, sem presumir tabelas iguais. Confirmações/intenção permanecem; recover não repete rede e possível efeito bloqueia alterações/expurgo. Binário v5 ou anterior recusa v6. Não rebaixar user_version ou restaurar cópia antiga sobre bloqueios. [Armazenamento](armazenamento-v6.md) e [CART-01](cart-01-escrita-confirmada.md).
 
 Para backup, parar o processo e aguardar o fechamento do banco, então copiar privadamente o diretório completo, preservando eventuais arquivos WAL/SHM. Não copiar apenas o arquivo principal de um banco aberto. Restaurar uma cópia consistente com o mesmo esquema em ambiente isolado; conferir `quick_check`, replay, versão e resultados antes de trocar o serviço. Nunca restaurar snapshot antigo sobre operação com efeito externo pendente/desconhecido: reconciliar antes. A migração/rollback dos vínculos OAuth existentes continua separada em OPS-01; não sobrescrever `.ifood-links` nem o SQLite do bot com este banco.
 
@@ -112,7 +120,7 @@ CI adicionada para Windows/Ubuntu e Node 22.13/24. Os testes específicos usam S
 
 Registro histórico da implementação RUN-01, antes dos merges posteriores: validação local em 18/10/2026, Windows/Node 24.13, após incorporar `main@9aa02f2`: **440 testes TypeScript passaram**, incluindo 35 da RUN-01; dois testes POSIX de permissões da OPS-01 foram omitidos no Windows, conforme a condição já existente nessa base. Typecheck, lint e build passaram. Os seis testes Python de conformidade da API-01 também passaram. O resultado da matriz de CI deve ser conferido na PR. Não houve merge na main, deploy, mudança de variáveis Railway nem ensaio com conta real.
 
-Validação integrada em 18/10/2026, Linux/Node 22.23, sobre `main@dc448f9` (AI-01 #36 + DATA-01 + GRP-01):
+**Registro histórico** da validação integrada em 18/10/2026, Linux/Node 22.23, sobre `main@dc448f9` (AI-01 #36 + DATA-01 + GRP-01); processador e testes foram migrados depois para o assistente:
 
 - `test/turns/run01-integrated.test.ts`: morte real do processo com o **processador da AI-02** (Gemini com transporte
   sintético) sobre o domínio da DATA-01 nas etapas aceite, execução (modelo em voo) e commit. O reinício recupera a mesma
@@ -125,4 +133,4 @@ Validação integrada em 18/10/2026, Linux/Node 22.23, sobre `main@dc448f9` (AI-
   antiga → 409 `STALE_VERSION`; "pode pedir" sem aprovação; `quick_check ok`; logs sem texto, identidade ou segredo.
 - Não executado: bot Telegram real (exige o único worker de polling e token do bot) e volume Railway (OPS-01).
 
-Situação vigente na base remota `f3b8b55`: AI-01/AI-02, DATA-01, GRP-01, OPS-01 e os testes finais RUN-01 (#41) estão integrados ao código; a montagem do processador depende de configuração explícita. Isso não comprova o estado do deploy, volume Railway nem ensaio com Telegram real. A DEC-01 agora permite preparar carrinho real após confirmação humana específica. CART-01 permanece somente local; sua integração e a validação externa INT-02 #40 continuam pendentes. Envio e pagamento seguem proibidos, e testes automatizados não fazem escritas externas. Conferir [estado remoto/local](estado-remoto-local.md) antes de ativar qualquer fluxo.
+O código local integra assistente/AI-01, DATA-01, GRP-01, OPS-01 e montagem CART-01 opt-in. O processador exige configuração explícita; CART-01 tem opt-in próprio e não exige modelo. Isso não comprova merge remoto, deploy, volume ou ensaio com Telegram real. Evidência externa INT-02 e callback BOT-03 validado continuam gates; envio/pagamento seguem proibidos. A última execução local registrada está na [retirada do legado](retirada-legado.md#verificação-e-limites-de-evidência); esta revisão documental não reexecuta o ensaio histórico.

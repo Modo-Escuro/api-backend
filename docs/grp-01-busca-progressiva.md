@@ -1,5 +1,7 @@
 # GRP-01 — Busca progressiva e ausência de propostas
 
+> Registro do incremento #49. Helpers puros de exploração/composição e seus regressores são preservados na reconciliação; o wrapper do agente foi retirado. O assistente atual usa seu próprio executor/ciclo limitado, sem prometer que todas as estratégias abaixo sejam acionadas a cada turno. UNKNOWN obrigatório continua bloqueado. [Integração corrente](sincronizacao-github.md).
+
 Desenvolvida em 18/10/2026 na branch `codex/grp01-progressive-search`, inicialmente sobre API #47 `a72f7958bafda3036a5c6f77045d13925b25233b`. O usuário autorizou publicar as melhorias. Na conferência para publicação, o #47 já estava mergeado; a entrega segue em PR de continuação, com base atualizada para `main@a027ed40ec24fb8957d28131e432bcdc566b45aa`, preservando #47 e #48. Publicação não autoriza merge, deploy, mudança de flags ou compra real. Os textos acessíveis do bot permanecem em outra branch e fora deste incremento da API.
 
 ## Causa e evidência

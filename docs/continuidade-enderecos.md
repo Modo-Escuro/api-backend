@@ -1,6 +1,6 @@
 # Continuidade automática e endereço iFood — 18/10/2026
 
-Base: `main@8a6dadc82ff8c7e952b665dedad6876677fade6b`. Branch separada `codex/conversation-continuity-addresses`; os drafts CART-01 #46 e bot #17 foram preservados. Não houve merge, deploy, mudança de flags/volumes ou operação externa. Foram lidos CLAUDE.md, plano-conversacional.md, contrato bot/API, RUN-01, ligação Gemini/GRP-01 e regras de vínculos.
+Origem histórica: main@8a6dadc e branch de continuidade. O diagnóstico abaixo pertence àquele incremento. Na reconciliação atual há assistente único, executor com seleção observada e [SQLite v6](armazenamento-v6.md). [Sincronização GitHub](sincronizacao-github.md) distingue o código consultado dos serviços online não conferidos.
 
 ## Causa e fluxo
 
@@ -23,16 +23,16 @@ O usuário exige confirmação mesmo com um endereço, prevalecendo sobre a desc
 
 Opções ainda não autorizadas ficam somente na RAM por cinco minutos; reinício invalida seus botões. A tabela aditiva `delivery_address_selected` no SQLite da RUN-01 guarda escopo, hash de vínculo, addressId autorizado, hash do endereço, hash da referência escolhida e prazo de 24 h. Não guarda lista, texto, endereço completo ou coordenadas. Replay da escolha reconhecida sobrevive a reinício, sem voltar para uma escolha substituída. Não altera user_version nem rebaixa esquema CART-01.
 
-Sugestões da montagem de produção exigem a referência confirmada e revalidam vínculo/endereço antes e depois da busca. `runEvaluation` também confere addressId na lista; o fallback antigo do único endereço permanece apenas no avaliador legado, fora do agente montado. Remoção/mudança/troca durante a busca impede aplicar propostas. DATA-01 recebe SET_ADDRESS com SET_PROPOSALS no commit normal da RUN-01; sem seleção, coleta de pessoas/restrições/orçamento continua e as sugestões ficam pendentes. O modelo nunca recebe a referência de confirmação.
+Na montagem atual, `AssistantTools` lê a lista e confere addressId/hash da seleção autorizada antes de consultar ofertas; também verifica o vínculo após a chamada. Sem seleção, informa ADDRESS_REQUIRED e não busca ofertas. O executor mantém a lista por turno; a revisão CART-01 realiza nova releitura antes da escrita, sem prometer atomicidade entre catálogo e entrega. `runEvaluation` mantém sua própria verificação de addressId e compatibilidade de endereço único; isso não é seleção automática no assistente. A ponte de propostas não garante SET_ADDRESS em toda composição. O modelo não recebe endereço, coordenadas ou referência humana.
 
 ## Arquivos e regressões
 
 - `services/address-reference.ts`: schema e validação da referência atual, compartilháveis com CART-01.
 - `services/delivery-addresses.ts`: revisão, seleção persistente e releitura autenticada.
 - `routes/conversation.ts` e `app.ts`: fronteira autenticada adicional, erros fixos e cache no-store.
-- `conversation-runtime.ts`, `services/group.ts` e `agent/processor.ts`: conexão com a montagem existente e pendência de endereço sem impedir coleta.
+- `conversation-runtime.ts`, `assistant/tools.ts` e `assistant/processor.ts`: seleção autorizada, consultas e pendência de endereço sem impedir conversa. O provedor `services/group.ts` e `agent/` foram retirados.
 - `test/addresses.test.ts`: zero/um/múltiplos, origem/autenticação/isolamento, replay/reinício, expiração, remoção/mudança, vínculo trocado, erro/schema/timeout e nenhuma busca antes da escolha.
-- Testes de wiring/hardening foram atualizados para confirmar o endereço explicitamente antes de testar sugestões; não se relaxaram os bloqueios alimentares ou critérios de sucesso.
+- `test/assistant/assistant.test.ts`: catálogo bloqueado sem seleção, com endereço confirmado nos ensaios de consulta; não relaxa elegibilidade alimentar. Os testes antigos de wiring/hardening pertenciam ao processador retirado.
 
 Checks finais e SHAs ficam na descrição do PR. Typecheck/lint/build e suíte completa são obrigatórios. Os testes usam SQLite/HTTP reais e OAuth/MCP/Gemini sintéticos; não comprovam operação iFood.
 
@@ -44,4 +44,4 @@ GO técnico é limitado à revisão do código com verificações aprovadas. NO-
 2. Implantar API primeiro, com o mesmo banco/vínculos e cart/pagamento/envio desligados. Conferir autenticação, rollout e rotas novas com usuário sintético autorizado.
 3. Implantar bot depois, preservando outbox/cursor e um polling. Mensagens novas do worker têm markup editável. Entrega anterior realmente incerta não pode ser reenviada automaticamente sem risco de duplicação; recuperação manual continua explícita.
 4. No ensaio humano: enviar texto e aguardar resposta automática; conectar pelo navegador e aguardar contexto/endereço; conferir zero/um/múltiplos, escolha e retomada. Repetir com reinício, outro organizador, sessão indisponível e endereço removido em ambiente controlado. Não provocar compras reais.
-5. Rollback: reverter bot primeiro. A API antiga voltaria a aceitar fallback de endereço único no agente; se for necessário revertê-la, desabilitar sugestões/conversa durante a transição. Tabelas aditivas preservam referências e não autorizam negócio por si só.
+5. Rollback funcional preserva armazenamento; binários v5 e anteriores recusam v6. Não rebaixar schema nem restaurar cópia antiga sobre intenções. Bot precisa conservar contrato/outbox compatíveis; pausar conversa em transição incompatível. Referência não autoriza negócio por si só.

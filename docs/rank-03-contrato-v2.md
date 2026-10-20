@@ -176,8 +176,7 @@ Recorte ilustrativo de uma única opção com total desconhecido (não é payloa
 
 ## Consumidores inspecionados e adaptação
 
-- **Frontend deste repositório:** `src/web/App.tsx` só usa diagnóstico (`/api/diagnostics/search`) e login;
-  não consome `/api/evaluate` nem apresenta score. Nenhuma mudança incompatível nesses endpoints.
+- **Frontend no diagnóstico histórico:** o painel só consumia diagnóstico/login. Ele e `/api/diagnostics/search` foram retirados localmente em 20/10; o consumidor atual é o bot/assistente, sem afirmar que `/api/evaluate` seja seu fluxo principal.
 - **Testes/pipeline locais:** adaptados para declarar ECONOMY quando testam recomendações, validar D9,
   cobertura e chaves. Casos de #8/#9 preservam suas verificações; novos testes verificam ausência de prioridade.
 - **Bot no diagnóstico original:** `Modo-Escuro/telegram-bot/main@e280807` tinha login, sem cliente de conversa.

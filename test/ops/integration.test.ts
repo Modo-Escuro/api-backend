@@ -1,11 +1,10 @@
-// OPS-02 ponta a ponta offline: agente determinístico + RUN-01/DATA-01 em SQLite real + rotas HTTP reais.
+// OPS-02 ponta a ponta offline: assistente sintético + RUN-01/DATA-01 em SQLite real + rotas HTTP reais.
 // Sem MCP real, sem modelo real, sem compra. Valores sensíveis são sintéticos.
 import { readdirSync, readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../../src/server/app';
-import { DeterministicModel } from '../../src/server/agent/mock-model';
-import type { ConversationModel, ModelRequest } from '../../src/server/agent/model';
-import { createAgentProcessor } from '../../src/server/agent/processor';
+import type { AssistantModel } from '../../src/server/assistant/protocol';
+import { offlineAssistant } from '../helpers/assistant';
 import { loadConfig } from '../../src/server/config';
 import type { ConversationEvent } from '../../src/server/contracts/conversation';
 import { SpendBudget } from '../../src/server/ops/budget';
@@ -31,12 +30,12 @@ function msg(n: number, text: string, expectedVersion: number, org = ORG): Conve
 }
 
 /** Modelo determinístico que reporta uso, como um provedor real faria. */
-class UsageModel implements ConversationModel {
+class UsageModel implements AssistantModel {
   readonly id = 'usage';
-  private inner = new DeterministicModel();
-  async propose(r: ModelRequest) {
+  async propose(r: Parameters<AssistantModel['propose']>[0]) {
     r.reportUsage?.({ inputTokens: 100, outputTokens: 50 });
-    return this.inner.propose(r);
+    return { message: 'Vamos organizar esse pedido.', requests: [], itemRefs: [],
+      contextActions: [{ action: 'SET_PRIORITY' as const, value: 'ECONOMY' as const }] };
   }
 }
 
@@ -54,14 +53,14 @@ describe('OPS-02 integrado (offline)', () => {
   });
   afterEach(() => { cleanup.splice(0).forEach((f) => f()); setLogSink(); lines.length = 0; vi.restoreAllMocks(); });
 
-  function env(opts: { budget?: SpendBudget; extraEnv?: Record<string, string>; model?: ConversationModel } = {}) {
+  function env(opts: { budget?: SpendBudget; extraEnv?: Record<string, string>; model?: AssistantModel } = {}) {
     const dir = temporary();
     const config = loadConfig({ BOT_API_TOKEN: TOKEN, ALLOWED_ORGANIZER_IDS: `${ORG},222222222`, IFOOD_LINKS_DIR: dir.dir,
       CONVERSATION_RUNTIME_ENABLED: 'true', BOT_TELEGRAM_ID: principal.botId, CONVERSATION_DB_FILE: dir.file, ...opts.extraEnv });
     const store = new TurnStore(dir.file);
-    const processor = createAgentProcessor({ model: opts.model ?? new UsageModel(), linkOf: async () => null, timeoutMs: 2_000, budget: opts.budget });
+    const processor = offlineAssistant(opts.model ?? new UsageModel(), opts.budget);
     const runtime = new TurnRuntime(store, { processor });
-    const app = createApp(undefined, { config, conversations: runtime, budget: opts.budget });
+    const app = createApp({ config, conversations: runtime, budget: opts.budget });
     cleanup.push(() => { try { runtime.stop(); } catch { /* já parado */ } dir.clean(); });
     let n = 0;
     const send = async (text: string, org = ORG) => {
@@ -104,7 +103,7 @@ describe('OPS-02 integrado (offline)', () => {
 
   it('estouro do orçamento é parada clara (LIMIT_EXCEEDED) e o estado continua recuperável', async () => {
     let t = 0;
-    const budget = new SpendBudget({ maxCallsPerConversation: 1, windowMs: 60_000 }, () => t);
+    const budget = new SpendBudget({ maxCallsPerConversation: 2, windowMs: 60_000 }, () => t);
     const e = env({ budget });
     expect((await e.send('Somos Ana e Bia.')).body).toMatchObject({ status: 'SUCCEEDED', resultVersion: 1 });
     const before = e.store.snapshot(principal);
@@ -120,7 +119,7 @@ describe('OPS-02 integrado (offline)', () => {
   });
 
   it('status separa HTTP, sessão operacional, conversa e capacidade de compra; flags isoladas não habilitam envio', async () => {
-    const e = env({ extraEnv: { IFOOD_CART_ENABLED: 'true', IFOOD_SUBMIT_ENABLED: 'true' } });
+    const e = env({ extraEnv: { IFOOD_SUBMIT_ENABLED: 'true' } });
     expect((await e.app.request('/api/ops/status')).status).toBe(401);
     const r = await e.app.request('/api/ops/status', { headers: headers() });
     expect(r.status).toBe(200);
@@ -129,7 +128,7 @@ describe('OPS-02 integrado (offline)', () => {
     expect(body.sessions).toEqual({ confirmed: 0, operational: 0, unavailable: 0, reconnectRequired: 0, unverified: 0 });
     expect(body.conversation).toMatchObject({ enabled: true, rollout: { mode: 'ALL_AUTHORIZED' },
       runtime: { accepting: true, processorInstalled: true, storage: 'OK', resultUnknown: 0 } });
-    expect(body.purchase).toEqual({ capable: false, cartPreparation: 'LEGACY_FLAG_ON', submission: 'DISABLED',
+    expect(body.purchase).toEqual({ capable: false, cartPreparation: 'DISABLED', submission: 'DISABLED',
       submitFlagIgnored: true, reason: 'DEC01_D8_READ_ONLY', cartIntents: { PENDING: 0, SUCCEEDED: 0, FAILED: 0, RESULT_UNKNOWN: 0 } });
     expect(['PRIVATE', 'UNVERIFIED_PLATFORM']).toContain(body.conversation.storagePermissions.state);
     // Health HTTP continua 200 mesmo com runtime parado; o status operacional mostra a diferença.
@@ -164,7 +163,7 @@ describe('OPS-02 integrado (offline)', () => {
     e.runtime.stop();
 
     // Rollback: mesma config sem a flag de conversa ⇒ rotas v1 indisponíveis, nada é migrado ou apagado.
-    const rolled = createApp(undefined, { config: { ...e.config, conversationRuntime: undefined } });
+    const rolled = createApp({ config: { ...e.config, conversationRuntime: undefined } });
     expect((await rolled.request(base, { headers: headers() })).status).toBe(503);
     expect(readdirSync(e.dir.dir).filter((f) => !f.startsWith('turns.sqlite')).map((f) => [f, readFileSync(`${e.dir.dir}/${f}`)])).toEqual(linksBefore);
 

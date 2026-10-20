@@ -1,6 +1,10 @@
 # Estado remoto, alterações locais e escopo — 18/10/2026
 
-**Continuação no draft #46:** [integração e auditoria offline](cart-01-conclusao-offline.md) incluem main `a027ed4` (INT-02 #48 e endereço #47), revisão completa e instrumentação parcial OPS-02. O quadro abaixo conserva referências históricas; código em draft não significa merge/deploy/ativação.
+**Reconciliação em 20/10:** GitHub consultado: API main f6ef20e, bot main 43105ba, API #46 mergeado e #50 documental aberto/conflitante. Integração em worktrees separados e [v6](armazenamento-v6.md), com originais preservados. Commit funcional `853adf2`; publicação de branches/PRs draft autorizada em seguida, sem merge/deploy. Quadros de 18/10 abaixo são históricos.
+
+Há assistente, memória/sessão e sacola com endereço observado. Novo ensaio HTTP sintético do bot percorre texto→sacola→revisão e invalidação por alergia, sem escrita. Capturas INT-02/parsers da main preservados, sem novo ensaio externo. Configuração, volumes e serviço online não consultados. [Detalhes e publicação pendente](sincronizacao-github.md).
+
+**Continuação de 18/10 publicada em draft:** o [relatório de integração CART-01 offline](cart-01-conclusao-offline.md) registra API #46 em `11a05ce87ed61c1d9ab013fd98aa65ec89ea7d54` e bot #17 em `b0d208932b058812e9316db42188b9659ff9c45a`, reunindo endereços, carrinho e INT-02 #48, com apresentação completa no bot e instrumentação parcial OPS-02. O registro não declara merge na main, deploy ou ativação. O quadro abaixo conserva o retrato histórico anterior; não é consulta em tempo real aos drafts.
 
 Retrato conferido em 18/10/2026, horário de São Paulo. Não é monitoramento contínuo. SHAs identificam código publicado; não comprovam configuração, deploy ou ensaio online.
 
@@ -28,7 +32,7 @@ Enviar pedido (`submitOrder`), selecionar/processar pagamento (`setCartPayment`)
 2. **Carrinho real:** escopo aprovado; implementação publicada em draft, canal humano parcial e respostas reais ainda pendentes. [INT-02](https://github.com/Modo-Escuro/api-backend/issues/40) bloqueia ativação, não o desenvolvimento offline.
 3. **Fechamento externo do briefing:** continua pendente. Carrinho preparado não comprova pedido aceito nem pagamento; validar DA10 e obter resultado confiável quando esse escopo for autorizado.
 
-A INT-01 #7 fechada cobre auditoria/metadados, não saídas reais de negócio. O usuário confirmou que não havia capturas de createCart/getCart/mutações ou ambiente autenticado disponibilizado nesta sessão. Não inferir execução de tools/list, escopos ou CI.
+A INT-01 histórica cobria metadados. A main posterior trouxe capturas/manifesto INT-02 declarado OBSERVED_AUTHENTICATED; foram preservados e exercitados offline, não reobtidos. Isso não comprova novo login, tools/list, escopos, CI atual ou GO irrestrito de escrita.
 
 ## Evidência e manutenção
 

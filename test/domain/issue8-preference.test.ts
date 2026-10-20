@@ -107,11 +107,11 @@ describe('issue #8 — preferência opcional nunca bloqueia', () => {
     }
   });
 
-  it('D: alergia sem dado vira aviso (não bloqueio) mesmo com preferências presentes', () => {
+  it('D: alergia continua bloqueando mesmo com preferências presentes', () => {
     const { d, l } = withGroup([opt(1, 'Bacon crocante', 3)]);
     const e = evaluate(d, l, [{ kind: 'ALLERGY', code: 'PEANUT' }, VEGAN_PREF]);
-    expect(codes(e.blockers)).not.toContain('ALLERGY_UNVERIFIED');
-    expect(codes(e.warnings)).toContain('ALLERGY_UNVERIFIED');
+    expect(e.eligible).toBe(false);
+    expect(codes(e.blockers)).toContain('ALLERGY_UNVERIFIED');
     // a preferência continua só gerando aviso
     expect(prefWarnings(e.warnings).length).toBeGreaterThan(0);
   });

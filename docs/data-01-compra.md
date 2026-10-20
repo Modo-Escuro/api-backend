@@ -1,17 +1,19 @@
 # DATA-01 — Compra, participantes, restrições e evidências
 
+**Reconciliação local de 20/10 — SQLite v6:** memória e sessão da fila são preservadas junto de dados das variantes v5 anteriores, sem importar grupos como perfis SELF. Ver [memória](assistente-conversacional.md#memória-por-titular-e-destinatário) e [migrações v6](armazenamento-v6.md). O domínio permanece independente dos perfis.
+
 Issue: [#13 DATA-01](https://github.com/Modo-Escuro/api-backend/issues/13) · Decisões: [DEC-01](decisoes-conversacionais.md) · Runtime: [RUN-01](runtime-turnos.md) · Contrato: [conversa v1](conversation-api-v1.md)
 
-O estado local da compra fica **no mesmo SQLite da RUN-01** (schema v2) e muda **só por operações tipadas**,
-gravadas na mesma transação do snapshot e da operação. A DATA-01 não sincroniza carrinho por si só. A main remota já integra montagem AI-01/AI-02; novos eventos dependem dos opt-ins e configuração explícitos. CART-01 deve reutilizar este domínio para preparar o carrinho real confirmado.
+O estado da compra fica **no mesmo SQLite da RUN-01** (v2 domínio, v3 CART-01, variantes v4/v5 e unificação v6) e muda **só por operações tipadas**,
+gravadas na mesma transação do snapshot e da operação. A DATA-01 não sincroniza carrinho por si só. O assistente local é o único processador, com opt-ins explícitos; CART-01 reutiliza o domínio para preparar carrinho somente pelo caminho confirmado. Estado remoto/deploy não é inferido dessa árvore.
 
 ## Onde está cada coisa
 
 | Arquivo | Conteúdo |
 | --- | --- |
 | `src/server/domain/money.ts` (DOM-01) | Fonte única de `Cents` e da aritmética/rateio em centavos; a DATA-01 só importa o tipo |
-| `src/server/domain/purchase.ts` | `MoneyLimit { amountCents, kind: MANDATORY \| PREFERENCE }`, `PurchaseState`, as 13 operações, `applyPatch`, `applyLinkChange`, `nextPurchase`, evidência (função pura, sem I/O) |
-| `src/server/turns/store.ts` | Migração v2, compra no `claim`, gravação atômica no `finish`, `purge()` da D7 |
+| `src/server/domain/purchase.ts` | `MoneyLimit { amountCents, kind: MANDATORY \| PREFERENCE }`, `PurchaseState`, operações tipadas, `applyPatch`, `applyLinkChange`, `nextPurchase`, evidência (função pura, sem I/O) |
+| `src/server/turns/store.ts` | Migração v6, compra no claim, commit atômico, associação de sessão e exclusão D7 incluindo dados anteriores |
 | `src/server/turns/runtime.ts` | `TurnContext.purchase`, `TurnContext.previewDomain()`, `TurnResult.domain`, `purge` no tick |
 
 Fronteira com a DOM-01 (#10): conversões de preço, rateio (D3) e verificação de limites (D4) estão em
@@ -65,6 +67,8 @@ Uma compra criada no próprio turno já sob o vínculo mantém o que o turno def
 linha `DERIVED` (`LINK_ASSOCIATED` ou `LINK_CHANGED`) com `caused_by` = `changeId` da operação — nenhuma mensagem
 humana é fabricada. Operações de domínio de um turno são `USER` por padrão (vêm de mensagem humana aceita).
 
+No runtime, turnos associados por X-Conversation-Session não carregam automaticamente compra de outro vínculo: claim oculta estado incompatível e commit pode guardá-lo em retired_purchase_states. Sem transferência de perfis/participantes entre contas; sem cabeçalho permanece compatibilidade. [Alcance e migração](armazenamento-v6.md#forma-canônica-e-compatibilidade).
+
 **Snapshot × compra:** no `finish`, um bloco `GROUP` precisa refletir a compra gravada: um bloco só, exatamente os
 mesmos participantes (`participantRef` = `participantId`, mesmo nome) e `budgetCents` igual ao teto coletivo
 declarado (ou `null`). `GROUP` sem compra ativa é recusado. O texto das condições não é verificável e fica a cargo de
@@ -89,7 +93,7 @@ vencida não libera — CA07).
 Fica só a deduplicação mínima: chave e hash dos eventos e o status das operações, para replay não reprocessar.
 O vínculo OAuth (OPS-01) é outro armazenamento e não é afetado.
 
-## Para a AI-02 (processador)
+## Para o processador do assistente
 
 ```ts
 const processor: TurnProcessor = async (ctx) => {
@@ -100,8 +104,7 @@ const processor: TurnProcessor = async (ctx) => {
 ```
 
 - Nunca repassar JSON do modelo como operação sem validar intenção, IDs e `humanConfirmed` no código do servidor.
-  `humanConfirmed` só quando o organizador declarou a mudança explicitamente; hoje é um booleano do processador
-  (vincular a um evento de botão consumido depende de suporte a ações no contrato e na AI-02).
+  `humanConfirmed` é um campo interno do domínio, nunca uma autorização aceita do modelo. O assistente não expõe operações arbitrárias de domínio nem compra por esse booleano.
 - Enviar `linkId` do vínculo realmente usado no turno (OPS-01); sem ele, troca de conta não é detectada.
 - Montar o bloco `GROUP` a partir de `previewDomain()` (o `finish` recusa divergência).
 - `merchantId`/`addressId` só de respostas MCP do mesmo vínculo.
@@ -114,6 +117,6 @@ continuam sendo processadas e o runtime não é marcado como indisponível. Falh
 
 ## Limitações
 
-- Sem rotas novas: o estado é lido pelo processador (`TurnContext.purchase`) e exposto ao bot só pelo snapshot.
+- O domínio não tem endpoint CRUD próprio: o processador lê `TurnContext.purchase` e publica snapshot; memória, sessão, endereço e CART-01 têm rotas dedicadas documentadas no [contrato HTTP](conversation-api-v1.md).
 - Logs técnicos e backups seguem OPS-01/OPS-02; o banco em si não tem criptografia em repouso (volume privado, 700/600).
-- Itens por participante, propostas e cobertura (GRP-01) e cálculo de rateio (DOM-01) não fazem parte desta entrega.
+- Propostas/cobertura GRP-01 e rateio DOM-01 estão implementados em módulos próprios e são reutilizados, sem duplicação. Composição local não comprova escrita no iFood.

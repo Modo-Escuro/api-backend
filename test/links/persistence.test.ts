@@ -266,7 +266,7 @@ describe('disco efêmero', () => {
 describe('endpoints de saúde', () => {
   const mkApp = (env: Env, cfg: AppConfig = env.cfg) => {
     const links = restart(env, cfg);
-    return createApp(new IfoodAuth(cfg, env.as.fetch, { tokenFile: null }), { config: cfg, links });
+    return createApp({ config: cfg, links });
   };
 
   it('/api/health resume o armazenamento sem caminhos; /ready é 200 em disco local', async () => {

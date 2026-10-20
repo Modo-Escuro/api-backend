@@ -21,7 +21,6 @@ function setup() {
     clientSecret: 's3cr3t',
     redirectUri: 'http://localhost:8000',
     authServer: AS,
-    tokenFile: join(dir, 'tokens.json'),
   };
   const calls: { url: string; body: URLSearchParams; auth: string | null }[] = [];
   let tokenCount = 0;
@@ -37,7 +36,8 @@ function setup() {
     }
     return new Response('nf', { status: 404 });
   }) as typeof fetch;
-  return { cfg, calls, auth: new IfoodAuth(cfg, fakeFetch) };
+  const tokenFile = join(dir, 'tokens.json');
+  return { cfg, calls, tokenFile, auth: new IfoodAuth(cfg, fakeFetch, { tokenFile }) };
 }
 
 describe('PKCE', () => {
@@ -48,9 +48,10 @@ describe('PKCE', () => {
 });
 
 describe('IfoodAuth', () => {
-  it('login via PAR + callback + refresh', async () => {
-    const { auth, calls, cfg } = setup();
-    const url = new URL(await auth.startLogin());
+  it('autoriza via PAR e troca código com PKCE; persiste e renova tokens por vínculo', async () => {
+    const { auth, calls, cfg, tokenFile } = setup();
+    const verifier = 'synthetic-verifier-for-explicit-link';
+    const url = new URL(await auth.authorizationUrl('synthetic-state', verifier));
     expect(url.origin + url.pathname).toBe(md.authorization_endpoint);
     expect(url.searchParams.get('request_uri')).toBe('urn:par:abc');
     expect(url.searchParams.get('client_id')).toBe('cid');
@@ -60,25 +61,23 @@ describe('IfoodAuth', () => {
     expect(par.body.get('code_challenge_method')).toBe('S256');
     expect(par.body.get('redirect_uri')).toBe('http://localhost:8000');
     expect(par.body.get('resource')).toBe(cfg.mcpUrl);
-    const state = par.body.get('state')!;
-
-    await expect(auth.handleCallback('code1', 'estado-falso')).rejects.toThrow(/state/);
-    await auth.handleCallback('code1', state);
+    expect(par.body.get('state')).toBe('synthetic-state');
+    await auth.setTokens(await auth.exchangeCode('code1', verifier));
     const tok = calls[1]!;
     expect(tok.body.get('grant_type')).toBe('authorization_code');
     expect(pkceChallenge(tok.body.get('code_verifier')!)).toBe(par.body.get('code_challenge'));
     expect(await auth.getAccessToken()).toBe('at1');
 
     // Token persistido com permissão restrita; status nunca expõe token.
-    const stored = JSON.parse(readFileSync(cfg.tokenFile, 'utf8'));
+    const stored = JSON.parse(readFileSync(tokenFile, 'utf8'));
     expect(stored.refreshToken).toBe('rt1');
-    const status = await auth.status();
+    const status = await auth.tokenInfo();
     expect(JSON.stringify(status)).not.toMatch(/at1|rt1/);
-    expect(status.authenticated).toBe(true);
+    expect(status.present).toBe(true);
 
     // Expirado → refresh automático.
-    writeFileSync(cfg.tokenFile, JSON.stringify({ ...stored, expiresAt: Date.now() - 1000 }));
-    const fresh = new IfoodAuth(cfg, (auth as unknown as { fetchFn: typeof fetch }).fetchFn);
+    writeFileSync(tokenFile, JSON.stringify({ ...stored, expiresAt: Date.now() - 1000 }));
+    const fresh = new IfoodAuth(cfg, (auth as unknown as { fetchFn: typeof fetch }).fetchFn, { tokenFile });
     expect(await fresh.getAccessToken()).toBe('at2');
   });
 
@@ -87,30 +86,17 @@ describe('IfoodAuth', () => {
     await expect(auth.getAccessToken()).rejects.toMatchObject({ code: 'LOGIN_REQUIRED' });
   });
 
-  it('ignora .tokens.json de outro clientId', async () => {
-    const { cfg } = setup();
-    writeFileSync(cfg.tokenFile, JSON.stringify({ clientId: 'outro', accessToken: 'x', refreshToken: null, expiresAt: null }));
-    const a = new IfoodAuth(cfg, fetch);
-    expect((await a.status()).authenticated).toBe(false);
+  it('ignora arquivo por vínculo de outro clientId', async () => {
+    const { cfg, tokenFile } = setup();
+    writeFileSync(tokenFile, JSON.stringify({ clientId: 'outro', accessToken: 'x', refreshToken: null, expiresAt: null }));
+    const a = new IfoodAuth(cfg, fetch, { tokenFile });
+    expect((await a.tokenInfo()).present).toBe(false);
   });
 
-  it('callback do login de desenvolvimento rejeita tentativa expirada e state repetido', async () => {
-    const { cfg, calls } = setup();
-    let t = 1_000_000;
-    const fakeFetch = (async (input: string | URL | Request, init?: RequestInit) => {
-      const url = String(input);
-      if (url.endsWith('/.well-known/openid-configuration')) return Response.json(md);
-      calls.push({ url, body: new URLSearchParams(String(init?.body ?? '')), auth: null });
-      if (url === md.pushed_authorization_request_endpoint) return Response.json({ request_uri: 'urn:par:x' });
-      return Response.json({ access_token: 'at', expires_in: 3600 });
-    }) as typeof fetch;
-    const a = new IfoodAuth(cfg, fakeFetch, { now: () => t });
-    await a.startLogin();
-    const state = calls.at(-1)!.body.get('state')!;
-    t += 11 * 60_000;
-    await expect(a.handleCallback('c', state)).rejects.toMatchObject({ code: 'ATTEMPT_EXPIRED' });
-    await expect(a.handleCallback('c', state)).rejects.toMatchObject({ code: 'INVALID_STATE' });
-    expect(calls.some((c) => c.url === md.token_endpoint)).toBe(false);
+  it('sem caminho explícito não importa arquivo de tokens de outra sessão', async () => {
+    const { cfg, tokenFile } = setup();
+    writeFileSync(tokenFile, JSON.stringify({ clientId: 'cid', accessToken: 'x' }));
+    expect((await new IfoodAuth(cfg).tokenInfo()).present).toBe(false);
   });
 
   it('falha de rede no AS vira PROVIDER_UNREACHABLE (não logout)', async () => {

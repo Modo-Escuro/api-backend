@@ -1,5 +1,7 @@
 # AI-01 — Escolha do modelo e avaliação
 
+> Histórico: scripts/corpus do intérprete anterior foram [retirados](retirada-legado.md). Para o fluxo atual, consultar [assistente conversacional](assistente-conversacional.md); não executar os comandos antigos como validação da árvore atual.
+
 > **Histórico (PR #35).** Comparação de candidatos que levou à escolha do Gemini. Os caminhos Groq/Anthropic e os
 > scripts citados aqui foram removidos na consolidação #35 + #36; ver [montagem AI-01](ai-01-montagem-ensaio.md).
 

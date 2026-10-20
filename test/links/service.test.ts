@@ -366,7 +366,7 @@ describe('isolamento e ciclo de vida', () => {
 
   it('sessão global antiga (.tokens.json) nunca vira vínculo', async () => {
     const env = setup();
-    writeFileSync(env.cfg.tokenFile, JSON.stringify({ clientId: 'cid', accessToken: 'legacy', refreshToken: 'legacy-rt', expiresAt: null, scope: null }));
+    writeFileSync(join(env.cfg.linksDir, '.tokens.json'), JSON.stringify({ clientId: 'cid', accessToken: 'legacy', refreshToken: 'legacy-rt', expiresAt: null, scope: null }));
     expect(await env.links.status(ORG_A)).toMatchObject({ state: 'DISCONNECTED', reason: 'NEVER_CONNECTED' });
     expect(await code(env.links.withOperational(ORG_A, 'ADDRESSES_READ', async () => 1))).toBe('IFOOD_LINK_REQUIRED');
   });

@@ -1,5 +1,7 @@
 # AI-02 — Agente conversacional
 
+> Histórico: o processador `agent/` e seu vocabulário foram retirados localmente em 20/10/2026. Este documento preserva o contrato daquele incremento. A implementação atual é o [assistente](assistente-conversacional.md); ver [migração](retirada-legado.md).
+
 Issue: [#16 AI-02](https://github.com/Modo-Escuro/api-backend/issues/16) · Base: [DATA-01](data-01-compra.md), [RUN-01](runtime-turnos.md), [conversa v1](conversation-api-v1.md), [DEC-01](decisoes-conversacionais.md)
 
 O agente interpreta a mensagem do organizador e propõe **ações num vocabulário fechado**. O servidor valida cada ação

@@ -2,21 +2,21 @@
 // DATA-01 (schema v2): estado da compra no mesmo banco, gravado na MESMA transação do snapshot/operação;
 // patches com proveniência em purchase_changes; exclusão D7 ao encerrar ou após inatividade.
 // CART-01 (schema v3): confirmações/intenção duráveis; binários v2 recusam o banco para preservar bloqueios.
-import { createHash, randomBytes } from 'node:crypto';
-import { AccountGroupSchema, groupOf } from '../domain/account-group.js';
-import { renderSnapshot } from '../agent/render.js';
-import { missingQuestions } from '../agent/policy.js';
+// Memória (schema v4): fatos por vínculo/pessoa/finalidade, gravados atomicamente com o turno.
+import { randomBytes } from 'node:crypto';
 import { chmodSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { commitMemory, installMemorySchema, memoryAccountRef, memoryDirectory, purgeMemorySelf, removeMemoryPerson, retrieveMemory, validateMemoryActions } from '../assistant/memory-store.js';
+import type { MemoryCommit, MemoryReader } from '../assistant/memory.js';
+import type { AccountSession } from './account-session.js';
 import { hasUnresolvedCartWrite, installCartWriteSchema, recoverCartWriteIntents } from '../cart/write-schema.js';
 import { CancelResultSchema, OperationSchema, SnapshotSchema, type ConversationEvent, type ErrorCode, type Operation, type Snapshot } from '../contracts/conversation.js';
 import { contractErrorResponse } from '../contracts/errors.js';
 import { log } from '../ops/log.js';
-import { conversationActions } from '../agent/conversation-actions.js';
 import { assertOperation, assertReplay, assertScope, assertSnapshot, assertVersion, contentHash, ContractError, eventKey, type AdapterPrincipal } from '../contracts/guards.js';
 import {
-  CONTRACT_MAX_PARTICIPANTS, DEFAULT_MAX_PARTICIPANTS, DomainError, nextPurchase, parsePurchaseState, emptyPurchase, applyPatch,
+  CONTRACT_MAX_PARTICIPANTS, DEFAULT_MAX_PARTICIPANTS, DomainError, nextPurchase, parsePurchaseState,
   type ChangePath, type DomainChange, type PurchaseState,
 } from '../domain/purchase.js';
 
@@ -41,105 +41,37 @@ export const DEFAULT_LIMITS: TurnLimits = {
   maxRecords: 10_000, maxAttempts: 3, maxResultBytes: 65_536,
   maxParticipants: DEFAULT_MAX_PARTICIPANTS, inactivityMs: 24 * 60 * 60_000,
 };
-export const SCHEMA_VERSION = 5;
-export const sessionRef = (linkId: string) => createHash('sha256').update(linkId).digest('hex');
-export interface AccountContext { key: string; linkId: string }
+export const SCHEMA_VERSION = 6;
 export interface CancelCommand {
   contractVersion: '1.0'; eventId: string; conversationId: string; expectedVersion: number;
   source: ConversationEvent['source']; operationId: string;
 }
 type CancelResult = ReturnType<typeof CancelResultSchema.parse>;
 export interface Job {
-  accountSession?: string;
   operation: Operation; event: ConversationEvent; principal: AdapterPrincipal;
   snapshot: Snapshot; token: string;
   /** DATA-01: compra ativa da conversa no momento do claim (null se não houver). */
   purchase: PurchaseState | null;
+  accountSession?: AccountSession;
 }
 export interface FinishInput {
-  clearGroup?: boolean;
-  /** Opt-in interno: referências emitidas pelo store, nunca pelo modelo/processador. */
-  conversationActions?: boolean;
   snapshot: Snapshot; completeness: 'PARTIAL' | 'COMPLETE'; paths: Operation['changes'][number]['paths'];
   cause?: 'USER' | 'DERIVED';
   /** DATA-01: operações tipadas; o estado é recalculado aqui a partir do estado persistido. */
   domain?: DomainChange;
+  memory?: MemoryCommit;
 }
 interface Row {
   id: string; scope: string; event_id: string; body: string | null; operation: string;
   owner: string | null; token: string | null; lease_until: number | null; attempts: number;
   effect: number;
+  account_session?: string | null;
+  account_link_id?: string | null;
 }
 type SqlRow = Record<string, string | number | bigint | Uint8Array | null>;
 const row = (r: SqlRow | undefined) => r as unknown as Row | undefined;
 
 export class TurnStore {
-  accountGroupsEnabled = false;
-  private saveGroup(scope: string, state: PurchaseState) {
-    if (!this.accountGroupsEnabled) return;
-    const account = this.db.prepare('SELECT account_key FROM conversation_accounts WHERE scope=?').get(scope);
-    if (!account) return;
-    const data = JSON.stringify(groupOf(state));
-    const previous = this.db.prepare('SELECT data FROM account_groups WHERE scope=? AND account_key=?').get(scope, String(account['account_key']));
-    if (previous?.['data'] === data) return;
-    this.db.prepare('INSERT INTO account_groups VALUES(?,?,?,1) ON CONFLICT(scope,account_key) DO UPDATE SET data=excluded.data,version=account_groups.version+1')
-      .run(scope, String(account['account_key']), data);
-  }
-
-  /** Chamado sob o lock do vínculo. Uma nova sessão nunca reutiliza compra, propostas ou callbacks antigos. */
-  activateAccount(p: AdapterPrincipal, account: AccountContext) {
-    this.accountGroupsEnabled = true;
-    this.transaction(() => {
-      const scope = scopeKey(p), session = sessionRef(account.linkId);
-      const previous = this.db.prepare('SELECT * FROM conversation_accounts WHERE scope=?').get(scope);
-      if (previous?.['session_ref'] === session && previous['account_key'] === account.key && this.purchaseOf(scope)) return;
-      if (hasUnresolvedCartWrite(this.db, scope) || this.db.prepare("SELECT id FROM operations WHERE scope=? AND (status='RESULT_UNKNOWN' OR (effect=1 AND status IN ('RUNNING','CANCEL_REQUESTED')))").get(scope)) throw new ContractError('RESULT_UNKNOWN');
-      const base = this.current(scope) ?? this.initial(p);
-      this.db.prepare('INSERT OR IGNORE INTO conversations(scope,snapshot) VALUES(?,?)').run(scope, JSON.stringify(base));
-      for (const r of this.db.prepare("SELECT * FROM operations WHERE scope=? AND status IN ('ACCEPTED','RUNNING','CANCEL_REQUESTED')").all(scope)) this.failure(row(r)!, 'LINK_CHANGED');
-      // O grupo legado não é atribuído automaticamente a nenhuma conta.
-      this.purgeScope(scope, null);
-      const saved = this.db.prepare('SELECT data FROM account_groups WHERE scope=? AND account_key=?').get(scope, account.key);
-      const state = { ...emptyPurchase({ seed: scope, eventId: session }),
-        ...(saved ? AccountGroupSchema.parse(JSON.parse(String(saved['data']))) : {}), linkId: account.linkId };
-      const snapshot = renderSnapshot(base, state, [saved ? 'Grupo desta conta recuperado. O que vocês querem comer?' : 'Vamos organizar o grupo desta conta. Quem participa?'], missingQuestions(state));
-      state.version = snapshot.version;
-      this.db.prepare('UPDATE conversations SET snapshot=?,domain=?,last_activity_at=? WHERE scope=?')
-        .run(JSON.stringify(snapshot), JSON.stringify(parsePurchaseState(state)), this.now(), scope);
-      this.db.prepare('INSERT INTO conversation_accounts VALUES(?,?,?) ON CONFLICT(scope) DO UPDATE SET account_key=excluded.account_key,session_ref=excluded.session_ref')
-        .run(scope, account.key, session);
-    });
-  }
-
-  group(p: AdapterPrincipal) {
-    const r = this.db.prepare('SELECT g.data,g.version FROM conversation_accounts a JOIN account_groups g ON a.scope=g.scope AND a.account_key=g.account_key WHERE a.scope=?').get(scopeKey(p));
-    return r ? { version: Number(r['version']), group: AccountGroupSchema.parse(JSON.parse(String(r['data']))) } : { version: 0, group: null };
-  }
-
-  /** CRUD separado da sacola; alterações invalidam a compra atual, nunca escrevem no iFood. */
-  editGroup(p: AdapterPrincipal, version: number, ops: unknown[] | null) {
-    return this.transaction(() => {
-      const scope = scopeKey(p), previous = this.group(p);
-      if (previous.version !== version) throw new ContractError('STALE_VERSION');
-      const allowed = new Set(['ADD_PARTICIPANT', 'RENAME_PARTICIPANT', 'REMOVE_PARTICIPANT', 'SET_RESTRICTIONS', 'ADD_RESTRICTION', 'REMOVE_RESTRICTION', 'SET_LIMIT', 'SET_PRIORITY', 'MARK_UNCLEAR', 'RESOLVE_CLARIFICATION']);
-      if (ops?.some(o => !o || typeof o !== 'object' || !('op' in o) || !allowed.has(String(o.op)))) throw new ContractError('INVALID_REQUEST');
-      const current = this.purchaseOf(scope);
-      if (!current) throw new ContractError('LINK_CHANGED');
-      let next: PurchaseState;
-      try { next = ops ? applyPatch(current, ops, { seed: scope, eventId: ref(), maxParticipants: this.limits.maxParticipants }).state
-        : { ...emptyPurchase({ seed: scope, eventId: ref() }), linkId: current.linkId }; }
-      catch { throw new ContractError('INVALID_REQUEST'); }
-      this.purgeScope(scope, null);
-      delete next.bag; delete next.proposals; delete next.searchQuery;
-      next.evidence = []; next.merchant = { state: 'NOT_ASKED' }; next.address = { state: 'NOT_ASKED' };
-      const snapshot = renderSnapshot(this.current(scope)!, next, ['Grupo atualizado.'], missingQuestions(next));
-      next.version = snapshot.version;
-      this.db.prepare('UPDATE conversations SET domain=?,snapshot=?,last_activity_at=? WHERE scope=?').run(JSON.stringify(next), JSON.stringify(snapshot), this.now(), scope);
-      this.saveGroup(scope, next);
-      return this.group(p);
-    });
-  }
-
   readonly db: DatabaseSync;
   readonly limits: TurnLimits;
   private closed = false;
@@ -207,14 +139,33 @@ export class TurnStore {
           installCartWriteSchema(this.db);
           this.db.exec('PRAGMA user_version=3;');
         }
-        // v4: intenção de busca no domínio e navegação contextual; v3 não conhece esses campos.
-        if (current < 4) this.db.exec('PRAGMA user_version=4;');
-        if (current < 5) this.db.exec(`
-          CREATE TABLE IF NOT EXISTS account_groups(scope TEXT NOT NULL, account_key TEXT NOT NULL, data TEXT NOT NULL, version INTEGER NOT NULL, PRIMARY KEY(scope,account_key));
-          CREATE TABLE IF NOT EXISTS conversation_accounts(scope TEXT PRIMARY KEY, account_key TEXT NOT NULL, session_ref TEXT NOT NULL);
-          CREATE TABLE IF NOT EXISTS operation_accounts(operation_id TEXT PRIMARY KEY REFERENCES operations(id) ON DELETE CASCADE, session_ref TEXT NOT NULL);
-          PRAGMA user_version=5;
-        `);
+        // v6 unifica as duas variantes v5: a publicada tem grupos por conta, a local tem memória/fila.
+        // Instalar por capacidade, nunca presumir que user_version=5 implica as mesmas tabelas.
+        if (current < 6) {
+          installMemorySchema(this.db);
+          const columns = this.db.prepare('PRAGMA table_info(operations)').all();
+          if (!columns.some(c => c['name'] === 'account_session')) this.db.exec('ALTER TABLE operations ADD COLUMN account_session TEXT;');
+          if (!columns.some(c => c['name'] === 'account_link_id')) this.db.exec('ALTER TABLE operations ADD COLUMN account_link_id TEXT;');
+          // Vínculo conversa↔conta autenticada em tabela companheira: migração aditiva; a tabela histórica de conversas não muda de forma.
+          this.db.exec(`CREATE TABLE IF NOT EXISTS account_bindings (scope TEXT PRIMARY KEY, account_session TEXT NOT NULL,
+            account_link_id TEXT, FOREIGN KEY(scope) REFERENCES conversations(scope));
+          CREATE TABLE IF NOT EXISTS retired_purchase_states (scope TEXT NOT NULL, version INTEGER NOT NULL,
+            domain TEXT NOT NULL, PRIMARY KEY(scope,version), FOREIGN KEY(scope) REFERENCES conversations(scope));
+          PRAGMA user_version=6;`);
+        }
+        // Uma versão numérica válida com forma incompatível também falha fechada; nada é substituído.
+        const required = {
+          operations: ['account_session', 'account_link_id'],
+          assistant_memory_accounts: ['scope', 'account_ref', 'revision', 'context', 'updated_at'],
+          assistant_memory_people: ['scope', 'account_ref', 'person_ref', 'person'],
+          assistant_memory_facts: ['scope', 'account_ref', 'person_ref', 'fact_key', 'fact'],
+          account_bindings: ['scope', 'account_session', 'account_link_id'],
+          retired_purchase_states: ['scope', 'version', 'domain'],
+        };
+        for (const [table, names] of Object.entries(required)) {
+          const columns = new Set(this.db.prepare(`PRAGMA table_info(${table})`).all().map(c => c['name']));
+          if (names.some(name => !columns.has(name))) throw new Error('Schema incompatível.');
+        }
         // Conversas vindas do v1 não têm atividade registrada. O instante da migração abre uma janela única de
         // `inactivityMs` (D7): não presume atividade antiga como recente, nem apaga de surpresa uma conversa em uso.
         if (current === 1) this.db.prepare('UPDATE conversations SET last_activity_at=? WHERE last_activity_at IS NULL').run(this.now());
@@ -231,6 +182,16 @@ export class TurnStore {
     catch (e) { this.db.exec('ROLLBACK'); throw e; }
   }
   close() { if (!this.closed) { this.closed = true; this.db.close(); } }
+  memory(p: AdapterPrincipal): MemoryReader {
+    const scope = scopeKey(p);
+    return {
+      directory: linkId => memoryDirectory(this.db, scope, linkId, this.now()),
+      retrieve: (linkId, people, purpose) => retrieveMemory(this.db, scope, linkId, people, purpose),
+      validate: (linkId, actions, people, purpose, message) => validateMemoryActions(this.db, scope, linkId, actions, people, purpose, message),
+      purgeSelf: linkId => purgeMemorySelf(this.db, scope, linkId),
+      removeRecipient: (linkId, label) => removeMemoryPerson(this.db, scope, linkId, label),
+    };
+  }
   private current(scope: string): Snapshot | undefined {
     const found = this.db.prepare('SELECT snapshot FROM conversations WHERE scope=?').get(scope);
     return found ? SnapshotSchema.parse(JSON.parse(String(found['snapshot']))) : undefined;
@@ -278,7 +239,7 @@ export class TurnStore {
     this.write(saved, { ...op, status: 'CANCELLED', pollAfterMs: null, error: null });
   }
 
-  accept(p: AdapterPrincipal, event: ConversationEvent, processingAvailable = true): { status: 200 | 202; operation: Operation } {
+  accept(p: AdapterPrincipal, event: ConversationEvent, processingAvailable = true, session?: AccountSession): { status: 200 | 202; operation: Operation } {
     return this.transaction(() => {
       const scope = scopeKey(p);
       const snapshot = this.current(scope) ?? this.initial(p);
@@ -288,16 +249,13 @@ export class TurnStore {
       if (previous) {
         assertReplay(hash, String(previous['hash']));
         if (previous['kind'] !== 'EVENT') throw new ContractError('EVENT_CONFLICT');
-        return { status: 200, operation: this.emitted(this.read(String(previous['operation_id']), scope)) };
+        const saved = this.read(String(previous['operation_id']), scope);
+        if (session && saved.account_session !== session.ref) throw new ContractError('LINK_CHANGED');
+        return { status: 200, operation: this.emitted(saved) };
       }
       if (!processingAvailable) throw new ContractError('UNAVAILABLE');
       assertVersion(event.expectedVersion, snapshot.version);
-      if (event.input.kind === 'ACTION' && event.source.kind === 'CALLBACK') {
-        const input = event.input;
-        const action = snapshot.allowedActions.find(a => a.actionRef === input.actionRef && a.kind === input.action);
-        if (!action) throw new ContractError('ACTION_UNAVAILABLE');
-        if (Date.parse(action.expiresAt) <= this.now()) throw new ContractError('REFERENCE_EXPIRED');
-      } else if (event.input.kind !== 'TEXT' || event.source.kind !== 'MESSAGE') throw new ContractError('ACTION_UNAVAILABLE');
+      if (event.input.kind !== 'TEXT' || event.source.kind !== 'MESSAGE') throw new ContractError('ACTION_UNAVAILABLE');
       this.budget(scope);
       const operation: Operation = {
         contractVersion: '1.0', operationId: ref(), eventId: event.eventId, conversationId: p.conversationId,
@@ -308,10 +266,8 @@ export class TurnStore {
       this.db.prepare('INSERT OR IGNORE INTO conversations(scope,snapshot) VALUES (?,?)').run(scope, JSON.stringify(snapshot));
       // D7: "evento aceito" renova a atividade; replays acima não renovam.
       this.db.prepare('UPDATE conversations SET last_activity_at=? WHERE scope=?').run(this.now(), scope);
-      this.db.prepare('INSERT INTO operations(id,scope,event_id,body,operation,status) VALUES (?,?,?,?,?,?)')
-        .run(operation.operationId, scope, event.eventId, JSON.stringify(event), JSON.stringify(operation), operation.status);
-      const account = this.db.prepare('SELECT session_ref FROM conversation_accounts WHERE scope=?').get(scope);
-      if (this.accountGroupsEnabled && account) this.db.prepare('INSERT INTO operation_accounts VALUES(?,?)').run(operation.operationId, String(account['session_ref']));
+      this.db.prepare('INSERT INTO operations(id,scope,event_id,body,operation,status,account_session,account_link_id) VALUES (?,?,?,?,?,?,?,?)')
+        .run(operation.operationId, scope, event.eventId, JSON.stringify(event), JSON.stringify(operation), operation.status, session?.ref ?? null, session?.linkId ?? null);
       this.db.prepare('INSERT INTO events(key,scope,kind,hash,source,operation_id) VALUES (?,?,?,?,?,?)')
         .run(key, scope, 'EVENT', hash, JSON.stringify(event.source), operation.operationId);
       return { status: 202, operation };
@@ -339,10 +295,18 @@ export class TurnStore {
     assertOperation(op, this.now());
     return op;
   }
-  operation(p: AdapterPrincipal, id: string): Operation { return this.emitted(this.read(id, scopeKey(p))); }
-  snapshot(p: AdapterPrincipal): Snapshot {
+  operation(p: AdapterPrincipal, id: string, sessionRef?: string): Operation {
+    const saved = this.read(id, scopeKey(p));
+    if (sessionRef && saved.account_session !== sessionRef) throw new ContractError('LINK_CHANGED');
+    return this.emitted(saved);
+  }
+  snapshot(p: AdapterPrincipal, sessionRef?: string): Snapshot {
     const snapshot = this.current(scopeKey(p));
     if (!snapshot) throw new ContractError('NOT_FOUND');
+    if (sessionRef) {
+      const bound = this.db.prepare('SELECT account_session FROM account_bindings WHERE scope=?').get(scopeKey(p));
+      if (bound?.['account_session'] !== sessionRef) return emptySnapshot(p.conversationId, snapshot.version);
+    }
     return this.sanitizeSnapshot(snapshot);
   }
 
@@ -411,6 +375,11 @@ export class TurnStore {
       try {
         snapshot = this.current(saved.scope)!;
         purchase = this.purchaseOf(saved.scope);
+        if (saved.account_session) {
+          const bound = this.db.prepare('SELECT account_session FROM account_bindings WHERE scope=?').get(saved.scope);
+          if (bound?.['account_session'] !== saved.account_session) snapshot = emptySnapshot(snapshot.conversationId, snapshot.version);
+          if (purchase?.linkId !== saved.account_link_id) purchase = null;
+        }
       } catch {
         this.failure(saved, 'INTERNAL');
         return undefined;
@@ -423,8 +392,8 @@ export class TurnStore {
       this.db.prepare('UPDATE operations SET owner=?,token=?,lease_until=?,attempts=attempts+1 WHERE id=?')
         .run(owner, token, Math.min(this.now() + this.limits.leaseMs, Date.parse(op.deadlineAt)), op.operationId);
       return { operation: running, event: JSON.parse(saved.body!) as ConversationEvent,
-        accountSession: this.db.prepare('SELECT session_ref FROM operation_accounts WHERE operation_id=?').get(op.operationId)?.['session_ref'] as string | undefined,
-        principal: { botId: botId!, organizerId: organizerId!, conversationId: conversationId! }, snapshot, token, purchase };
+        principal: { botId: botId!, organizerId: organizerId!, conversationId: conversationId! }, snapshot, token, purchase,
+        ...(saved.account_session ? { accountSession: { ref: saved.account_session, linkId: saved.account_link_id ?? null } } : {}) };
     });
   }
   private owned(job: Job): Row | undefined {
@@ -488,7 +457,10 @@ export class TurnStore {
       let domain: ReturnType<typeof nextPurchase> | null = null;
       if (result.domain !== undefined) {
         try {
-          domain = nextPurchase(this.purchaseOf(saved.scope), result.domain,
+          const previous = this.purchaseOf(saved.scope);
+          if (job.accountSession && previous && previous.linkId !== job.accountSession.linkId)
+            this.db.prepare('INSERT OR IGNORE INTO retired_purchase_states VALUES(?,?,?)').run(saved.scope, previous.version, JSON.stringify(previous));
+          domain = nextPurchase(job.accountSession && previous?.linkId !== job.accountSession.linkId ? null : previous, result.domain,
             { seed: saved.scope, eventId: op.eventId, maxParticipants: this.limits.maxParticipants });
         } catch (e) {
           if (e instanceof DomainError) throw new ContractError('INVALID_REQUEST');
@@ -500,10 +472,16 @@ export class TurnStore {
       const stored = endedStatus ? closingSnapshot(snapshot, endedStatus) : snapshot;
       // O bloco GROUP mostrado precisa refletir exatamente a compra gravada (participantes, nomes e teto).
       if (!endedStatus) assertGroupMatches(stored, domain ? domain.state : this.purchaseOf(saved.scope));
-      if (!endedStatus && result.conversationActions) {
-        stored.allowedActions = conversationActions(stored, domain ? domain.state : this.purchaseOf(saved.scope), this.now());
-        assertSnapshot(stored, this.now());
+      if (result.memory) {
+        if (result.memory.linkId !== result.domain?.linkId || job.event.input.kind !== 'TEXT') throw new ContractError('INVALID_REQUEST');
+        commitMemory(this.db, saved.scope, op.eventId, job.event.input.text, result.memory, this.now());
+      } else if (endedStatus && job.event.input.kind === 'TEXT' && /^Confirmo: apagar todos os dados deste pedido[.!]?$/iu.test(job.event.input.text)) {
+        const linkId = domain?.state?.linkId;
+        if (linkId) this.db.prepare('DELETE FROM assistant_memory_accounts WHERE scope=? AND account_ref=?').run(saved.scope, memoryAccountRef(linkId));
       }
+      if (job.accountSession) this.db.prepare(`INSERT INTO account_bindings(scope,account_session,account_link_id) VALUES(?,?,?)
+        ON CONFLICT(scope) DO UPDATE SET account_session=excluded.account_session, account_link_id=excluded.account_link_id`)
+        .run(saved.scope, job.accountSession.ref, job.accountSession.linkId);
       const paths = [...new Set<ChangePath>([...result.paths, ...(domain?.paths ?? [])])];
       // Operações de domínio vêm de uma mensagem humana aceita: por padrão a origem é USER, não DERIVED.
       const cause = result.cause ?? (domain?.ops.length ? 'USER' : 'DERIVED');
@@ -520,8 +498,6 @@ export class TurnStore {
         return true;
       }
       if (endedStatus) {
-        // Limpar perfil é exclusão explícita; a expiração normal da compra mantém o cadastro independente.
-        if (result.clearGroup) this.saveGroup(saved.scope, emptyPurchase({ seed: saved.scope, eventId: op.eventId }));
         // D7: encerrar exclui a compra na mesma transação. O snapshot neutro de encerramento e a operação atual
         // também expiram: a atividade é renovada para o expurgo por inatividade apagá-los depois.
         this.db.prepare('UPDATE conversations SET snapshot=? WHERE scope=?').run(JSON.stringify(stored), saved.scope);
@@ -530,7 +506,6 @@ export class TurnStore {
         return true;
       }
       const state: PurchaseState = { ...domain.state, version: snapshot.version };
-      this.saveGroup(saved.scope, state);
       this.db.prepare('UPDATE conversations SET snapshot=?, domain=?, last_activity_at=? WHERE scope=?')
         .run(JSON.stringify(snapshot), JSON.stringify(parsePurchaseState(state)), this.now(), saved.scope);
       const insert = this.db.prepare(`INSERT INTO purchase_changes(change_id,scope,purchase_id,event_id,source,base_version,
@@ -589,6 +564,15 @@ export class TurnStore {
    */
   private purgeScope(scope: string, keep: string | null) {
     if (hasUnresolvedCartWrite(this.db, scope)) throw new ContractError('RESULT_UNKNOWN');
+    // Perfil é separado da compra; inatividade D7 apaga tudo. Limpar perfil explícito apaga a conta no finish.
+    if (keep === null) this.db.prepare('DELETE FROM assistant_memory_accounts WHERE scope=?').run(scope);
+    this.db.prepare('DELETE FROM retired_purchase_states WHERE scope=?').run(scope);
+    this.db.prepare('DELETE FROM account_bindings WHERE scope=?').run(scope);
+    // Dados da variante publicada continuam preservados na migração, mas sujeitos à mesma exclusão D7.
+    for (const table of ['account_groups', 'conversation_accounts']) {
+      if (this.db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table))
+        this.db.prepare(`DELETE FROM ${table} WHERE scope=?`).run(scope);
+    }
     this.db.prepare('DELETE FROM cart_write_reviews WHERE scope=?').run(scope);
     // Mantém só tombstones técnicos para impedir replay; sem conteúdo da composição após D7.
     this.db.prepare("UPDATE cart_write_intents SET plan='{}' WHERE scope=?").run(scope);

@@ -79,19 +79,19 @@ describe('ranking no pipeline /api/evaluate (fixtures reais)', () => {
     expect(prefs.summary.recommendations).toBe(prefs.recommendations.length);
   });
 
-  it('alergia sem dado do iFood: candidato elegível com aviso ALLERGY_UNVERIFIED, nunca PASS', async () => {
+  it('sem candidato elegível: recommendations [] com a explicação registrada', async () => {
     const deps = fake({ pages: [{ ...fx('searchOffers-lanche-glutenfree.json'), hasMore: false, nextPageToken: undefined }] });
     const v = evaluateView(await runEvaluation({ query: 'lanche', restrictions: [{ kind: 'ALLERGY', code: 'GLUTEN' }] }, deps));
-    expect(v.serverFilters).toEqual(['GLUTEN_FREE']);
+    expect(v.summary).toMatchObject({ eligible: 0, recommendations: 0 });
+    expect(v.recommendations).toEqual([]);
+    expect(v.eligible).toEqual([]);
     expect(v.summary.eligible + v.summary.blocked + v.summary.needsVerification).toBe(v.summary.candidates);
-    expect(v.eligible.length).toBeGreaterThan(0);
-    for (const c of v.eligible) {
-      expect(c.item.name).toBe('Veggie Burger');
-      expect(c.restrictions[0]!.status).not.toBe('PASS');
-      expect(c.blockers.map((b) => b.code)).not.toContain('ALLERGY_UNVERIFIED');
-      expect(c.warnings.map((w) => w.code)).toContain('ALLERGY_UNVERIFIED');
-    }
-    expect(v.summary.recommendations).toBe(v.recommendations.length);
+    expect(v.summary.blocked + v.summary.needsVerification).toBe(v.summary.candidates);
+    expect(v.ranking.eligibleScored).toBe(0);
+    expect(v.ranking.notes.join(' ')).toMatch(/Nenhuma opção pôde ser confirmada como compatível/);
+    expect(v.notes.join(' ')).toMatch(/Nenhuma opção pôde ser confirmada/);
+    expect(v.serverFilters).toEqual(['GLUTEN_FREE']);
+    for (const c of [...v.blocked, ...v.needsVerification]) expect(c.item.name).toBe('Veggie Burger');
   });
 
   it('pendentes de verificação (sem getItem) ficam fora das recomendações', async () => {

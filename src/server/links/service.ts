@@ -14,6 +14,7 @@
 //  - A sessão global antiga (.tokens.json) nunca é importada como vínculo.
 
 import type { CartGateway } from '../cart/contracts.js';
+import type { DiscoveryReader } from '../mcp/discovery.js';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { IfoodAuth, LOGIN_ATTEMPT_TTL_MS, randomToken, type StoredTokens } from '../auth.js';
 import type { AppConfig } from '../config.js';
@@ -48,6 +49,7 @@ export const OPERATION_SCOPES: Record<Operation, string[]> = {
 /** Sessão MCP de UM vínculo (deps de leitura ligados ao cliente MCP desse vínculo). */
 export interface LinkMcpSession {
   deps: EvaluateDeps;
+  discovery?: DiscoveryReader;
   cart?: CartGateway;
   /** Perfil básico (getUser sem profileData) — usado só para a identidade mascarada da confirmação. */
   getUser?(): Promise<unknown>;
@@ -58,6 +60,7 @@ export type SessionFactory = (auth: IfoodAuth) => LinkMcpSession;
 export interface OperationalContext {
   linkId: string;
   deps: EvaluateDeps;
+  discovery?: DiscoveryReader;
   cart?: CartGateway;
   cache: ItemCache;
 }
@@ -663,7 +666,7 @@ export class IfoodLinkService {
     if (missing.length) throw new LinkError('IFOOD_SCOPE_MISSING', `Escopo insuficiente: ${missing.join(', ')}`, 403, 'CONNECTED', 'MISSING_SCOPES');
     const linkId = rt.record.linkId;
     try {
-      return await fn({ linkId, deps: this.session(rt).deps, cart: this.session(rt).cart, cache: rt.cache });
+      return await fn({ linkId, deps: this.session(rt).deps, discovery: this.session(rt).discovery, cart: this.session(rt).cart, cache: rt.cache });
     } catch (e) {
       // Ignora falhas de um vínculo que já foi substituído no meio da operação.
       if (this.links.get(organizerId) === rt) {
@@ -730,9 +733,9 @@ export class IfoodLinkService {
       }
       if (linkState === 'CONNECTED') {
         scopeEvidence = info.scopes ? 'TOKEN_SCOPES' : 'NOT_PROVIDED';
-        // CART-01 tem opt-in próprio, compatível com Gemini e F7 desligada. Preparação nunca libera pagamento.
+        // Só CART-01 pode expor operações de carrinho. Preparação nunca libera pagamento.
         const ops = (Object.keys(OPERATION_SCOPES) as Operation[]).filter((o) => !o.startsWith('CART_') ||
-          (this.cfg.confirmedCartWrites ? o !== 'CART_PAYMENT' : this.cfg.cartEnabled));
+          (Boolean(this.cfg.confirmedCartWrites) && o !== 'CART_PAYMENT'));
         const has = (s: string) => !info.scopes || info.scopes.includes(s);
         missingScopes = [...new Set(ops.flatMap((o) => OPERATION_SCOPES[o]).filter((s) => !has(s)))];
         if (operational) allowed = ops.filter((o) => OPERATION_SCOPES[o].every(has));

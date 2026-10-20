@@ -1,7 +1,7 @@
 // Wrappers tipados das tools do MVP. Somente leitura: tools de carrinho/pedido/escrita são bloqueadas.
 
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { getMcpClient, MCP_TIMEOUT_MS } from './client.js';
+import { MCP_TIMEOUT_MS } from './client.js';
 import { extractErrors, McpToolError } from './errors.js';
 import { metrics } from '../ops/metrics.js';
 import type {
@@ -60,17 +60,16 @@ export interface CallOptions {
 export async function callReadTool<T>(
   name: string,
   args: Record<string, unknown>,
-  client?: Client,
+  client: Client,
   opts: CallOptions = {},
 ): Promise<T> {
   if (!ALLOWED_TOOLS.has(name)) throw new Error(`Tool não permitida no MVP: ${name}`);
-  const c = client ?? (await getMcpClient());
   const timeout = Math.max(1, Math.min(opts.timeoutMs ?? MCP_TIMEOUT_MS, MCP_TIMEOUT_MS));
   const t0 = Date.now();
   // OPS-02: só ferramenta, resultado e código do erro (nunca argumentos, coordenadas ou payload).
   let outcome = 'OK', code: string | undefined;
   try {
-    const r = (await c.callTool({ name, arguments: args }, undefined, { timeout, signal: opts.signal })) as RawToolResult;
+    const r = (await client.callTool({ name, arguments: args }, undefined, { timeout, signal: opts.signal })) as RawToolResult;
     return parseToolResult(name, r) as T;
   } catch (e) {
     outcome = e instanceof McpToolError ? 'TOOL_ERROR' : 'TRANSPORT_ERROR';
@@ -82,18 +81,18 @@ export async function callReadTool<T>(
   }
 }
 
-export const listAddresses = (client?: Client) => callReadTool<ListAddressesResult>('listAddresses', {}, client);
+export const listAddresses = (client: Client) => callReadTool<ListAddressesResult>('listAddresses', {}, client);
 
-export function searchOffers(args: SearchOffersArgs, client?: Client, opts?: CallOptions) {
+export function searchOffers(args: SearchOffersArgs, client: Client, opts?: CallOptions) {
   if (!args.query.trim()) throw new Error('searchOffers exige `query` descritivo (qualificadores vão em refinements)');
   return callReadTool<SearchOffersResult>('searchOffers', { ...args }, client, opts);
 }
 
-export const getItem = (a: { itemId: string; merchantId: string; userLocation: LatLng }, client?: Client, opts?: CallOptions) =>
+export const getItem = (a: { itemId: string; merchantId: string; userLocation: LatLng }, client: Client, opts?: CallOptions) =>
   callReadTool<GetItemResult>('getItem', { ...a }, client, opts);
 
 /** Perfil básico. Nunca pede profileData (comportamental). */
-export const getUser = (client?: Client, opts?: CallOptions) => callReadTool<unknown>('getUser', { includeProfileData: false }, client, opts);
+export const getUser = (client: Client, opts?: CallOptions) => callReadTool<unknown>('getUser', { includeProfileData: false }, client, opts);
 
-export const getMerchant = (a: { merchantId: string; userLocation: LatLng }, client?: Client) =>
+export const getMerchant = (a: { merchantId: string; userLocation: LatLng }, client: Client) =>
   callReadTool<Record<string, unknown>>('getMerchant', { ...a }, client);

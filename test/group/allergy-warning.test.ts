@@ -1,4 +1,4 @@
-// Decisão de produto (18/10/2026): alergia/restrição sem dado do iFood vira AVISO; conflito informado continua excluindo.
+// Regra confirmada em 20/10: UNKNOWN obrigatório bloqueia por consumidor; preferência não vira obrigação.
 import { describe, expect, it } from 'vitest';
 import { composeProposals } from '../../src/server/domain/group';
 import { evaluateCandidate } from '../../src/server/domain/eligibility';
@@ -16,31 +16,30 @@ function people(allergic: string, other?: string): PurchaseState {
   return s;
 }
 
-describe('alergia desconhecida não bloqueia a pessoa', () => {
-  it('item sem informação de alérgeno é elegível com aviso ALLERGY_UNVERIFIED', () => {
+describe('alergia desconhecida bloqueia o item para a pessoa', () => {
+  it('item sem informação de alérgeno não é elegível', () => {
     const c = candidate({ name: 'Pizza de mussarela', description: 'Queijo e molho', price: 40 });
     const e = evaluateCandidate(c, { restrictions: [{ kind: 'ALLERGY', code: 'PEANUT' }] });
-    expect(e.blockers.map(b => b.code)).not.toContain('ALLERGY_UNVERIFIED');
-    expect(e.warnings.map(w => w.code)).toContain('ALLERGY_UNVERIFIED');
-    expect(e.eligible).toBe(true);
+    expect(e.blockers.map(b => b.code)).toContain('ALLERGY_UNVERIFIED');
+    expect(e.eligible).toBe(false);
   });
 
-  it('grupo com alérgico recebe proposta completa, com aviso explícito para confirmar com o restaurante', () => {
+  it('bloqueio de Ana não impede cobertura de Bia nem aparece como cobertura completa', () => {
     const s = people('Ana', 'Bia');
     const r = composeProposals(s, [candidate({ name: 'Pizza de mussarela', description: 'Queijo e molho', price: 40 })], { seed: 'x' });
     expect(r.proposals.length).toBeGreaterThan(0);
-    expect(r.proposals[0]!.coverage.every(c => c.status === 'COVERED')).toBe(true);
+    expect(r.proposals[0]!.coverage.map(c => c.status)).toEqual(['NEEDS_VERIFICATION', 'COVERED']);
     const cell = r.matrix.find(c => c.participantId === s.participants[0]!.participantId)!;
-    expect(cell).toMatchObject({ status: 'COMPATIBLE', warnings: ['ALLERGY_UNVERIFIED'] });
-    expect(r.explanation[1]).toMatch(/^Atenção: o iFood não informa ingredientes nem alérgenos\. As restrições de Ana .*confirme com o restaurante/);
-    expect(r.explanation.join(' ')).not.toMatch(/sem item liberado/);
+    expect(cell).toMatchObject({ status: 'NEEDS_VERIFICATION', reasons: ['ALLERGY_UNVERIFIED'] });
+    expect(r.proposals[0]!.approvalBlockers).toContain('PARTIAL_COVERAGE');
+    expect(r.proposals[0]!.proposal.lines.every(l => !l.consumerIds.includes(s.participants[0]!.participantId))).toBe(true);
   });
 
-  it('uso individual com alergia também recebe proposta e aviso', () => {
+  it('uso individual com alergia desconhecida não recebe proposta elegível', () => {
     const s = people('Você');
     const r = composeProposals(s, [candidate({ name: 'Hambúrguer', description: 'Pão e carne', price: 30 })], { seed: 'x' });
-    expect(r.proposals[0]!.coverage[0]!.status).toBe('COVERED');
-    expect(r.explanation.some(t => t.includes('As restrições de Você'))).toBe(true);
+    expect(r.proposals).toHaveLength(0);
+    expect(r.matrix[0]).toMatchObject({ status: 'NEEDS_VERIFICATION', reasons: ['ALLERGY_UNVERIFIED'] });
   });
 
   it('alérgeno citado na descrição continua bloqueando (não é dado desconhecido)', () => {

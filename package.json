@@ -7,23 +7,17 @@
     "node": ">=22.13"
   },
   "scripts": {
-    "dev": "concurrently -k -n api,web -c blue,green \"npm:dev:api\" \"npm:dev:web\"",
+    "dev": "npm run dev:api",
     "dev:api": "tsx watch --env-file-if-exists=.env src/server/index.ts",
-    "dev:web": "vite",
     "start": "tsx --env-file-if-exists=.env src/server/index.ts",
-    "build": "npm run typecheck && vite build",
+    "build": "npm run typecheck",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "eval:agent": "tsx scripts/agent-evaluation.ts",
-    "ai:demo:offline": "tsx scripts/evaluate-gemini-demo.ts",
-    "ai:demo:gemini": "tsx scripts/evaluate-gemini-demo.ts --live",
     "contract:generate": "tsx scripts/export-conversation-contract.ts && tsx scripts/conversation-examples.ts",
     "test:contract": "vitest run test/contracts/conversation.test.ts",
     "setup:env": "node scripts/setup-env-from-opencode.mjs",
-    "auth:import-opencode": "node scripts/import-opencode-token.mjs",
-    "smoke": "tsx --env-file-if-exists=.env scripts/smoke.ts",
     "links": "tsx --env-file-if-exists=.env scripts/links-admin.ts"
   },
   "dependencies": {
@@ -32,23 +26,16 @@
     "@modelcontextprotocol/sdk": "^1.32.1",
     "ai": "7.0.143",
     "hono": "^4.13.13",
-    "react": "^19.3.1",
-    "react-dom": "^19.3.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^26.6.5",
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
-    "@vitejs/plugin-react": "^6.1.2",
-    "concurrently": "^10.0.6",
     "eslint": "^10.13.0",
     "globals": "^17.13.0",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.71.2",
-    "vite": "^8.3.4",
     "vitest": "^5.0.5"
   }
 }

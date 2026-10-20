@@ -1,5 +1,7 @@
 # F7 — Relatório de implementação e validação
 
+> Relatório histórico de código/testes retirados localmente em 20/10/2026. Resultados abaixo não representam a suíte ou a interface atual; ver [retirada do legado](retirada-legado.md).
+
 Branch: `feat/f7-cart-checkout`. PR #4 em rascunho, sem merge para main. A árvore estava limpa antes da
 incorporação solicitada de origin/main; arquivos existentes e ignorados foram preservados. Nenhuma compra
 ou chamada real de carrinho foi executada. Testes usam exclusivamente AS e MCP simulados.

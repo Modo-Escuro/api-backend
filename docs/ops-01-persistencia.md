@@ -49,9 +49,9 @@ Dependência externa **não provisionada por este repositório**: o volume preci
 
 O volume é só da API. **Não copiar o banco do bot (`/data` do serviço do bot) para o volume da API**, nem o contrário.
 
-## Migração do deploy atual (sem volume)
+## Migração de uma instalação sem volume
 
-O deploy atual guarda os vínculos em `.ifood-links` dentro do container. O próximo redeploy os apaga. Há dois caminhos:
+O ensaio de 17/10 registrou vínculos em `.ifood-links` dentro do container, sem volume. Esse retrato não confirma a infraestrutura atual. Antes de qualquer redeploy, conferir o caminho efetivo e a durabilidade do serviço autorizado; se ainda estiver em disco efêmero, o próximo redeploy pode apagar vínculos. Há dois caminhos para esse caso:
 
 **A. Preservar o vínculo existente** (exige shell no container em execução, antes de qualquer redeploy):
 
@@ -74,8 +74,7 @@ npm run links -- verify
 Em seguida, `POST /api/bot/ifood/verify` pelo bot confirma que a sessão continua operacional.
 
 **B. Reconectar** (mais simples para a conta de teste): criar o volume, fazer o deploy e repetir uma vez o fluxo
-Conectar → Confirmar no Telegram. Use B se o container atual já foi substituído por outro deploy — nesse caso o vínculo
-anterior já se perdeu.
+Conta iFood → Entrar no iFood → autorizar no navegador, que conclui o vínculo. Confirmação Telegram adicional é só recuperação compatível. Use B se uma instalação efêmera já perdeu os arquivos; não inferir perda sem conferir o armazenamento atual.
 
 ## Backup e restauração
 
