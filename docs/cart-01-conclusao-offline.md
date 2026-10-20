@@ -1,6 +1,8 @@
 # CART-01 — Integração e conclusão offline em 18/10/2026
 
-Esta continuação acompanha o [draft API #46](https://github.com/Modo-Escuro/api-backend/pull/46) e o [draft bot #17](https://github.com/Modo-Escuro/telegram-bot/pull/17). Endereço API #47 e bot #18 já estão nas respectivas mains (`a027ed4` e `6adb78d`). O registro abaixo conserva a preparação/auditoria local anterior à publicação. Publicar estes drafts não significa merge, deploy ou ativação.
+> Relatório histórico offline de 18/10, incluindo schema v3 e contagens da origem. A árvore reconciliada usa [v6](armazenamento-v6.md), memória/sessão e [legado retirado](retirada-legado.md). O [contrato vigente](cart-01-escrita-confirmada.md) não autoriza downgrade nem promove esse relatório a prova online.
+
+**Publicação autorizada pelo usuário:** atualização no [draft API #46](https://github.com/Modo-Escuro/api-backend/pull/46), commit `11a05ce87ed61c1d9ab013fd98aa65ec89ea7d54`, e no [draft bot #17](https://github.com/Modo-Escuro/telegram-bot/pull/17), commit `b0d208932b058812e9316db42188b9659ff9c45a`. As cópias limpas de publicação estão em `.work/publish-api` e `.work/publish-bot`. Código/testes foram comparados aos arquivos auditados; atualizações documentais concorrentes fora da entrega foram preservadas localmente. O registro abaixo descreve a preparação anterior à publicação. Nenhum merge na main, deploy ou ativação foi executado.
 
 Implementação local em `codex/cart-01-integration`, a pedido do usuário. Fontes: CLAUDE.md, DEC-01 D2–D10, plano conversacional, contratos DATA-01/DOM-01/GRP-01/RUN-01, documentação CART-01 e INT-02, além de AGENTS.md e regras preservadas do bot. Baseline, fixtures observadas, hashes históricos e pins de testes anteriores foram preservados.
 

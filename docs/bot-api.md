@@ -1,14 +1,14 @@
-**Atualização autorizada em 18/10/2026:** o retorno OAuth no navegador conclui o vínculo sem segundo clique Telegram. Ver [retorno natural](login-retorno-natural.md). Os trechos abaixo sobre confirmação Telegram obrigatória são históricos; compra continua sem autorização pelo login.
+**Contrato atualizado em 18/10/2026:** o retorno OAuth no navegador conclui o vínculo sem segundo clique Telegram. Ver [retorno natural](login-retorno-natural.md). A confirmação manual permanece para compatibilidade e recuperação; login não autoriza compra.
 
 # Contrato bot Telegram → api-backend (F3.5 — login iFood do organizador)
 
 **Atualização de contexto — 18/10/2026:** este arquivo descreve o contrato existente. [Plano de execução](plano-conversacional.md) e [contrato proposto de conversa](https://github.com/Modo-Escuro/telegram-bot/blob/codex/plano-conversacional/docs/contrato-conversa-proposto.md) especificam o trabalho futuro. Login online foi ensaiado com PUBLIC_BASE_URL HTTPS e callback /callback; referências localhost nos exemplos são de desenvolvimento, não obrigação para o usuário do serviço online. Bot usa BACKEND_BASE_URL e BACKEND_API_TOKEN; API usa BOT_API_TOKEN. Não há aprovação de compra neste contrato.
 
-Status: **implementado no api-backend** (2026-10-17). Decisões aceitas: confirmação por **botão** (sem código digitado),
+Status: **implementado no api-backend**, com conclusão do vínculo no navegador (2026-10-18). Confirmação manual compatível por **botão** (sem código digitado),
 `BOT_API_TOKEN` + `X-Telegram-User-Id`, dinheiro em **centavos inteiros** no contrato do bot, demo com um organizador.
-Base: `telegram-bot/docs/login-ifood.md`. Login **não** aprova compra; não há envio de pedidos no backend. Carrinho F7 opcional e desabilitado por padrão: seção 10.
+Base do consumidor: `telegram-bot/docs/login-ifood.md`. Login não aprova compra e não há envio de pedidos. F7 retirada; CART-01 com opt-in próprio. Reconciliação local de 20/10: assistente único, sessão/memória/progresso e banco v6; não é conferência online.
 
-Contrato de conversa versionado: [API-01 v1.0](conversation-api-v1.md), com schemas e testes offline. A [RUN-01](runtime-turnos.md) registra as rotas e infraestrutura opt-in; ainda exige integração de domínio/IA antes de aceitar novos turnos no processo padrão. As rotas de vínculo deste documento permanecem independentes.
+Contrato de conversa versionado: [API-01 v1.0](conversation-api-v1.md), com schemas base e extensões de conta/memória/progresso. RUN-01 integra DATA-01 e o assistente pela montagem AI-01; aceitar turnos novos exige runtime/modelo explicitamente configurados. O bot conserva `X-Conversation-Session` para os eventos associados ao vínculo. As rotas de login deste documento permanecem independentes.
 
 ## 1. Autenticação bot → API
 
@@ -20,7 +20,7 @@ Toda chamada do bot leva:
 | `X-Telegram-User-Id` | `from.id` do update/callback_query **já validado pelo adaptador** (conversa privada, organizador permitido) |
 | `Content-Type` | `application/json` nas rotas com corpo |
 
-- O backend confere o ID contra `ALLOWED_ORGANIZER_IDS`. Identidade no corpo/query/texto do usuário ou do LLM é ignorada
+- O backend confere o ID contra `ALLOWED_ORGANIZER_IDS`. Com `BOT_PASSWORD_ACCESS_ENABLED=true`, o adaptador autenticado também pode admitir IDs válidos enviando `X-Telegram-Access: PASSWORD`, após validar a senha no bot; ver [acesso por senha](acesso-bot-senha.md). Identidade no corpo/query/texto do usuário ou do LLM é ignorada
   ou rejeitada (corpos são `strict`).
 - Erros: `401 BOT_AUTH_REQUIRED`, `400 ORGANIZER_REQUIRED`, `403 ORGANIZER_NOT_ALLOWED`, `503 BOT_API_NOT_CONFIGURED` (fail closed).
 - Qualquer rota de vínculo: `503 LINK_STORAGE_UNAVAILABLE` quando o armazenamento de vínculos não pode ser lido (arquivo
@@ -33,12 +33,12 @@ Toda chamada do bot leva:
 |---|---|---|---|
 | `DISCONNECTED` | sem vínculo nem tentativa | `NEVER_CONNECTED`, `DISCONNECTED_BY_USER`, `ATTEMPT_EXPIRED`, `CONFIRMATION_EXPIRED`, `AUTHORIZATION_DENIED`, `CODE_EXCHANGE_FAILED`, `PROVIDER_UNAVAILABLE`, `ATTEMPT_SUPERSEDED` | botão **Conectar iFood** |
 | `AWAITING_AUTHORIZATION` | link gerado; login no navegador não concluído | `RECONNECTING_FROM_<estado>` se já havia vínculo | botão-URL do link + **Verificar** |
-| `AWAITING_CONFIRMATION` | iFood autorizou; falta o organizador confirmar | | identidade mascarada + **Confirmar conexão** / **Cancelar** |
+| `AWAITING_CONFIRMATION` | autorização recebida; instalação ainda pendente, compatibilidade ou recuperação | | identidade mascarada + **Confirmar conexão** / **Cancelar** quando a confirmação manual for necessária |
 | `CONNECTED` | vínculo confirmado | `null` (operacional), `VERIFICATION_PENDING`, `TOKEN_REFRESH_PENDING` | liberar fluxo **só se** `allowedOperations` não vazio |
 | `RECONNECT_REQUIRED` | credencial comprovadamente inválida | `REFRESH_REJECTED`, `TOKEN_EXPIRED`, `TOKEN_REJECTED`, `ACCESS_FORBIDDEN`, `TOKENS_MISSING` | **Conectar iFood** de novo |
 | `UNAVAILABLE` | iFood/AS/rede fora — **não é logout**; tokens mantidos | `PROVIDER_ERROR`, `AUTH_PROVIDER_UNAVAILABLE`, `MCP_UNAVAILABLE`, `NETWORK_ERROR` | "iFood indisponível" + **Verificar** |
 
-Corpo de status (todas as rotas de vínculo devolvem este objeto; nunca há token, código OAuth, telefone, e-mail ou nome completo):
+Exemplo de status de confirmação manual pendente (compatibilidade/recuperação). No fluxo normal, o callback instala o vínculo e o bot consulta o estado resultante; não precisa observar `AWAITING_CONFIRMATION`. As respostas nunca contêm token, código OAuth, telefone, e-mail ou nome completo:
 
 ```json
 {
@@ -62,7 +62,7 @@ Corpo de status (todas as rotas de vínculo devolvem este objeto; nunca há toke
   "scopeEvidence": null,
   "missingScopes": [],
   "purchaseAuthorized": false,
-  "limitations": ["Login não aprova compra…", "O callback OAuth é http://localhost:8000…"],
+  "limitations": ["Login não aprova compra…"],
   "nextActions": ["CONFIRM_CONNECTION", "CANCEL"]
 }
 ```
@@ -70,7 +70,7 @@ Corpo de status (todas as rotas de vínculo devolvem este objeto; nunca há toke
 - `accountIdentity.status`: `VERIFIED` (nome/e-mail mascarados do `getUser`), `NOT_PROVIDED` (iFood respondeu sem esses
   campos) ou `UNAVAILABLE` (consulta falhou). Nos dois últimos, o bot deve dizer que a identidade não pôde ser verificada.
 - Em `CONNECTED`: `account = { "identity": {…mascarada…}, "addressCount": <n|null> }`, `linkId` opaco, `attempt: null`.
-- `linkId` muda a cada nova confirmação (reconexão/troca de conta). O bot deve invalidar carrinho/aprovação associada a outro
+- `linkId` muda a cada nova confirmação (reconexão/troca de conta). O bot deve invalidar sacola/aprovação associada a outro
   `linkId`. `confirm` também devolve `previousLinkId`.
 
 ## 3. Endpoints do bot
@@ -101,16 +101,18 @@ Operações de conta (mesma autenticação; exigem vínculo confirmado **e** ope
 1. /start ou "Conectar":   POST /connect  → 201 { authorizationUrl, attempt.expiresAt }
    Mensagem com botão-URL "Abrir login do iFood" (authorizationUrl) + aviso:
    "Abra o link no navegador e volte ao Telegram. O link vale 10 min. Em desenvolvimento localhost, use o computador do backend."
-2. Usuário faz login no navegador. A página final diz "volte ao Telegram e toque em Confirmar conexão".
+2. Usuário faz login no navegador. O callback valida a tentativa e instala o vínculo. A página diz "Conta conectada" e orienta voltar ao Telegram, sem confirmar novamente. Se a verificação operacional falhar, orienta usar Verificar conexão.
 3. Bot consulta GET /status (botão "Verificar" ou polling curto, ex.: a cada 5 s por até 10 min):
    - AWAITING_AUTHORIZATION → continuar aguardando ("ainda não concluído" — um "já entrei" não comprova nada)
-   - AWAITING_CONFIRMATION  → enviar mensagem:
+   - CONNECTED e allowedOperations ≠ [] → retomar o fluxo; login não aprova compras.
+   - UNAVAILABLE ou vínculo não operacional → oferecer Verificar; não iniciar operações de conta.
+   - AWAITING_CONFIRMATION (compatibilidade/recuperação) → enviar mensagem:
        "Conectar esta conta iFood? Maria S. · m***@example.com
         Se não reconhece esta conta, toque em Cancelar."
        Inline keyboard: [Confirmar conexão] callback_data = "ifc:" + attempt.confirmationId   (≤ 64 bytes)
                         [Cancelar]          callback_data = "ifx"
      (se accountIdentity.status ≠ VERIFIED: "Não foi possível verificar a identidade da conta.")
-4. callback_query "ifc:<id>": o adaptador valida from.id == organizador (como em qualquer update) e chama
+4. Se houver confirmação manual pendente, callback_query "ifc:<id>": o adaptador valida from.id == organizador (como em qualquer update) e chama
    POST /confirm { confirmationId: <id> } com X-Telegram-User-Id = from.id.
    - 200 CONNECTED e allowedOperations ≠ [] → "Conta conectada". Login não aprova compras.
    - 200 com state UNAVAILABLE → "iFood indisponível, tente Verificar depois" (vínculo existe, operações bloqueadas).
@@ -126,8 +128,8 @@ Operações de conta (mesma autenticação; exigem vínculo confirmado **e** ope
 Regras para o bot:
 - Nunca pedir senha, código OAuth, token, URL de retorno ou qualquer código no chat.
 - Nunca construir `confirmationId`/`attemptId`; usar apenas os valores do status mais recente.
-- Não confirmar automaticamente: a confirmação é sempre um clique humano do organizador.
-- Não guardar tokens (o bot nunca os recebe). `linkId` pode ser guardado para invalidar carrinhos.
+- O callback OAuth conclui automaticamente o vínculo após a autorização humana no navegador. O bot não chama `/confirm` por polling; quando houver confirmação manual pendente, chama essa rota somente após o clique do organizador.
+- Não guardar tokens (o bot nunca os recebe). `linkId` pode ser guardado para invalidar sacolas.
 
 ## 5. Proteção contra link encaminhado e garantias da tentativa
 
@@ -135,9 +137,9 @@ Regras para o bot:
 |---|---|
 | Mesma máquina | Com `PUBLIC_BASE_URL` local (padrão), `/auth/ifood/start` e o callback (`/`) só aceitam conexões de loopback (127.0.0.1/::1). Outro computador recebe 403. |
 | Mesmo navegador | O primeiro navegador que abre o link recebe cookie HttpOnly/SameSite=Lax e "reivindica" a tentativa. Outro navegador recebe 409; o callback em navegador sem o cookie é rejeitado (409) **sem consumir** a tentativa. |
-| Confirmação consciente | Após o callback o vínculo fica `AWAITING_CONFIRMATION`; o bot mostra a identidade mascarada da conta e só o organizador que criou a tentativa consegue confirmar (outro ⇒ 404). |
+| Autorização no navegador | O callback conclui o vínculo com a conta autorizada no navegador para o organizador derivado da tentativa no servidor. Não há segunda conferência de identidade no Telegram no fluxo normal. O link inicial é uma capacidade privada: quem o abrir primeiro reivindica a tentativa. Não compartilhar; cookie/PKCE não provam que os dispositivos pertencem à mesma pessoa. |
 | Tentativa | `state` e PKCE S256 aleatórios; validade de 10 min para o login e mais 10 min para confirmar; `state` de uso único (callbacks concorrentes: só um troca o código); nova `connect` invalida a anterior; `confirmationId` só existe após callback válido e só vale uma vez. |
-| Sessão | Após confirmar, uma leitura autenticada real (`listAddresses`) define `operational`. Tokens, sessão MCP e cache são próprios de cada vínculo. |
+| Sessão | A instalação pelo callback ou confirmação manual executa uma leitura autenticada real (`listAddresses`) para definir `operational`. Falha remota pode deixar o vínculo salvo sem operações liberadas. Tokens, sessão MCP e cache são próprios de cada vínculo. |
 
 Identidade da conta: `getUser` com `includeProfileData=false` (contrato observado 2026-10-17: `{ success, data: { fullName, email, phone } }`,
 `readOnlyHint=true`, escopo `mcp.user.basic.read`). Só saem do backend nome mascarado ("Maria S.") e e-mail mascarado
@@ -162,7 +164,7 @@ Identidade da conta: `getUser` com `includeProfileData=false` (contrato observad
   `options.mandatory[].totalCents`, `confirmedTotalCents` (sempre `null`), etc.
 - Quando o preço é ambíguo (`status: "UNCERTAIN"`), `unitTotalCents`/`estimatedTotalCents` vêm `null` e só as faixas valem.
 - Mensagens (`blockers[].message`, `notes`) continuam em texto "R$ x.yz" para leitura humana.
-- O domínio também usa centavos inteiros; BRL do MCP é convertido na normalização. `src/server/services/cents.ts` só projeta os nomes do contrato, sem multiplicar novamente. Ver DOM-01 na seção 11.
+- O domínio também usa centavos inteiros; BRL do MCP é convertido na normalização. `src/server/services/cents.ts` só projeta os nomes do contrato, sem multiplicar novamente. Ver DOM-01 na seção 13.
 
 ## 8. Recomendações ranqueadas (`/api/evaluate` — contrato 2.0, RANK-03)
 
@@ -269,13 +271,12 @@ estão no [guia de migração](rank-03-contrato-v2.md#contrato-http-antesdepois)
 
 No desenvolvimento, `http://localhost:8000` exige cadastro exato e navegador no computador do backend.
 No serviço online, o ensaio usou `https://api-backend-production-9c4c.up.railway.app/callback`, com cadastro aprovado segundo o usuário e conexão operacional observada. PUBLIC_BASE_URL e IFOOD_REDIRECT_URI devem coincidir com o ambiente/cadastro; não substituir o HTTPS por defaults locais.
-Com origem pública, a proteção de loopback não se aplica; permanecem navegador vinculado por cookie e confirmação humana do organizador. Consulte o estado observado no bot; esta documentação não verifica continuamente o deploy.
+Com origem pública, a proteção de loopback não se aplica; permanecem tentativa com state/PKCE, prazo e navegador vinculado por cookie. A autorização humana ocorre no navegador, sem segundo clique Telegram. Consulte o estado observado no bot; esta documentação não verifica continuamente o deploy.
 
 ## 10. Recorte da demo (não é isolamento multiusuário completo)
 
 - Um organizador em `ALLOWED_ORGANIZER_IDS`, uma conta iFood dedicada de teste.
-- Sem banco de dados, sem criptografia dos tokens em repouso (arquivos modo 600 em `IFOOD_LINKS_DIR`, fora do Git), sem rate
-  limiting, sem auditoria, sem revogação no provedor, um único processo (tentativas pendentes ficam em memória).
+- Vínculos OAuth usam arquivos modo 600 em `IFOOD_LINKS_DIR`, fora do Git, sem criptografia dos tokens em repouso ou revogação no provedor. Tentativas pendentes ficam em memória. RUN-01/DATA-01/CART-01 usam SQLite separado; logs e métricas sanitizados seguem OPS-02. Operar com um único processo; não há rate limiting HTTP geral.
 - Vínculos confirmados sobrevivem a reinício e redeploy **somente** se `IFOOD_LINKS_DIR` estiver num volume persistente
   (OPS-01, [ops-01-persistencia](ops-01-persistencia.md)). Tentativas pendentes continuam voláteis.
 - Sessão global antiga (`/api/auth/*`) desligada por padrão e nunca importada como vínculo.
@@ -295,15 +296,17 @@ BACKEND_API_TOKEN=<o mesmo segredo BOT_API_TOKEN da API>
 TELEGRAM_ALLOWED_USER_ID=<mesmo ID de ALLOWED_ORGANIZER_IDS>   # enviado como X-Telegram-User-Id
 ```
 
-## 10. F7 — Contrato do carrinho e revisão
+## 12. Carrinho — legado F7 e preparação CART-01
 
-Contrato legado anterior à nova CART-01: manter `IFOOD_CART_ENABLED=false`. A [DEC-01 vigente](decisoes-conversacionais.md) já permite carrinho real confirmado, mas sua implementação nova é local e não faz parte destas rotas na main conferida. PREPARE_CART não usa `/purchase-approvals`; pedido/pagamento continuam proibidos. Auditoria e limites: [INT-01](int-01-audit.md).
+Na árvore local de 20/10/2026, a F7 e todas as rotas `/api/bot/cart` foram retiradas (404 após autenticação). Remova `IFOOD_CART_ENABLED` do ambiente; `true` é recusado na inicialização. A [DEC-01 vigente](decisoes-conversacionais.md) permite carrinho real confirmado somente pelo caminho CART-01. PREPARE_CART não usa `/purchase-approvals`; pedido/pagamento continuam proibidos.
 
-Rotas em `/api/bot/cart` usam a mesma autenticação de adaptador deste documento, JSON estrito, centavos inteiros e vínculo operacional. O contrato completo de endpoints, corpos, respostas, estados e retries está em [f7-cart-checkout.md](f7-cart-checkout.md#endpoints-do-telegram).
+O contrato de endpoints em [f7-cart-checkout.md](f7-cart-checkout.md#endpoints-do-telegram) é histórico e não descreve rotas disponíveis na árvore atual.
 
-Fluxo: consultar `/catalog` com endereço da conta → escolher itemRef/opções → criar carrinho → consultar e selecionar entrega/pagamento/cupom → ler getCart → revisão informativa. O bot gera requestId por intenção e preserva em retries. Não inventar referências nem obter IDs da LLM. A revisão não oferece compra: approve/submit retornam CHECKOUT_DISABLED. RESULT_UNKNOWN exige reconciliação, nunca um novo requestId automático. Cartões não expõem tokens e a configuração real ainda depende da validação das saídas MCP; as correções #2/#3 já estão incorporadas. O catálogo devolve resultados parciais e erros sanitizados por candidato; tentativas de releitura com o mesmo requestId não repetem escritas confirmadas.
+Leitura de catálogo permanece no executor do assistente. Não inventar referências nem obter IDs da LLM. A retirada também elimina `/api/auth/*` e `/api/diagnostics/search`; OAuth continua exclusivamente por vínculo Telegram. Ver [migração](retirada-legado.md).
 
-## 11. DOM-01 — Limites locais e total parcial
+A implementação local da [CART-01](cart-01-escrita-confirmada.md) usa rotas próprias em `/api/bot/v1/conversations/:conversationId/cart-writes`, compra/sacola DATA-01/GRP-01 e confirmação humana PREPARE_CART. O adaptador preserva `requestId`, `callbackId` e referência da confirmação; replay consulta a intenção persistida e não repete escrita. `RESULT_UNKNOWN` bloqueia novas mutações, inclusive com outro requestId. O opt-in novo permanece desligado por padrão e exige manifesto de evidência externa; ativação depende de INT-02 e BOT-03. Preparar itens não autoriza enviar pedido nem selecionar/processar pagamento.
+
+## 13. DOM-01 — Limites locais e total parcial
 
 O domínio agora também calcula em centavos; campos HTTP `*Cents` mantêm a unidade, sem reconversão. `refinements` de prazo, distância, frete, nota e promoção são condições obrigatórias também verificadas localmente. O campo aditivo `softLimits` aceita os mesmos alvos, sem `sort`, como preferências: não filtra MCP e não bloqueia elegibilidade. Cada candidato expõe resultados em `limits`; campos de frete usam `*Cents`.
 

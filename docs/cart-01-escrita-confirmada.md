@@ -1,6 +1,6 @@
-# CART-01 — Escrita de carrinho confirmado pelo organizador
+# CART-01 — Escrita de carrinho confirmada pelo organizador
 
-**Continuação:** [apresentação completa e auditoria](cart-01-conclusao-offline.md) acrescentam conta mascarada, loja/endereço e nomes de opções/remoções, vinculados por hash, além da composição/custos observados na consulta final. A publicação em draft não fornece evidência real do iFood nem ativa escrita.
+**Continuação:** o [contrato de apresentação e a integração offline](cart-01-conclusao-offline.md) acrescentam identificação mascarada da conta, loja, endereço e nomes das opções/remoções; hashes das descrições vinculam a revisão. A consulta final do bot já apresenta composição/custos observados. As lacunas desses itens descritas historicamente abaixo foram implementadas localmente, sem ativação real.
 
 [Auditoria original](cart-01-auditoria.md) · [Integração atual](cart-01-integracao.md) · [INT-02 #40 — gate externo](https://github.com/Modo-Escuro/api-backend/issues/40).
 
@@ -8,13 +8,13 @@ Revisão de escopo autorizada pelo usuário em 18/10/2026. Substitui a proibiç�
 
 ## Fluxo implementado
 
-DATA-01/GRP-01 continuam sendo a fonte única de participantes, restrições, limites, propostas e carrinho escolhido. CART-01 não mantém outra carrinho nem outro rateio. Guarda somente plano técnico, confirmação, intenção e projeção sanitizada do carrinho remoto, no mesmo SQLite da RUN-01/DATA-01. DOM-01 calcula dinheiro e rateio.
+DATA-01/GRP-01 continuam sendo a fonte única de participantes, restrições, limites, propostas e sacola escolhida. CART-01 não mantém outra sacola nem outro rateio. Guarda somente plano técnico, confirmação, intenção e projeção sanitizada do carrinho remoto, no mesmo SQLite da RUN-01/DATA-01. DOM-01 calcula dinheiro e rateio.
 
-Migração aditiva **v2 → v3**, em transação. O número da versão impede que um binário anterior ignore bloqueios CART-01. Rollback funcional desliga o opt-in; não rebaixa o banco nem apaga PENDING/RESULT_UNKNOWN. O ciclo da RUN-01 recupera intenções vencidas mesmo sem montar o serviço de carrinho: sem possível efeito vira FAILED; com efeito possível vira RESULT_UNKNOWN e continua bloqueado.
+CART-01 introduziu v3; o schema atual é **v6**, que unifica as variantes v5 e preserva intenções/tabelas. Binários v5 e anteriores recusam v6. Rollback funcional desliga o opt-in, sem downgrade ou exclusão de PENDING/RESULT_UNKNOWN. RUN-01 recupera intenções vencidas sem repetir rede: possível efeito mantém RESULT_UNKNOWN. [Migração atual](armazenamento-v6.md).
 
 1. Organizador escolhe proposta atual na GRP-01. A integração do callback no Telegram pertence à BOT-03.
 2. Adaptador autenticado solicita revisão, sem enviar preço, produto, restrição, participante ou consentimento no corpo.
-3. Servidor valida compra ativa, carrinho CURRENT, cobertura completa, limites declarados, vínculo operacional e permissões de descoberta/leitura/escrita. Resolve endereço em `listAddresses`, relê disponibilidade e `getItem`, confere loja, produtos, opções, quantidade e elegibilidade por consumidor. Alergia sem evidência permanece bloqueada.
+3. Servidor valida compra ativa, sacola CURRENT, cobertura completa, limites declarados, vínculo operacional e permissões de descoberta/leitura/escrita. Resolve endereço em `listAddresses`, relê disponibilidade e `getItem`, confere loja, produtos, opções, quantidade e elegibilidade por consumidor. Alergia sem evidência permanece bloqueada.
 4. Se já houver cartId, relê `getCart` e calcula as mutações necessárias para a composição desejada. Não deduz `cartItemId` de `itemId`. Alterações de pagamento, entrega ou cupom não fazem parte deste incremento.
 5. Revisa o contrato: schemas anunciados devem coincidir com o manifesto de evidência; respostas autenticadas observadas devem passar nos parsers instalados. `tools/list`, escopos e um arquivo com nomes não comprovam saída nem efeito.
 6. Emite referência opaca de uso único, finalidade PREPARE_CART, hash, versão e expiração em cinco minutos. Exibe composição e soma dos preços observados. Custos desconhecidos não viram zero nem total confirmado.
@@ -28,7 +28,7 @@ Prefixo `B = /api/bot/v1/conversations/:conversationId/cart-writes`.
 
 | Método/rota | Contrato |
 | --- | --- |
-| `POST B/reviews` | JSON `{}`; compra/carrinho vêm da DATA-01. Resposta contém `confirmationRef`, finalidade, versão, hash, expiração, composição, operações e incerteza do total |
+| `POST B/reviews` | JSON `{}`; compra/sacola vêm da DATA-01. Resposta contém `confirmationRef`, finalidade, versão, hash, expiração, composição, operações e incerteza do total |
 | `POST B/confirm` | `{purpose:"PREPARE_CART",source:"TELEGRAM_CALLBACK",confirmationRef,requestId,callbackId}`; schema estrito; referência/ID preservados no replay |
 | `GET B/current` | Consulta o carrinho conhecido, custos e bloqueios. Não limpa resultado desconhecido |
 | `GET B/operations/:operationId` | Recupera estado da mesma intenção, sem escrever novamente |
@@ -38,7 +38,7 @@ Exige Bearer do adaptador, `X-Telegram-User-Id` validado pela autenticação e `
 
 O plano vincula finalidade, organizador/bot/conversa, compra, versão, hash do domínio, linkId, endereço, loja, composição, catálogo observado, estado remoto e prazo. A referência em claro só volta ao canal humano; SQLite guarda seu hash. Callback ID é guardado como hash e não pode ser usado para outra intenção. Nenhum booleano `userConsent`/`humanConfirmed` é aceito. O vocabulário/modelContext da IA não recebeu essas referências nem novas ações de aprovação.
 
-BUY-01 futuro deve emitir **outra** autorização, finalidade SUBMIT_ORDER, após custo completo confirmado e revisão apta. Deve ligar responsável, conta, versão, composição, entrega, custos e prazo; consumir autorização junto da intenção de envio durável. PREPARE_CART não pode ser convertido ou reutilizado para isso. `/purchase-approvals`, rotas legadas `/approve`/`submit` e o gateway de pagamento continuam bloqueados.
+BUY-01 futuro deve emitir **outra** autorização, finalidade SUBMIT_ORDER, após custo completo confirmado e revisão apta. Deve ligar responsável, conta, versão, composição, entrega, custos e prazo; consumir autorização junto da intenção de envio durável. PREPARE_CART não pode ser convertido ou reutilizado para isso. `/purchase-approvals` continua indisponível, o gateway não libera pagamento e as rotas F7 `/approve`/`submit` foram retiradas (404 após autenticação).
 
 ## Persistência e falhas
 
@@ -57,11 +57,11 @@ Releitura antes da escrita detecta mudanças observadas; não torna a validaçã
 
 ## Configuração de desenvolvimento e gate externo
 
-Padrão: `IFOOD_CONFIRMED_CART_WRITES_ENABLED=false`. Quando explicitamente ativada em ambiente de teste, exige RUN-01/DATA-01 com banco persistente e `IFOOD_CART_CONTRACT_EVIDENCE_FILE` apontando para manifesto privado. Não exige AI-01, provedor/modelo ou sua conclusão. Quando Gemini também está montado, ambos compartilham a DATA-01 e a F7 permanece desligada; o serviço de vínculos anuncia somente CART_READ/CART_WRITE conforme escopos, sem liberar CART_PAYMENT. A F7 antiga permanece sem escrita operacional, mesmo com sua flag ativa.
+Padrão: `IFOOD_CONFIRMED_CART_WRITES_ENABLED=false`. A montagem explícita exige RUN-01/DATA-01 com banco persistente e `IFOOD_CART_CONTRACT_EVIDENCE_FILE` apontando para manifesto privado. Não exige modelo. Com Gemini montado, ambos compartilham DATA-01; o vínculo só anuncia CART_READ/CART_WRITE conforme configuração/escopos, nunca CART_PAYMENT. F7 foi retirada, não apenas desligada; `IFOOD_CART_ENABLED=true` é recusado no boot. Nenhuma flag antiga contorna o gate novo.
 
-Manifesto v1: endpoint `/marketplace`, `source:OBSERVED_AUTHENTICATED`, `businessToolsCalled:true`, `parserSha256` (arquivo contracts.ts normalizado para LF), e por ferramenta `name`, `inputSchemaSha256` (JSON canônico por contentHash), `observedAt`, `samplePath`, `sampleSha256` (JSON canônico). Necessita getCart e cada mutação realmente usada. Amostras sanitizadas devem preservar campos contratuais e não conter dados privados. O manifesto registra a origem declarada pelo operador, não substitui revisão humana da evidência. Não há manifesto operacional incluído porque não recebemos essas capturas.
+Manifesto v1: endpoint literal `https://consumer-mcp.ifood.com.br/marketplace`, source OBSERVED_AUTHENTICATED, businessToolsCalled, hash LF do parser e, por ferramenta, nome, hash canônico do inputSchema, observedAt, samplePath/sampleSha256. Necessita getCart e cada mutação usada. A reconciliação preserva `fixtures/int02/cart-evidence.json` e amostras recebidas na main, sem alterar seus hashes; os regressores verificam o gate contra esses formatos. Isso não confirma novo ensaio, outputs com opções ou reconciliação confiável de resultado desconhecido; a declaração de origem exige revisão humana de alcance e privacidade.
 
-Ferramentas iFood não estão registradas nesta sessão do agente. Não houve leitura de credenciais, login, chamada de negócio ou ensaio externo. A ausência de outputSchema não autoriza inventar resposta. Testes usam gateway e evidência **mockados**, sem declarar amostras sintéticas como observadas.
+A validação documentada é local/offline: não houve nova chamada de negócio, leitura de credenciais ou ensaio externo nesta atualização. A ausência de outputSchema não autoriza inventar resposta. Testes usam gateway/evidência **mockados**; disponibilidade de ferramenta numa sessão de desenvolvimento não comprova outputs ou autoriza escrita.
 
 ## Critérios antes de PR e ativação
 

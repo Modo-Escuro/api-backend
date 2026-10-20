@@ -1,6 +1,6 @@
 # Ranking de recomendações (F4) — implementação
 
-Status: **RANK-03 implementada localmente na branchBruna**, contrato 2.0 (18/10/2026), sem commit/integração novos.
+Status na árvore local de 20/10/2026: **RANK-03 implementada**, contrato de avaliação 2.0, domínio puro preservado. Origem/merges e resultados de implementação estão no guia abaixo; isso não é conferência atual de implantação ou de GitHub. O assistente apresenta cartões próprios e a GRP-01 usa ranqueador de planos provisório: não confundir essa experiência com consumidor direto de `/api/evaluate`.
 Base: DEC-01 D9 e DOM-01; diagnóstico, antes/depois e consumidores: [rank-03-contrato-v2](rank-03-contrato-v2.md).
 Contrato HTTP/centavos e exemplo de payload: `docs/bot-api.md` (seções 7 e 8).
 
@@ -113,7 +113,7 @@ Dinheiro segue em centavos, inclusive `orderingKeys.estimatedTotalCents`, sem re
 
 | Arquivo | Papel |
 |---|---|
-| `src/server/domain/ranking.ts` | **novo** — classificação, pesos, critérios, `rankCandidates` (função pura) |
+| `src/server/domain/ranking.ts` | Classificação, pesos, critérios, `rankCandidates` (função pura) |
 | `src/server/services/evaluate.ts` | classifica cada candidato, chama o ranking só com ELIGIBLE, `preferences` no request |
 | `src/server/services/evaluate-view.ts` | buckets da resposta, `recommendations` + `ranking`, `summary`, `notes` |
 | `src/server/services/cents.ts` | `recommendations`/`needsVerification` em centavos (genérico preserva `ranking`) |

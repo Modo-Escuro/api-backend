@@ -2,7 +2,7 @@
 
 Revisão de 18/10/2026 autorizada pelo usuário, que confirmou a aprovação da equipe para carrinho real. [Estado remoto/local](estado-remoto-local.md) · [DEC-01 #5](https://github.com/Modo-Escuro/api-backend/issues/5) · [Decisão anterior preservada](https://github.com/Modo-Escuro/api-backend/blob/f3b8b5561acc0c0ae5e9efe12b52acc2f29bf218/docs/decisoes-conversacionais.md).
 
-O único escopo de carrinho vigente é preparar/modificar o carrinho real após confirmação humana específica. Composição local e testes com mocks são etapas técnicas, não uma entrega alternativa. Não altera o baseline StRS nem declara validação da mentoria, integração real entregue ou autorização de pedido/pagamento. A main conferida ainda executa propostas/composição local ainda não sincronizada com o iFood; o código CART-01 auditado permanece local e separado desta revisão documental.
+O único escopo de carrinho vigente é preparar/modificar o carrinho real após confirmação humana específica. Composição local e testes com mocks são etapas técnicas, não uma entrega alternativa. Não altera baseline StRS nem declara validação da mentoria, integração real ou autorização de pedido/pagamento. A árvore local de 20/10 contém assistente/sacola e CART-01 opt-in; [publicação/online](estado-remoto-local.md) são evidências separadas.
 
 ## Resumo vigente
 
@@ -23,7 +23,7 @@ O único escopo de carrinho vigente é preparar/modificar o carrinho real após 
 
 Cada organizador autenticado organiza sua própria compra. O acesso por senha integrado em API #39 e bot #13/#14 não compartilha conta iFood, domínio ou aprovação entre usuários. Participantes não possuem contas neste recorte. Dados declarados conservam origem no organizador.
 
-A direção de produto permite carrinho real; os contratos e a implementação determinística precisam estar integrados e validados antes de ativar. Manter F7 legada desligada: sua flag não instala confirmação humana nem durabilidade. Não alterar flags, volumes ou produção por esta revisão documental.
+A direção de produto permite carrinho real; contratos e implementação determinística precisam estar validados antes de ativar. F7 foi [retirada localmente](retirada-legado.md), e sua flag com true é recusada. Não restaurá-la para contornar confirmação/durabilidade. Não alterar flags, volumes ou produção por esta revisão documental.
 
 ## Confirmação de preparação e aprovação de pedido
 

@@ -1,12 +1,14 @@
 # CART-01 — Integração sobre a main atual
 
-**Continuação publicada no mesmo draft #46:** [conclusão offline e auditoria](cart-01-conclusao-offline.md) integram a main com INT-02 #48 e endereço #47, completam a revisão e a consulta final do bot e adiantam a OPS-02. Os registros abaixo são históricos; o GO técnico continua restrito às flags desligadas.
+> Histórico da integração em 18/10: schema v3, SHAs/hashes/resultados pertencem à origem. A árvore reconciliada usa [v6](armazenamento-v6.md), assistente único e F7 retirada. [Guia vigente](cart-01-escrita-confirmada.md); não regravar evidências como nova validação remota.
+
+**Continuação local:** [conclusão offline](cart-01-conclusao-offline.md) reúne endereços #47, CART-01 #46 e main com INT-02 #48; completa apresentação humana e consulta final. Os resultados e bases abaixo são históricos e não representam validação do novo delta ou do provedor.
 
 Integração de 18/10/2026, base `f3b8b5561acc0c0ae5e9efe12b52acc2f29bf218`, branch `codex/cart-01-confirmed-writes`. Código reaproveitado da implementação local anteriormente auditada sobre `8191a0f`, cujo [relatório original](cart-01-auditoria.md) é histórico. A implementação original e seu patch foram preservados; SHA-256 do patch: `3897aef6d8be0dcbca65aca8409e873ebf5837ea772ec016990343b97ed173c0`.
 
 ## Resultado e alcance
 
-O incremento prepara criação e alterações de itens de carrinho por confirmação humana específica PREPARE_CART, usando a compra/carrinho da DATA-01/GRP-01 e o dinheiro da DOM-01. Confirmação/intenção e reconhecimento/cartId são persistidos atomicamente. Replay consulta a intenção; falha parcial interrompe a sequência; resultado desconhecido impede novas escritas. O [contrato e fluxo completo](cart-01-escrita-confirmada.md) detalha os limites.
+O incremento prepara criação e alterações de itens de carrinho por confirmação humana específica PREPARE_CART, usando a compra/sacola da DATA-01/GRP-01 e o dinheiro da DOM-01. Confirmação/intenção e reconhecimento/cartId são persistidos atomicamente. Replay consulta a intenção; falha parcial interrompe a sequência; resultado desconhecido impede novas escritas. O [contrato e fluxo completo](cart-01-escrita-confirmada.md) detalha os limites.
 
 O PR mantém **`IFOOD_CONFIRMED_CART_WRITES_ENABLED=false`**. Não inclui evidência operacional de contrato nem callback Telegram BOT-03. Não envia pedido, não seleciona/processa pagamento, não muda flags da Railway e não faz deploy/merge. Não há autorização de compra pela IA.
 

@@ -1,5 +1,7 @@
 # Síntese, resposta curta e carrinho simulado
 
+> Histórico do intérprete anterior. O assistente atual não aplica automaticamente estes atalhos de Não/CLEAR_BAG nem emite seus antigos botões. Usa intenção natural, memória seletiva e escolha digitada de propostas; continuidade canônica de orçamento foi adaptada separadamente. [Guia atual](assistente-conversacional.md) e [reconciliação](sincronizacao-github.md).
+
 Pedido de 18/10/2026: evitar repetir o grupo inteiro, aproveitar respostas como “Não”, reduzir o menu do bot e oferecer botão para esvaziar o carrinho. As imagens mostram estados repetidos com notas diferentes; não comprovam duplicação do transporte nem a versão online.
 
 O contexto enviado ao modelo passa a incluir também as perguntas rotineiras pendentes, anteriormente ausentes. Uma resposta exata “Não”, “Nao” ou “nenhuma” pode responder à primeira pergunta de restrições mostrada pelo bot, sem nova inferência. Exige compra ativa, fase COLLECTING, pergunta atual idêntica às pendências calculadas pelo servidor, identidade presente no GROUP e participante em NOT_ASKED. Notas de endereço/recusa, esclarecimento aberto, snapshot divergente, contexto ausente ou restrição já declarada impedem essa interpretação. Não há remoção de alergia, liberação de UNKNOWN do catálogo ou confirmação humana fabricada. Uma resposta ambígua continua no caminho normal de esclarecimento.

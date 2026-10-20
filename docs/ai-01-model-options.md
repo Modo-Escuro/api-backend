@@ -1,5 +1,7 @@
 # AI-01 — Pré-seleção de modelos gratuitos
 
+> **Pesquisa histórica de candidatos.** Não é a configuração corrente nem comprovação de cota/preço atual. A árvore local usa Gemini explicitamente configurado em [assistente](assistente-conversacional.md#configuração); scripts/corpus antigos foram [retirados](retirada-legado.md). Preservam-se fontes e decisões da pesquisa sem nova consulta aos fornecedores.
+
 > **Histórico (PR #35).** Comparação de candidatos que levou à escolha do Gemini. Os caminhos Groq/Anthropic e os
 > scripts citados aqui foram removidos na consolidação #35 + #36; ver [montagem AI-01](ai-01-montagem-ensaio.md).
 

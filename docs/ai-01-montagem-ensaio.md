@@ -1,5 +1,7 @@
 # AI-01 — Montagem do processador, provedor Gemini e ensaio
 
+> Histórico de montagem/ensaios anteriores à [retirada do legado](retirada-legado.md). `agent/`, corpus e scripts `eval:agent`/`ai:demo:*` foram retirados localmente. Transporte atual em `ai/gemini.ts`, único processador em `assistant/`, configuração vigente em `.env.example`. Os resultados históricos abaixo não comprovam inferência ou operação online do fluxo atual.
+
 > **Consolidação dos PRs #35 (Maylon) e #36 (kujojorin).** Do #36 vêm a montagem (`createConversationRuntime`),
 > a configuração explícita e a avaliação encadeada. Do #35 vêm a escolha do Gemini 3.8 Flash, o adaptador e o
 > ensaio ao vivo ([resultado](ai-01-result.md)). O candidato OpenAI do #36 (nunca avaliado) e os caminhos
@@ -8,7 +10,27 @@
 Base: `main@2df4e54` da API. Continuação do bot: [PR #11](https://github.com/Modo-Escuro/telegram-bot/pull/11)
 integrado em `main@681d21d`. A BOT-02 foi encerrada pelo alcance implementado; ensaio humano é evidência separada. A DEC-01 vigente permite carrinho real confirmado; CART-01 nova continua local, com ativação condicionada à INT-02. Envio e pagamento seguem proibidos. Nenhuma variável, volume, credencial ou instância Railway foi alterada por este incremento.
 
-## Entrega e limites
+## Configuração explícita na API
+
+Montagem corrente conferida em 20/10/2026: `createConversationRuntime` monta dois modelos JSON com contabilidade compartilhada, roteador de audiência e planejador de compras, ambos em `ai/gemini.ts`, consumidos por `assistant/processor.ts`. `agent/` e `linkedProposalProvider` não existem mais. A configuração vigente está em [.env.example](../.env.example) e [assistente](assistente-conversacional.md#configuração).
+
+| Configuração atual | Regra |
+| --- | --- |
+| Runtime | `CONVERSATION_RUNTIME_ENABLED=true`, `CONVERSATION_DB_FILE` explícito/persistente e `BOT_TELEGRAM_ID` válido |
+| Autenticação | `BOT_API_TOKEN` com ao menos 32 caracteres e `ALLOWED_ORGANIZER_IDS` válidos para montagem do modelo |
+| Modelo | `CONVERSATION_MODEL_ENABLED=true`, provider `google`, modelo `gemini-3.8-flash`, `GEMINI_API_KEY` no servidor |
+| Limites | `CONVERSATION_MODEL_MAX_REQUESTS` obrigatório; demais valores/faixas em `config.ts`/`.env.example` |
+| Prazo | timeout do adaptador por chamada padrão 15000 ms; prazo do turno do assistente padrão 45 s. Não há mais a folga legada de +2 s como prazo do turno |
+| Proteção de custo | Roteador e planejador consomem chamadas separadas; contadores do adaptador e `SpendBudget` em RAM, não teto financeiro durável |
+| Configurações retiradas | Remover `CONVERSATION_AGENT_MODE`, flags F7/sessão global e `WEB_ORIGIN`; modo structured/flags antigas true são recusados |
+| Persistência | SQLite v6, unificando variantes v5; sem downgrade. [Guia](armazenamento-v6.md) |
+| Carrinho | Opt-in/evidência/confirmação próprios da CART-01; nenhuma configuração do modelo autoriza escrita |
+
+Sem opt-in do modelo, não há processador nem fallback determinístico: novos eventos recebem UNAVAILABLE; consultas/replay existentes têm regras próprias. Sem runtime, a montagem nem abre o banco. Chave incidental não ativa nada.
+
+Testes vigentes: `test/assistant/`, `test/ops/gemini-integration.test.ts` e `test/turns/`. Os comandos `eval:agent`/`ai:demo:*` abaixo pertencem apenas aos ensaios históricos; não há CLI live equivalente entregue nesta árvore. Nova avaliação exige ambiente e chave de teste explicitamente configurados, sem usar produção.
+
+## Registro histórico — entrega e limites do incremento #35/#36
 
 O entrypoint usa `createConversationRuntime`, compartilhando a mesma instância de `IfoodLinkService` entre login,
 agente e leitura MCP. Com os dois opt-ins e configuração válida, monta
@@ -22,7 +44,7 @@ Não existe fallback de regras em produção.
 - **Sugestões (GRP-01) ligadas:** "Sugere pizza" lê `searchOffers`/`getItem` pelo vínculo; escolha só por posição;
   composição local ainda não sincronizada, total `UNKNOWN` e aprovação de pedido bloqueada. A preparação real depende da integração CART-01 e confirmação PREPARE_CART. Nenhuma ferramenta de escrita é alcançável.
 
-## Configuração explícita na API
+## Configuração histórica na API (#35/#36)
 
 | Variável | Regra |
 | --- | --- |
@@ -69,7 +91,7 @@ Saída estruturada via `generateText` + `Output.object` (Vercel AI SDK) com o sc
 transporte; validação local estrita (`AgentProposalSchema` + `allowedActions` + política) depois da resposta.
 `thinkingLevel: low`, sem pensamentos na saída, sem ferramentas nem streaming, telemetria do SDK desligada.
 
-## Avaliação reproduzível
+## Avaliação histórica — reprodução somente na revisão de origem
 
 Dois ensaios complementares, ambos só com dados sintéticos e **chave exclusiva de teste** `AI_EVAL_GEMINI_API_KEY`
 (nunca a chave de produção nem `railway run` com o ambiente de produção):

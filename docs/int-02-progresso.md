@@ -1,5 +1,7 @@
 # INT-02 #40 — preparação offline e gate de evidências
 
+> Documento de evolução histórica: a seção inicial registra NO-GO antes das capturas e a seção final registra o ensaio autenticado declarado em 18/10. A reconciliação em 20/10 preserva amostras, manifesto e parser exatos da main; testes offline do gate passaram, mas não houve nova operação externa. GO de caso observado não cobre opções não observadas, resultado desconhecido, pagamento/envio ou ativação da nova experiência. [Estado corrente](sincronizacao-github.md).
+
 **Consumidor em continuação local:** [CART-01 integrada offline](cart-01-conclusao-offline.md) reutiliza estes regressores sobre a main com #48 e preserva o gate de evidência. O merge #48 não trouxe capturas de negócio; os NO-GO abaixo continuam válidos.
 
 Atualização offline em **18/10/2026**. A issue [#40](https://github.com/Modo-Escuro/api-backend/issues/40) permanece **aberta**: testes sintéticos não concluem a validação real. Nesta etapa não houve chamada ao MCP, login, leitura de credenciais, operação real de carrinho, envio ou pagamento. Flags, produção e deploy não foram alterados.
