@@ -23,7 +23,6 @@ const lines = [
   `IFOOD_CLIENT_SECRET=${cfg.oauth.clientSecret}`,
   `IFOOD_REDIRECT_URI=${cfg.oauth.redirectUri ?? 'http://localhost:8000'}`,
   'IFOOD_SCOPE=',
-  'WEB_ORIGIN=http://localhost:5173',
   'PORT=8000',
 ];
 writeFileSync(envPath, lines.join('\n') + '\n', { mode: 0o600 });

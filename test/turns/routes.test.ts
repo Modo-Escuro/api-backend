@@ -19,7 +19,7 @@ describe('RUN-01 rotas autenticadas reais, sem MCP', () => {
     const config = loadConfig({ BOT_API_TOKEN: TOKEN, ALLOWED_ORGANIZER_IDS: '111111111,222222222',
       IFOOD_LINKS_DIR: dir.dir, CONVERSATION_RUNTIME_ENABLED: 'true', BOT_TELEGRAM_ID: '900001',
       CONVERSATION_DB_FILE: dir.file });
-    const app = createApp(undefined, { config, conversations: runtime });
+    const app = createApp({ config, conversations: runtime });
     cleanup.push(() => { runtime.stop(); dir.clean(); });
     return { app, runtime, store };
   }
@@ -78,7 +78,7 @@ describe('RUN-01 rotas autenticadas reais, sem MCP', () => {
     const action = event(); action.source = { ...action.source, kind: 'CALLBACK', callbackQueryId: 'click' };
     action.input = { kind: 'ACTION', action: 'REQUEST_REVIEW', actionRef: 'a'.repeat(24) };
     expect((await app.request(base + '/events', { method: 'POST', headers: auth, body: JSON.stringify(action) })).status).toBe(409);
-    const disabled = createApp(undefined, { config: loadConfig({ BOT_API_TOKEN: TOKEN, ALLOWED_ORGANIZER_IDS: '111111111' }) });
+    const disabled = createApp({ config: loadConfig({ BOT_API_TOKEN: TOKEN, ALLOWED_ORGANIZER_IDS: '111111111' }) });
     const response = await disabled.request(base, { headers: auth }); expect(response.status).toBe(503);
     expect(await response.json()).toMatchObject({ error: { code: 'UNAVAILABLE' } });
   });
@@ -96,5 +96,20 @@ describe('RUN-01 rotas autenticadas reais, sem MCP', () => {
     expect(() => loadConfig({ CONVERSATION_RUNTIME_ENABLED: 'true' })).toThrowError('RUN-01 exige');
     expect(() => loadConfig({ CONVERSATION_RUNTIME_ENABLED: 'true', BOT_TELEGRAM_ID: 'x', CONVERSATION_DB_FILE: 'db.sqlite' })).toThrow();
     expect(() => loadConfig({ CONVERSATION_RUNTIME_ENABLED: 'true', BOT_TELEGRAM_ID: '900001', CONVERSATION_DB_FILE: 'db.sqlite', RAILWAY_SERVICE_ID: 'synthetic' })).toThrowError('armazenamento persistente');
+  });
+  it('diretório de memória devolve personas do vínculo atual, desabilitado sem conta', async () => {
+    const dir = temporary(), store = new TurnStore(dir.file);
+    const runtime = new TurnRuntime(store, { processor: async context => result(context) });
+    const config = loadConfig({ BOT_API_TOKEN: TOKEN, ALLOWED_ORGANIZER_IDS: '111111111', IFOOD_LINKS_DIR: dir.dir,
+      CONVERSATION_RUNTIME_ENABLED: 'true', BOT_TELEGRAM_ID: '900001', CONVERSATION_DB_FILE: dir.file });
+    const statusless = { status: vi.fn(async () => ({ state: 'CONNECTED', linkId: null, operational: false }) as never) };
+    const empty = createApp({ config, conversations: runtime, links: statusless as never });
+    expect(await (await empty.request(base + '/memory', { headers: auth })).json())
+      .toEqual({ contractVersion: '1.0', revision: 0, recipients: [], enabled: false });
+    const linked = { status: vi.fn(async () => ({ state: 'CONNECTED', linkId: 'synthetic-link-A', operational: true }) as never) };
+    const app = createApp({ config, conversations: runtime, links: linked as never });
+    expect(await (await app.request(base + '/memory', { headers: auth })).json())
+      .toEqual({ contractVersion: '1.0', revision: 0, recipients: [], enabled: true });
+    runtime.stop(); dir.clean();
   });
 });

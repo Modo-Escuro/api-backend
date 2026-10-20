@@ -12,7 +12,7 @@ const links = new IfoodLinkService({ cfg: config, sessionFactory: realSessionFac
 // OPS-02: o mesmo orçamento (por processo, em memória) limita o agente e aparece em /api/ops/status.
 const budget = config.conversationModel ? new SpendBudget() : undefined;
 const conversations = createConversationRuntime(config, links, undefined, budget);
-const app = createApp(undefined, { links, conversations, ...(budget ? { budget } : {}) });
+const app = createApp({ links, conversations, ...(budget ? { budget } : {}) });
 
 const server = serve({ fetch: app.fetch, port: config.port }, (info) => {
   console.log(`[api] http://localhost:${info.port}  (login: /api/auth/login · diagnóstico: /api/diagnostics)`);

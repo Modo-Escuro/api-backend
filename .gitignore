@@ -1,4 +1,5 @@
 node_modules/
+.assistant-synthetic-test.ts
 .work/
 .venv-bot/
 .int01-*.json
@@ -23,5 +24,3 @@ dist/
 *.swo
 *~
 *.html
-!src/web/index.html
-!src/web/index.html

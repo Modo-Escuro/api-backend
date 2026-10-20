@@ -1,21 +1,16 @@
 import { Hono, type Context } from 'hono';
-import { auth as defaultAuth, AuthError, type IfoodAuth } from './auth.js';
+import { AuthError } from './auth.js';
 import { CartError } from './cart/contracts.js';
-import { CartService } from './cart/service.js';
 import { ConfirmedCartService } from './cart/write-service.js';
 import { CartWriteStore } from './cart/write-store.js';
 import { cartIntentSummary } from './cart/write-schema.js';
 import { ObservedCartContract } from './cart/write-contract.js';
 import { registerCartWriteRoutes } from './routes/cart-write.js';
-import { registerCartRoutes } from './routes/cart.js';
 import { botAuth, organizerOf } from './botAuth.js';
 import { config as defaultConfig, mask, type AppConfig } from './config.js';
 import { IfoodLinkService, LinkError, type SessionFactory } from './links/service.js';
 import { realSessionFactory } from './links/session.js';
-import { getMcpClient, resetMcpClient } from './mcp/client.js';
 import { McpToolError } from './mcp/errors.js';
-import { ALLOWED_TOOLS, listAddresses, searchOffers } from './mcp/tools.js';
-import type { Address } from './mcp/types.js';
 import { handleLinkCallback, registerBotRoutes, registerBrowserRoutes } from './routes/bot.js';
 import { registerEvaluate } from './routes/evaluate.js';
 import { registerConversationRoutes } from './routes/conversation.js';
@@ -52,31 +47,21 @@ export function errorBody(err: unknown): { status: ErrStatus; body: Record<strin
   return { status: 500, body: { error: { kind: 'INTERNAL', message: 'Erro interno' } } };
 }
 
-/** Escolhe o endereço: id explícito (precisa existir na lista) ou único. Nunca inventa. */
-export function pickAddress(addresses: Address[], addressId?: string): Address | { error: string } {
-  if (addressId) return addresses.find((a) => a.addressId === addressId) ?? { error: 'addressId não pertence à lista retornada por listAddresses' };
-  if (addresses.length === 1) return addresses[0]!;
-  if (addresses.length === 0) return { error: 'Nenhum endereço salvo na conta iFood' };
-  return { error: 'Múltiplos endereços: informe addressId' };
-}
-
 export interface AppOptions {
   config?: AppConfig;
   /** Serviço de vínculos (testes injetam um com sessões falsas). */
   links?: IfoodLinkService;
   sessionFactory?: SessionFactory;
-  carts?: CartService;
   conversations?: TurnRuntime;
   /** OPS-02: orçamento do agente, só para o status operacional. */
   budget?: SpendBudget;
   cartWrites?: ConfirmedCartService;
 }
 
-export function createApp(auth: IfoodAuth = defaultAuth, opts: AppOptions = {}) {
+export function createApp(opts: AppOptions = {}) {
   const cfg = opts.config ?? defaultConfig;
   const links = opts.links ?? new IfoodLinkService({ cfg, sessionFactory: opts.sessionFactory ?? realSessionFactory });
   const app = new Hono();
-  const carts = opts.carts ?? new CartService(links, cfg.cartEnabled);
   const correlation = new WeakMap<Request, string>();
 
   // OPS-02: log estruturado por requisição — método, rota redigida (sem query: o callback OAuth carrega `code`),
@@ -118,12 +103,11 @@ export function createApp(auth: IfoodAuth = defaultAuth, opts: AppOptions = {}) 
   app.use('/api/addresses', requireBot);
   app.use('/api/evaluate', requireBot);
   registerBotRoutes(app as unknown as Hono, links);
-  registerCartRoutes(app, carts);
   const cartWrites = opts.cartWrites ?? (cfg.confirmedCartWrites && opts.conversations
     ? new ConfirmedCartService(new CartWriteStore(opts.conversations.store), links, new ObservedCartContract(cfg.confirmedCartWrites.evidenceFile)) : undefined);
   registerCartWriteRoutes(app, cartWrites, cfg.conversationRuntime?.botId, cfg.conversationOrganizerIds);
   registerConversationRoutes(app as unknown as Hono, opts.conversations, cfg.conversationRuntime?.botId, cfg.conversationOrganizerIds,
-    opts.conversations ? new DeliveryAddresses(opts.conversations.store, links) : undefined);
+    opts.conversations ? new DeliveryAddresses(opts.conversations.store, links) : undefined, links);
 
   // ---------- OPS-02: status operacional (autenticado; só contagens, sem caminhos/identidades) ----------
   // Separa: saúde HTTP ≠ armazenamento ≠ sessão iFood operacional ≠ conversa ≠ capacidade de compra.
@@ -147,7 +131,7 @@ export function createApp(auth: IfoodAuth = defaultAuth, opts: AppOptions = {}) 
       // Preparar carrinho exige evidência e confirmação específica. Nenhuma flag habilita envio.
       purchase: {
         capable: false,
-        cartPreparation: cartWrites ? 'HUMAN_CONFIRMATION_REQUIRED' : cfg.cartEnabled ? 'LEGACY_FLAG_ON' : 'DISABLED',
+        cartPreparation: cartWrites ? 'HUMAN_CONFIRMATION_REQUIRED' : 'DISABLED',
         submission: 'DISABLED',
         submitFlagIgnored: Boolean(cfg.submitFlagIgnored),
         cartIntents: opts.conversations ? cartIntentSummary(opts.conversations.store.db) : null,
@@ -163,32 +147,13 @@ export function createApp(auth: IfoodAuth = defaultAuth, opts: AppOptions = {}) 
   const requireLoopback = ['localhost', '127.0.0.1', '[::1]', '::1'].includes(host);
   registerBrowserRoutes(app as unknown as Hono, links, { requireLoopback });
 
-  const devCallback = async (c: Context) => {
-    const { code, state, error, error_description } = c.req.query();
-    const back = new URL(cfg.webOrigin);
-    if (error) {
-      back.searchParams.set('auth', 'error');
-      back.searchParams.set('reason', String(error_description ?? error).slice(0, 200));
-      return c.redirect(back.toString());
-    }
-    try {
-      await auth.handleCallback(code ?? '', state ?? '');
-      await resetMcpClient();
-      back.searchParams.set('auth', 'ok');
-    } catch (e) {
-      back.searchParams.set('auth', 'error');
-      back.searchParams.set('reason', e instanceof Error ? e.message.slice(0, 200) : 'falha');
-    }
-    return c.redirect(back.toString());
-  };
   const callback = async (c: Context) => {
     const q = c.req.query();
     if (!q.state && !q.code && !q.error) return null;
-    const isDev = (s: string) => cfg.devGlobalSession && auth.hasPendingState(s);
-    return (await handleLinkCallback(c, links, isDev, { requireLoopback })) ?? devCallback(c);
+    return handleLinkCallback(c, links, { requireLoopback });
   };
   app.get('/callback', async (c) => (await callback(c)) ?? c.text('callback sem state', 400));
-  app.get('/', async (c) => (await callback(c)) ?? c.redirect(cfg.webOrigin));
+  app.get('/', async (c) => (await callback(c)) ?? c.text('Ailo: conecte sua conta pelo Telegram.'));
 
   // ---------- Operações da conta: só com vínculo confirmado e operacional ----------
   app.get('/api/addresses', async (c) =>
@@ -222,70 +187,11 @@ export function createApp(auth: IfoodAuth = defaultAuth, opts: AppOptions = {}) 
         redirectUri: cfg.redirectUri,
         botApiConfigured: Boolean(cfg.botApiToken && (cfg.allowedOrganizerIds.length || cfg.botPasswordAccess)),
         allowedOrganizers: cfg.allowedOrganizerIds.length,
-        devGlobalSession: cfg.devGlobalSession,
       },
       links: await links.summary(),
     };
-    if (!cfg.devGlobalSession) return c.json(result);
-    result.devAuth = await auth.status();
-    const t0 = Date.now();
-    try {
-      const client = await getMcpClient(auth);
-      const { tools } = await client.listTools();
-      const names = tools.map((t) => t.name);
-      result.mcp = {
-        connected: true,
-        note: 'Lista de ferramentas não prova escopo nem sessão operacional.',
-        server: client.getServerVersion()?.name ?? null,
-        serverVersion: client.getServerVersion()?.version ?? null,
-        toolCount: names.length,
-        tools: names,
-        mvpToolsAvailable: [...ALLOWED_TOOLS].filter((n) => names.includes(n)),
-        mvpToolsMissing: [...ALLOWED_TOOLS].filter((n) => !names.includes(n)),
-        latencyMs: Date.now() - t0,
-      };
-    } catch (e) {
-      result.mcp = { connected: false, latencyMs: Date.now() - t0, ...errorBody(e).body };
-    }
     return c.json(result);
   });
-
-  // ---------- Sessão global de desenvolvimento (desligada por padrão; nunca vira vínculo Telegram) ----------
-  if (cfg.devGlobalSession) {
-    app.get('/api/auth/status', async (c) => c.json({ ...(await auth.status()), note: 'Sessão de desenvolvimento; token presente ≠ sessão operacional' }));
-    app.get('/api/auth/login', async (c) => c.redirect(await auth.startLogin()));
-    app.post('/api/auth/logout', async (c) => {
-      await auth.logout();
-      await resetMcpClient();
-      return c.json({ ok: true });
-    });
-    app.get('/api/diagnostics/search', async (c) => {
-      const query = c.req.query('q') || 'pizza';
-      const { results: addresses } = await listAddresses();
-      const addr = pickAddress(addresses ?? [], c.req.query('addressId'));
-      if ('error' in addr) return c.json({ error: { kind: 'ADDRESS', message: addr.error }, addressCount: addresses?.length ?? 0 }, 400);
-      if (!addr.coordinates) return c.json({ error: { kind: 'ADDRESS', message: 'Endereço sem coordinates no MCP' } }, 400);
-      const t0 = Date.now();
-      const r = await searchOffers({ query, userLocation: addr.coordinates, resultKind: 'ITEM', pageSize: 5 });
-      return c.json({
-        query,
-        interpretedQuery: r.interpretedQuery ?? null,
-        addressCount: addresses.length,
-        latencyMs: Date.now() - t0,
-        hasMore: r.hasMore ?? null,
-        resultCount: r.results?.length ?? 0,
-        sample: (r.results ?? []).map((i) => ({
-          itemId: i.itemId,
-          itemName: i.itemName ?? null,
-          unitPrice: i.unitPrice ?? null,
-          promotionalUnitPrice: i.promotionalUnitPrice ?? null,
-          merchantName: i.merchant?.merchantName ?? null,
-          isOpen: i.merchant?.isOpen ?? null,
-        })),
-        note: 'Preços de listagem não são definitivos — usar getItem antes de recomendar.',
-      });
-    });
-  }
 
   return app;
 }

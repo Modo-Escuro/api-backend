@@ -4,8 +4,8 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { createApp } from '../../src/server/app';
-import type { ConversationModel, ModelRequest } from '../../src/server/agent/model';
-import { createAgentProcessor } from '../../src/server/agent/processor';
+import type { AssistantModel } from '../../src/server/assistant/protocol';
+import { offlineAssistant } from '../helpers/assistant';
 import { ContractError } from '../../src/server/contracts/guards';
 import { ALLOWED_TOOLS, callReadTool } from '../../src/server/mcp/tools';
 import { SpendBudget } from '../../src/server/ops/budget';
@@ -27,7 +27,7 @@ describe('OPS-02 falhas e limites', () => {
 
   it('requisições não autenticadas a caminhos arbitrários não criam séries nem IDs nas métricas', async () => {
     const env = setup();
-    const app = createApp(undefined, { config: env.cfg, links: env.links });
+    const app = createApp({ config: env.cfg, links: env.links });
     for (let i = 0; i < MAX_SERIES + 50; i++) await app.request(`/api/bot/x${i}/11988887777`);
     await app.request('/api/health');
     const snap = metrics.snapshot();
@@ -40,7 +40,7 @@ describe('OPS-02 falhas e limites', () => {
 
   it('GET /api/ops/status: autenticação, autorização, configuração ausente e no-store', async () => {
     const env = setup();
-    const app = createApp(undefined, { config: env.cfg, links: env.links });
+    const app = createApp({ config: env.cfg, links: env.links });
     expect((await app.request('/api/ops/status')).status).toBe(401);
     expect((await app.request('/api/ops/status', { headers: auth(ORG_A, 'x'.repeat(40)) })).status).toBe(401);
     expect((await app.request('/api/ops/status', { headers: { authorization: `Bearer ${BOT_TOKEN}` } })).status).toBe(400);
@@ -50,13 +50,13 @@ describe('OPS-02 falhas e limites', () => {
     const ok = await app.request('/api/ops/status', { headers: auth() });
     expect(ok.status).toBe(200);
     expect(ok.headers.get('cache-control')).toBe('no-store');
-    const off = createApp(undefined, { config: { ...env.cfg, botApiToken: undefined }, links: env.links });
+    const off = createApp({ config: { ...env.cfg, botApiToken: undefined }, links: env.links });
     expect((await off.request('/api/ops/status', { headers: auth() })).status).toBe(503);
   });
 
   it('sessões: operacional, indisponível (rede), reconectar (refresh recusado) e não verificada após reinício', async () => {
     const env = setup();
-    const app = createApp(undefined, { config: env.cfg, links: env.links });
+    const app = createApp({ config: env.cfg, links: env.links });
     const sessions = async (a = app) => (await (await a.request('/api/ops/status', { headers: auth() })).json()).sessions;
     const { status } = await connectAndConfirm(env, ORG_A);
     await connectAndConfirm(env, ORG_B);
@@ -78,7 +78,7 @@ describe('OPS-02 falhas e limites', () => {
     const { IfoodLinkService } = await import('../../src/server/links/service');
     const restarted = new IfoodLinkService({ cfg: env.cfg, sessionFactory: env.mcp.factory, fetchImpl: env.as.fetch, now: env.clock.now });
     const calls = env.mcp.used.length;
-    expect(await sessions(createApp(undefined, { config: env.cfg, links: restarted }))).toEqual(
+    expect(await sessions(createApp({ config: env.cfg, links: restarted }))).toEqual(
       { confirmed: 2, operational: 0, unavailable: 0, reconnectRequired: 1, unverified: 1 });
     expect(env.mcp.used.length).toBe(calls);
   });
@@ -130,14 +130,16 @@ describe('OPS-02 orçamento sob concorrência e reinício', () => {
   }
 
   it('turnos simultâneos da mesma conversa não ultrapassam o teto de chamadas', async () => {
-    const budget = new SpendBudget({ maxCallsPerConversation: 1 });
+    const budget = new SpendBudget({ maxCallsPerConversation: 2 });
     let calls = 0;
     let release!: () => void;
     const gate = new Promise<void>((r) => { release = r; });
-    const model: ConversationModel = { id: 'slow', propose: async () => { calls++; await gate; return { actions: [] }; } };
-    const processor = createAgentProcessor({ model, linkOf: async () => null, timeoutMs: 2_000, budget });
-    const runs = [processor(ctx()), processor(ctx()), processor(ctx())].map((p) => p.then(() => 'OK', (e) => (e as ContractError).code));
-    await new Promise((r) => setTimeout(r, 10));
+    const model: AssistantModel = { id: 'slow', propose: async () => { calls++; await gate; return { message: 'Certo.', requests: [], itemRefs: [] }; } };
+    const processor = offlineAssistant(model, budget);
+    const outcome = (p: ReturnType<typeof processor>) => Promise.resolve(p).then(() => 'OK', (e) => (e as ContractError).code);
+    const first = outcome(processor(ctx()));
+    for (let i = 0; i < 30 && !calls; i++) await new Promise(r => setTimeout(r, 1));
+    const runs = [first, outcome(processor(ctx())), outcome(processor(ctx()))];
     release();
     expect((await Promise.all(runs)).sort()).toEqual(['LIMIT_EXCEEDED', 'LIMIT_EXCEEDED', 'OK']);
     expect(calls).toBe(1);
@@ -147,8 +149,8 @@ describe('OPS-02 orçamento sob concorrência e reinício', () => {
     const budget = new SpendBudget({ maxTokensPerConversation: 10_000 });
     const usage = [{ inputTokens: 9_000, outputTokens: 900 }, { inputTokens: -5, outputTokens: Number.NaN }];
     let i = 0;
-    const model: ConversationModel = { id: 'u', propose: async (r: ModelRequest) => { r.reportUsage?.(usage[i++]!); return { actions: [] }; } };
-    const processor = createAgentProcessor({ model, linkOf: async () => null, timeoutMs: 2_000, maxOutputTokens: 50, budget });
+    const model: AssistantModel = { id: 'u', propose: async r => { r.reportUsage?.(usage[i++]!); return { message: 'Certo.', requests: [], itemRefs: [] }; } };
+    const processor = offlineAssistant(model, budget, 50);
     await processor(ctx());
     expect(budget.summary().global.tokens).toBe(9_900);
     await expect(processor(ctx())).rejects.toMatchObject({ code: 'LIMIT_EXCEEDED' });
@@ -166,7 +168,7 @@ describe('OPS-02 orçamento sob concorrência e reinício', () => {
 describe('OPS-02 ausência de escrita', () => {
   it('módulos de observabilidade e agente não importam carrinho nem ferramentas de escrita', () => {
     const root = join(__dirname, '../../src/server');
-    for (const f of ['ops/log.ts', 'ops/metrics.ts', 'ops/budget.ts', 'ops/storage-check.ts', 'agent/processor.ts']) {
+    for (const f of ['ops/log.ts', 'ops/metrics.ts', 'ops/budget.ts', 'ops/storage-check.ts', 'assistant/processor.ts']) {
       const src = readFileSync(join(root, f), 'utf8');
       expect(src).not.toMatch(/from '\.\.\/cart|mcp\/cart|submitOrder|createCart|beginExternalEffect/);
     }

@@ -64,7 +64,7 @@ export interface RestrictionCheck {
   source: EvidenceSource;
   /** true quando o status depende de heurística textual (UI deve rotular como tal). */
   heuristic: boolean;
-  /** MANDATORY e status FAIL (conflito informado). UNKNOWN não bloqueia: vira aviso. */
+  /** MANDATORY sem PASS bloqueia: ausência de dado não comprova adequação. */
   blocking: boolean;
   /** A evidência (filtro do iFood) se refere ao item-base; opções nunca são verificadas por ela. */
   coversOptions: false;
@@ -307,7 +307,7 @@ export function evaluateRestriction(r: RestrictionKey, input: EvaluationInput): 
   let source: EvidenceSource;
   if (r.kind === 'ALLERGY') {
     // Alergia: só há dois desfechos possíveis — FAIL (heurística encontrou o alérgeno) ou UNKNOWN. Nunca PASS.
-    // Desde 18/10/2026 UNKNOWN só avisa; por isso alérgeno citado na DESCRIÇÃO também conta como conflito informado.
+    // Alérgeno citado na descrição também é conflito; ausência de menção continua UNKNOWN, não PASS.
     if (strongHit || descHits.length) {
       if (nameHits.length) reasons.push(`nome do item menciona: ${termsOf(nameHits)} (heurística)`);
       if (descHits.length) reasons.push(`descrição menciona: ${termsOf(descHits)} (heurística)`);
@@ -360,8 +360,7 @@ export function evaluateRestriction(r: RestrictionKey, input: EvaluationInput): 
   }
   if (optionHits.length && status !== 'FAIL') reasons.push(`evitar opções: ${termsOf(optionHits)} (heurística)`);
 
-  // Só conflito informado (FAIL) bloqueia; UNKNOWN obrigatório vira aviso (decisão de produto, 18/10/2026).
-  const blocking = requirement === 'MANDATORY' && status === 'FAIL';
+  const blocking = requirement === 'MANDATORY' && status !== 'PASS';
   return {
     restriction: r,
     requirement,

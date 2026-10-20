@@ -111,7 +111,7 @@ describe('auditoria: HTTP (app real, sem rede)', () => {
   });
   afterEach(() => { setLogSink(); lines.length = 0; vi.restoreAllMocks(); metrics.reset(); });
 
-  const mk = (over = {}) => createApp(undefined, { config: testConfig(over) });
+  const mk = (over = {}) => createApp({ config: testConfig(over) });
 
   // Corrigido pelo dono durante a auditoria (rótulo = template da rota Hono). Antes: 500 caminhos 401 esgotavam o teto.
   it('requisições não autenticadas não esgotam a cardinalidade nem expulsam séries legítimas', async () => {
@@ -194,10 +194,10 @@ describe('auditoria: HTTP (app real, sem rede)', () => {
 
   it('status não contém caminhos de arquivo, token, IDs de organizador', async () => {
     const cfg = testConfig();
-    const app = createApp(undefined, { config: cfg });
+    const app = createApp({ config: cfg });
     await app.request('/api/bot/ifood/status', { headers: auth() });
     const text = await (await app.request('/api/ops/status', { headers: auth() })).text();
-    for (const v of [cfg.linksDir, cfg.tokenFile, BOT_TOKEN, ORG_A, ORG_B, '/tmp']) expect(text).not.toContain(v);
+    for (const v of [cfg.linksDir, BOT_TOKEN, ORG_A, ORG_B, '/tmp']) expect(text).not.toContain(v);
     expect(JSON.parse(text).purchase).toMatchObject({ capable: false, submission: 'DISABLED' });
   });
 

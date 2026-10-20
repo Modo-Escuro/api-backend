@@ -1,17 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { errorBody, pickAddress } from '../src/server/app';
+import { createApp, errorBody } from '../src/server/app';
 import { AuthError } from '../src/server/auth';
 import { McpToolError } from '../src/server/mcp/errors';
 
-const A = (id: string) => ({ addressId: id, coordinates: { latitude: 0, longitude: 0 } });
-
-describe('pickAddress (FR-2)', () => {
-  it('1 endereço → usa direto', () => expect(pickAddress([A('a')])).toMatchObject({ addressId: 'a' }));
-  it('0 endereços → erro', () => expect(pickAddress([])).toHaveProperty('error'));
-  it('vários sem escolha → erro', () => expect(pickAddress([A('a'), A('b')])).toHaveProperty('error'));
-  it('id escolhido precisa existir na lista (nunca inventa)', () => {
-    expect(pickAddress([A('a'), A('b')], 'b')).toMatchObject({ addressId: 'b' });
-    expect(pickAddress([A('a')], 'zzz')).toHaveProperty('error');
+describe('superfícies retiradas', () => {
+  it('raiz informa o canal atual sem redirecionar para o painel retirado', async () => {
+    const response = await createApp().request('/');
+    expect(response.status).toBe(200);
+    expect(response.headers.get('location')).toBeNull();
+    expect(await response.text()).toContain('Telegram');
   });
 });
 

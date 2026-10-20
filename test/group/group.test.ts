@@ -32,31 +32,20 @@ describe('matriz participante × item e cobertura', () => {
     const best = r.proposals[0]!;
     const [ana, bia, caio] = ids(s);
     expect(best.proposal.lines.find((l) => l.consumerIds[0] === bia)!.itemId).toBe(veg.listing.itemId);
-    // Decisão de produto: alergia sem dado do iFood não bloqueia; a pessoa é atendida com aviso explícito.
-    expect(best.proposal.lines.some((l) => l.consumerIds.includes(caio!))).toBe(true);
-    expect(status(best, s)).toEqual(['COVERED', 'COVERED', 'COVERED']);
-    expect(best.approvalBlockers).not.toContain('PARTIAL_COVERAGE');
-    expect(r.matrix.filter((c) => c.participantId === caio && c.status === 'COMPATIBLE').every((c) => c.warnings?.includes('ALLERGY_UNVERIFIED'))).toBe(true);
-    expect(r.matrix.filter((c) => c.participantId === ana).every((c) => !c.warnings)).toBe(true);
+    expect(best.proposal.lines.some((l) => l.consumerIds.includes(caio!))).toBe(false); // alergia sem evidência não é atendida
+    expect(status(best, s)).toEqual(['COVERED', 'COVERED', 'NEEDS_VERIFICATION']);
+    expect(best.approvalBlockers).toEqual(expect.arrayContaining(['PARTIAL_COVERAGE', 'RESTRICTIONS_UNVERIFIED']));
     expect(r.explanation[0]).toMatch(/^Busca limitada:.*não prova que não existe combinação válida/);
-    expect(r.explanation[1]).toMatch(/^Atenção: o iFood não informa ingredientes nem alérgenos\. As restrições de .*Caio.* confirme com o restaurante antes de pedir\.$/);
-    expect(r.explanation[1]).not.toMatch(/Ana/);
-    expect(r.explanation.some((e) => e.startsWith('Sem atendimento'))).toBe(false);
-    // Conflito informado continua excluindo: carne nunca vai para a pessoa vegetariana.
-    expect(r.matrix.find((c) => c.participantId === bia && c.itemId === meat.listing.itemId)!.status).toBe('INCOMPATIBLE');
+    expect(r.explanation).toContain('Sem atendimento (os itens avaliados não trazem informação suficiente para confirmar a segurança alimentar): Caio.');
     expect(best.proposal.lines.every((l) => l.consumerIds.length === 1 && l.quantity === 1)).toBe(true);
     expect(ana).toBeDefined();
   });
 
-  it('alergia nunca vira PASS: item com leite é incompatível e item sem dado é liberado com aviso', () => {
+  it('alergia nunca vira PASS: item com leite é incompatível e item neutro fica em verificação', () => {
     const s = group(['Caio', { restrictions: 'MILK' }]);
-    const queijo = candidate({ name: 'Pizza de queijo', description: 'Mussarela e molho', price: 40 }), arroz = candidate({ name: 'Arroz', price: 20 });
-    const r = composeProposals(s, [queijo, arroz], { seed: 'x' });
-    expect(r.matrix.find((c) => c.itemId === queijo.listing.itemId)).toMatchObject({ status: 'INCOMPATIBLE', reasons: ['RESTRICTION_FAIL'] });
-    expect(r.matrix.find((c) => c.itemId === arroz.listing.itemId)).toMatchObject({ status: 'COMPATIBLE', warnings: ['ALLERGY_UNVERIFIED'] });
-    expect(r.proposals).toHaveLength(1);
-    expect(r.proposals[0]!.proposal.lines.map((l) => l.itemId)).toEqual([arroz.listing.itemId]);
-    expect(r.explanation).toContain('Atenção: o iFood não informa ingredientes nem alérgenos. As restrições de Caio não puderam ser verificadas nos itens sugeridos; confirme com o restaurante antes de pedir.');
+    const r = composeProposals(s, [candidate({ name: 'Pizza de queijo', description: 'Mussarela e molho', price: 40 }), candidate({ name: 'Arroz', price: 20 })], { seed: 'x' });
+    expect(r.proposals).toEqual([]);
+    expect(r.matrix.map((c) => c.status).sort()).toEqual(['INCOMPATIBLE', 'NEEDS_VERIFICATION']);
   });
 
   it('restrições não informadas bloqueiam a pessoa (UNKNOWN não é compatível)', () => {
@@ -167,8 +156,7 @@ describe('loja única, ranking e corte', () => {
 
   it('top-4 não elimina a única opção que atende um participante (mesmo com ranqueador que a coloca no fim)', () => {
     const s = group(['Ana', { restrictions: 'NONE' }], ['Bia', { restrictions: 'VEGETARIAN' }], ['Caio', { restrictions: 'NONE' }]);
-    // Carne: conflito informado para a vegetariana (sem dado, o item a atenderia com aviso).
-    const m1 = [20, 21, 22, 23, 24].map((p, i) => candidate({ name: `Hambúrguer de carne ${i}`, price: p, merchantId: M1, fee: 0 }));
+    const m1 = [20, 21, 22, 23, 24].map((p, i) => candidate({ name: `Barato ${i}`, price: p, merchantId: M1, fee: 0 }));
     const m2 = [candidate({ name: 'Vegetariano caro', price: 90, merchantId: M2, filters: ['VEGETARIAN'], fee: 0 })];
     // Ranqueador (contrato RANK-03) que ignora cobertura e põe o mais barato primeiro: o plano da loja 2 cai para o fim.
     const cheapestFirst: PlanRanker = { id: 'teste', rank: (plans) => [...plans].sort((a, b) => a.lowerBoundCents! - b.lowerBoundCents!) };

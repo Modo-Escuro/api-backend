@@ -141,9 +141,7 @@ export function testConfig(over: Partial<AppConfig> = {}): AppConfig {
     botApiToken: BOT_TOKEN,
     allowedOrganizerIds: [ORG_A, ORG_B],
     linksDir: mkdtempSync(join(tmpdir(), 'links-')),
-    tokenFile: join(mkdtempSync(join(tmpdir(), 'legacy-')), '.tokens.json'),
     publicBaseUrl: 'http://localhost:8000',
-    devGlobalSession: false,
     ...over,
   };
 }

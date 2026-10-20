@@ -32,11 +32,6 @@ interface AsMetadata {
   code_challenge_methods_supported?: string[];
 }
 
-interface PendingLogin {
-  verifier: string;
-  createdAt: number;
-}
-
 export class AuthError extends Error {
   constructor(
     message: string,
@@ -55,7 +50,7 @@ const REFRESH_SKEW_MS = 60_000;
 export const LOGIN_ATTEMPT_TTL_MS = 10 * 60_000;
 
 export interface AuthOptions {
-  /** Arquivo de persistência; null = somente memória. Default: cfg.tokenFile. */
+  /** Arquivo de persistência explícito por vínculo; ausente/null = somente memória. */
   tokenFile?: string | null;
   now?: () => number;
 }
@@ -64,7 +59,6 @@ export class IfoodAuth {
   private tokens: StoredTokens | null = null;
   private loaded: boolean;
   private metadata: AsMetadata | null = null;
-  private pending = new Map<string, PendingLogin>();
   private refreshing: Promise<StoredTokens> | null = null;
   private fetchFn: typeof fetch;
   private tokenFile: string | null;
@@ -80,7 +74,7 @@ export class IfoodAuth {
     opts: AuthOptions = {},
   ) {
     this.fetchFn = fetchImpl;
-    this.tokenFile = opts.tokenFile === undefined ? cfg.tokenFile : opts.tokenFile;
+    this.tokenFile = opts.tokenFile ?? null;
     this.loaded = this.tokenFile === null;
     this.now = opts.now ?? Date.now;
   }
@@ -261,7 +255,7 @@ export class IfoodAuth {
     return json;
   }
 
-  // ---------- autorização (genérico: usado pelo vínculo Telegram e pelo login de desenvolvimento) ----------
+  // ---------- autorização do vínculo Telegram ----------
   /** URL de autorização com PAR (se suportado) para um state/verifier já criados pelo chamador. */
   async authorizationUrl(state: string, verifier: string): Promise<string> {
     const { id } = this.requireClient();
@@ -299,32 +293,6 @@ export class IfoodAuth {
       resource: this.cfg.mcpUrl,
     });
     return this.toStored(json, source, null);
-  }
-
-  // ---------- login de desenvolvimento (sessão global; só com DEV_GLOBAL_SESSION) ----------
-  async startLogin(): Promise<string> {
-    const verifier = randomToken();
-    const state = randomToken(16);
-    this.gcPending();
-    this.pending.set(state, { verifier, createdAt: this.now() });
-    return this.authorizationUrl(state, verifier);
-  }
-
-  hasPendingState(state: string): boolean {
-    return this.pending.has(state);
-  }
-
-  private gcPending() {
-    const now = this.now();
-    for (const [k, v] of this.pending) if (now - v.createdAt > LOGIN_ATTEMPT_TTL_MS) this.pending.delete(k);
-  }
-
-  async handleCallback(code: string, state: string): Promise<void> {
-    const p = this.pending.get(state);
-    if (!p) throw new AuthError('state inválido ou expirado — reinicie o login', 'INVALID_STATE', 400);
-    this.pending.delete(state); // uso único, mesmo se a troca falhar
-    if (this.now() - p.createdAt > LOGIN_ATTEMPT_TTL_MS) throw new AuthError('tentativa de login expirada — reinicie o login', 'ATTEMPT_EXPIRED', 400);
-    await this.setTokens(await this.exchangeCode(code, p.verifier));
   }
 
   private toStored(json: Record<string, unknown>, source: string, prevRefresh: string | null): StoredTokens {
@@ -391,19 +359,4 @@ export class IfoodAuth {
     };
   }
 
-  /** Estado para o diagnóstico de desenvolvimento (sem tokens). `authenticated` = token presente, não sessão operacional. */
-  async status() {
-    const i = await this.tokenInfo();
-    return {
-      configured: Boolean(this.cfg.clientId && this.cfg.clientSecret),
-      authenticated: i.present,
-      source: this.tokens?.source ?? null,
-      expiresAt: i.expiresAt ? new Date(i.expiresAt).toISOString() : null,
-      expired: i.expired,
-      hasRefreshToken: i.hasRefreshToken,
-      scopes: i.scopes ?? [],
-    };
-  }
 }
-
-export const auth = new IfoodAuth();

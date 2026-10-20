@@ -2,23 +2,18 @@
 // resultado atrasado. Complementa store.test.ts, que cobre as mesmas etapas com resultados sintéticos.
 import { spawnSync } from 'node:child_process';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createGeminiModel } from '../../src/server/agent/gemini-model';
-import { createAgentProcessor } from '../../src/server/agent/processor';
-import type { GroupResult } from '../../src/server/domain/group';
+import { offlineAssistant } from '../helpers/assistant';
 import { TurnRuntime } from '../../src/server/turns/runtime';
 import { TurnStore } from '../../src/server/turns/store';
-import { geminiReply } from '../helpers/gemini';
+import { geminiAssistant, geminiReply } from '../helpers/gemini';
 import { deferred, event, flush, principal, temporary } from './helpers';
 
 const cleanup: (() => void)[] = [];
 // Ordem inversa: fecha o runtime/SQLite antes de apagar a pasta (Windows não remove arquivo aberto).
 afterEach(() => { cleanup.splice(0).reverse().forEach((f) => f()); vi.restoreAllMocks(); });
 
-function runtimeAt(file: string, transport: typeof fetch, now: () => number, proposals?: Parameters<typeof createAgentProcessor>[0]['proposals']) {
-  const runtime = new TurnRuntime(new TurnStore(file, {}, now), { processor: createAgentProcessor({
-    model: createGeminiModel({ apiKey: 'synthetic-key', maxRequests: 20, fetch: transport }), linkOf: async () => null, timeoutMs: 10_000,
-    ...(proposals ? { proposals } : {}),
-  }) });
+function runtimeAt(file: string, transport: typeof fetch, now: () => number) {
+  const runtime = new TurnRuntime(new TurnStore(file, {}, now), { processor: offlineAssistant(geminiAssistant(transport)) });
   cleanup.push(() => runtime.stop());
   return runtime;
 }
@@ -33,11 +28,11 @@ async function settle(runtime: TurnRuntime, operationId: string) {
 }
 const domain = (runtime: TurnRuntime) => JSON.parse(String(runtime.store.db.prepare('SELECT domain FROM conversations').get()!['domain']));
 
-describe('RUN-01 integrado: morte real do processo com o agente da AI-02', () => {
+describe('RUN-01 integrado: morte real do processo com o assistente', () => {
   for (const stage of ['accepted', 'running', 'committed'] as const) {
     it(`etapa ${stage}: reinício recupera a mesma operação, aplica uma vez e replay não chama o modelo`, async () => {
       const dir = temporary(); cleanup.push(dir.clean);
-      const child = spawnSync(process.execPath, ['--import', 'tsx', 'test/turns/crash-agent-process.ts', dir.file, stage], { encoding: 'utf8', timeout: 30_000 });
+      const child = spawnSync(process.execPath, ['--import', 'tsx', 'test/turns/crash-assistant-process.ts', dir.file, stage], { encoding: 'utf8', timeout: 30_000 });
       expect(child.status, child.stderr).toBe(17);
       // Logs do processo (OPS-02 ou outros) não podem misturar-se ao resultado: stdout tem exatamente uma linha JSON.
       expect(child.stdout.trim().split('\n')).toHaveLength(1);
@@ -46,7 +41,7 @@ describe('RUN-01 integrado: morte real do processo com o agente da AI-02', () =>
       expect(childCalls).toBe(stage === 'accepted' ? 0 : 1);
 
       const later = Date.now() + 16_000; // lease de 15 s do processo morto já expirou
-      const transport = vi.fn<typeof fetch>(async () => geminiReply({ actions: [{ action: 'ADD_PARTICIPANT', name: 'Ana' }] }));
+      const transport = vi.fn<typeof fetch>(async () => geminiReply({ message: 'Vamos organizar o pedido.', requests: [], itemRefs: [], contextActions: [{ action: 'SET_PRIORITY', value: 'ECONOMY' }] }));
       const runtime = runtimeAt(dir.file, transport, () => later);
       runtime.store.recover();
       const e = event(1, 0); e.input = { kind: 'TEXT', text: 'Somos Ana' };
@@ -56,7 +51,7 @@ describe('RUN-01 integrado: morte real do processo com o agente da AI-02', () =>
       expect(op).toMatchObject({ status: 'SUCCEEDED', resultVersion: 1 });
       // Leitura retomada chama o modelo de novo (sem efeito externo); resultado já gravado nunca é refeito.
       expect(transport).toHaveBeenCalledTimes(stage === 'committed' ? 0 : 1);
-      expect(domain(runtime).participants.map((p: { displayName: string }) => p.displayName)).toEqual(['Ana']);
+      expect(domain(runtime).priority).toMatchObject({ state: 'DECLARED', value: 'ECONOMY' });
       expect(runtime.accept(principal, e).operation.operationId).toBe(operationId);
       runtime.tick(); await flush();
       expect(transport).toHaveBeenCalledTimes(stage === 'committed' ? 0 : 1);
@@ -66,31 +61,27 @@ describe('RUN-01 integrado: morte real do processo com o agente da AI-02', () =>
 });
 
 describe('RUN-01 integrado: busca atrasada não sobrescreve correção', () => {
-  it('sugestão lenta (GRP-01) e correção de teto na mesma versão: correção vence, busca termina STALE_VERSION', async () => {
+  it('planejamento lento e correção de teto na mesma versão: correção vence, planejamento termina STALE_VERSION', async () => {
     const dir = temporary(); cleanup.push(dir.clean);
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const replies: Record<string, unknown[]> = {
-      'Somos Ana, sem restrições. Teto de R$ 180': [{ action: 'ADD_PARTICIPANT', name: 'Ana' }, { action: 'SET_NO_RESTRICTIONS', participant: { name: 'Ana' } },
-        { action: 'SET_LIMIT', target: 'GROUP', amountCents: 18000, kind: 'MANDATORY' }],
-      'Sugere pizza': [{ action: 'SUGGEST_PROPOSALS', query: 'pizza' }],
-      'Na verdade, no máximo R$ 150': [{ action: 'SET_LIMIT', target: 'GROUP', amountCents: 15000, kind: 'MANDATORY' }],
-    };
+    const search = deferred<void>();
+    let searching = false;
     const transport = vi.fn<typeof fetch>(async (_u, init) => {
       const message = JSON.parse(JSON.parse(String(init!.body)).contents[0].parts[0].text).message as string;
-      return geminiReply({ actions: replies[message] });
+      if (message === 'Sugere pizza') { searching = true; await search.promise; }
+      return geminiReply({ message: 'Vamos organizar o pedido.', requests: [], itemRefs: [], contextActions: message === 'Sugere pizza' ? []
+        : [{ action: 'SET_LIMIT', amountCents: message.includes('150') ? 15000 : 18000, kind: 'MANDATORY' }] });
     });
-    const search = deferred<GroupResult>();
-    const proposals = vi.fn(async () => search.promise);
-    const runtime = runtimeAt(dir.file, transport, Date.now, proposals);
+    const runtime = runtimeAt(dir.file, transport, Date.now);
     const send = (n: number, text: string, version: number) => { const e = event(n, version); e.input = { kind: 'TEXT', text }; return runtime.accept(principal, e).operation.operationId; };
 
     expect(await settle(runtime, send(1, 'Somos Ana, sem restrições. Teto de R$ 180', 0))).toMatchObject({ status: 'SUCCEEDED', resultVersion: 1 });
     const slow = send(2, 'Sugere pizza', 1);
-    for (let i = 0; i < 100 && !proposals.mock.calls.length; i++) { runtime.tick(); await flush(); await new Promise((r) => setTimeout(r, 5)); }
-    expect(proposals).toHaveBeenCalledOnce(); // busca em andamento
+    for (let i = 0; i < 100 && !searching; i++) { runtime.tick(); await flush(); await new Promise((r) => setTimeout(r, 5)); }
+    expect(searching).toBe(true);
     const correction = send(3, 'Na verdade, no máximo R$ 150', 1);
     expect(await settle(runtime, correction)).toMatchObject({ status: 'SUCCEEDED', resultVersion: 2 });
-    search.resolve({ proposals: [], explanation: [] } as unknown as GroupResult); // busca antiga termina depois
+    search.resolve(); // planejamento antigo termina depois
     expect(await settle(runtime, slow)).toMatchObject({ status: 'FAILED', error: { code: 'STALE_VERSION' } });
     expect(runtime.store.snapshot(principal).version).toBe(2);
     expect(domain(runtime).groupLimit).toMatchObject({ state: 'DECLARED', value: { amountCents: 15000, kind: 'MANDATORY' } });

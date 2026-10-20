@@ -108,14 +108,10 @@ describe('RANK-03 E — contrato HTTP versionado', () => {
     expect(body.summary.blockerCounts.NOT_DETAILED).toBeGreaterThan(0);
   });
 
-  it('G: alergia sem dado vira aviso (não bloqueia); orçamento completo UNKNOWN continua pendente', async () => {
+  it('G: alergia não verificada e orçamento completo UNKNOWN continuam pendentes, não recomendados', async () => {
     const allergy = await evaluate(app(), { restrictions: [{ kind: 'ALLERGY', code: 'PEANUT' }] });
-    const all = [...allergy.eligible, ...allergy.needsVerification, ...allergy.blocked];
-    expect(all.some((c) => c.blockers.some((b) => b.code === 'ALLERGY_UNVERIFIED'))).toBe(false);
-    expect(allergy.eligible.some((c) => c.warnings.some((w) => w.code === 'ALLERGY_UNVERIFIED'))).toBe(true);
-    // Toda recomendação com alergia declarada carrega o aviso explícito.
-    const recommended = new Set(allergy.recommendations.map((r) => r.itemId));
-    for (const c of allergy.eligible.filter((x) => recommended.has(x.itemId))) expect(c.warnings.map((w) => w.code)).toContain('ALLERGY_UNVERIFIED');
+    expect(allergy.recommendations).toEqual([]);
+    expect(allergy.needsVerification.some((c) => c.blockers.some((b) => b.code === 'ALLERGY_UNVERIFIED'))).toBe(true);
     const budget = await evaluate(app(), { budget: { maxOrderTotalCents: 100000 } });
     expect(budget.recommendations).toEqual([]);
     expect(budget.needsVerification.some((c) => c.blockers.some((b) => b.code === 'ORDER_BUDGET_UNVERIFIED'))).toBe(true);
